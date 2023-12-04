@@ -9,8 +9,8 @@ from tqdm import tqdm
 # This is hard coded for Woolf lab 9 chambers as of 11/22/2023
 resize_dim = 512
 # set the video codec
-fourcc = cv2.VideoWriter_fourcc('F', 'M', 'P', '4')
-# fourcc = cv2.VideoWriter_fourcc('F', 'F', 'V', '1')
+# fourcc = cv2.VideoWriter_fourcc('F', 'M', 'P', '4')
+fourcc = cv2.VideoWriter_fourcc('F', 'F', 'V', '1')
 # Set the coordinates for cropping the smaller frame.
 # This is hard coded for Woolf lab 9 chambers as of 11/22/2023
 chambers = [f'chamber_{i}' for i in range(1, 5)]
