@@ -4,7 +4,6 @@ import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import matplotlib
-import skvideo.io
 import gc
 import h5py
 from collections import defaultdict

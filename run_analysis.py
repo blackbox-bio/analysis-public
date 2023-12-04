@@ -4,7 +4,6 @@ import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import matplotlib
-import skvideo.io
 import gc
 import h5py
 from collections import defaultdict
@@ -16,6 +15,7 @@ from tkinter import filedialog
 
 from process import *
 from summary import *
+from dlc_runner import *
 
 
 def main():
@@ -24,13 +24,20 @@ def main():
     root = tk.Tk()
     root.withdraw()
 
-    # input the path to the folder containing the body_pose video and DLC tracking
+    # input the path to the experiment folder
     exp_folder = select_folder()
-    # exp_folder = "/Users/zihealexzhang/work_local/blackbox_data/test_data/"
+
+    # run dlc
+    body_videos = get_body_videos([exp_folder])
+    run_deeplabcut(dlc_config_path, body_videos)
+
+
     features_folder = os.path.join(exp_folder, "features")
     if not os.path.exists(features_folder):
         # Create the directory
         os.makedirs(features_folder)
+
+
 
     # generate the list of videos to be processed
     video_list = []

@@ -30,6 +30,7 @@ def process_video(video, exp_folder, output_folder):
     frame_count = int(ftir_video.get(cv2.CAP_PROP_FRAME_COUNT))
     recording_time = frame_count / fps
 
+    features['recording_time'] = np.array(recording_time)
     # calculate paw luminance
     hind_left, hind_right, front_left, front_right = cal_paw_luminance(
         label, ftir_video, size=22

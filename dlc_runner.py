@@ -3,7 +3,7 @@ import tkinter as tk
 from tkinter import filedialog
 import deeplabcut
 
-
+dlc_config_path = r'D:\DLC\blackbox_dlc_deployment\config.yaml'
 selected_folders = []
 
 

@@ -19,9 +19,7 @@ def generate_summary_csv(features_folder, summary_csv):
     summary_features = {}
     for video in features.keys():
         summary_features[video] = {}
-        summary_features[video]["recording_time (min)"] = (
-            np.nansum(features[video]["distance_traveled"]) / 1024 * 15 / 60
-        )
+        summary_features[video]["recording_time (min)"] = features[video]["recording_time"]/60
         summary_features[video]["distance_traveled (cm)"] = (
             np.nansum(features[video]["distance_traveled"]) / 1024 * 15
         )
