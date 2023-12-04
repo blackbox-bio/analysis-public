@@ -4,6 +4,9 @@ import numpy as np
 import concurrent.futures
 import sys
 from tqdm import tqdm
+import tkinter as tk
+from tkinter import filedialog
+
 
 # Set the desired size
 # This is hard coded for Woolf lab 9 chambers as of 11/22/2023
@@ -21,15 +24,29 @@ coords = {
 }
 
 
+def select_folder():
+    root = tk.Tk()
+    root.withdraw()
+
+    # Ask the user to select subfolder to process
+
+    folder = filedialog.askdirectory(
+        parent=root,
+        title="Select a subfolder to process",
+    )
+
+    return folder
+
+
 def process_chamber(file_path, chamber):
 
     # initialize directory paths
     experiment_folder = os.path.dirname(file_path)
     file_name = os.path.basename(file_path)
-    output_folder = os.path.join(experiment_folder, file_name[:-9])
+    output_folder = os.path.join(experiment_folder, file_name[:-10])
     # open the video capture objects
     cap_body = cv2.VideoCapture(file_path)
-    cap_ftir = cv2.VideoCapture(file_path[:-8] + 'ftir.avi')
+    cap_ftir = cv2.VideoCapture(file_path[:-9] + 'ftir.avi')
     # get the frame count and fps
     fps = int(cap_body.get(cv2.CAP_PROP_FPS))
     body_frame_count = int(cap_body.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -38,10 +55,10 @@ def process_chamber(file_path, chamber):
     frame_count = min(body_frame_count, ftir_frame_count)
 
     # create a new video writer for each chamber
-    body_file_name = f'{file_name[:-8]}_{chamber}_body.avi'
+    body_file_name = f'{file_name[:-9]}_{chamber}_body.avi'
     body_file_path = os.path.join(output_folder, body_file_name)
     body_video_writer = cv2.VideoWriter(body_file_path, fourcc, fps, (resize_dim, resize_dim))
-    ftir_file_name = f'{file_name[:-8]}_{chamber}_ftir.avi'
+    ftir_file_name = f'{file_name[:-9]}_{chamber}_ftir.avi'
     ftir_file_path = os.path.join(output_folder, ftir_file_name)
     ftir_video_writer = cv2.VideoWriter(ftir_file_path, fourcc, fps, (resize_dim, resize_dim))
 
@@ -84,12 +101,17 @@ def process_chamber(file_path, chamber):
 
 def main():
 
-    # Get the experiment folder path from the command line
-    args = sys.argv[1:]
-    assert len(args) == 1, "expecting one argument: the full directory path to " \
-                           "the experiment folder"
+    # Ask the user to select folder to process
+    root = tk.Tk()
+    root.withdraw()
 
-    experiment_folder = args[0]
+    experiment_folder = select_folder()
+    # Get the experiment folder path from the command line
+    # args = sys.argv[1:]
+    # assert len(args) == 1, "expecting one argument: the full directory path to " \
+    #                        "the experiment folder"
+    #
+    # experiment_folder = args[0]
 
     if not os.path.exists(experiment_folder):
         print("The directory does not exist.")
@@ -100,11 +122,11 @@ def main():
     with concurrent.futures.ThreadPoolExecutor() as executor:
         for file_name in os.listdir(experiment_folder):
             file_path = os.path.join(experiment_folder, file_name)
-            if not file_name.lower().endswith('body.avi'):
+            if not file_name.lower().endswith('trans.avi'):
                 continue
-            print("\nstart to split recording: " + file_name[:-9])
+            print("\nstart to split recording: " + file_name[:-10])
 
-            output_folder = os.path.join(experiment_folder, file_name[:-9])
+            output_folder = os.path.join(experiment_folder, file_name[:-10])
             os.makedirs(output_folder, exist_ok=True)
             futures = [executor.submit(process_chamber, file_path, chamber) for chamber in chambers]
             concurrent.futures.wait(futures)
