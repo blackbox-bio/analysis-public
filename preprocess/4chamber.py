@@ -2,25 +2,21 @@ import cv2
 import os
 import numpy as np
 import concurrent.futures
-import sys
 from tqdm import tqdm
 import tkinter as tk
 from tkinter import filedialog
 
 
 # Set the desired size
-# This is hard coded for Woolf lab 9 chambers as of 11/22/2023
 resize_dim = 1024
 # set the video codec
-fourcc = cv2.VideoWriter_fourcc('F', 'F', 'V', '1')
-# Set the coordinates for cropping the smaller frame.
-# This is hard coded for Woolf lab 9 chambers as of 11/22/2023
-chambers = [f'chamber_{i}' for i in range(1, 5)]
+fourcc = cv2.VideoWriter_fourcc("F", "F", "V", "1")
+chambers = [f"chamber_{i}" for i in range(1, 5)]
 coords = {
-    'chamber_1': [(0, 0), (1024, 1024)],
-    'chamber_2': [(1024, 0), (2048, 1024)],
-    'chamber_3': [(0, 1024), (1024, 2048)],
-    'chamber_4': [(1024, 1024), (2048, 2048)],
+    "chamber_1": [(0, 0), (1024, 1024)],
+    "chamber_2": [(1024, 0), (2048, 1024)],
+    "chamber_3": [(0, 1024), (1024, 2048)],
+    "chamber_4": [(1024, 1024), (2048, 2048)],
 }
 
 
@@ -28,7 +24,7 @@ def select_folder():
     root = tk.Tk()
     root.withdraw()
 
-    # Ask the user to select subfolder to process
+    # Ask the user to select folder to process
 
     folder = filedialog.askdirectory(
         parent=root,
@@ -46,7 +42,7 @@ def process_chamber(file_path, chamber):
     output_folder = os.path.join(experiment_folder, file_name[:-10])
     # open the video capture objects
     cap_body = cv2.VideoCapture(file_path)
-    cap_ftir = cv2.VideoCapture(file_path[:-9] + 'ftir.avi')
+    cap_ftir = cv2.VideoCapture(file_path[:-9] + "ftir.avi")
     # get the frame count and fps
     fps = int(cap_body.get(cv2.CAP_PROP_FPS))
     body_frame_count = int(cap_body.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -55,12 +51,16 @@ def process_chamber(file_path, chamber):
     frame_count = min(body_frame_count, ftir_frame_count)
 
     # create a new video writer for each chamber
-    body_file_name = f'{file_name[:-9]}_{chamber}_body.avi'
+    body_file_name = f"{file_name[:-9]}_{chamber}_body.avi"
     body_file_path = os.path.join(output_folder, body_file_name)
-    body_video_writer = cv2.VideoWriter(body_file_path, fourcc, fps, (resize_dim, resize_dim))
-    ftir_file_name = f'{file_name[:-9]}_{chamber}_ftir.avi'
+    body_video_writer = cv2.VideoWriter(
+        body_file_path, fourcc, fps, (resize_dim, resize_dim)
+    )
+    ftir_file_name = f"{file_name[:-9]}_{chamber}_ftir.avi"
     ftir_file_path = os.path.join(output_folder, ftir_file_name)
-    ftir_video_writer = cv2.VideoWriter(ftir_file_path, fourcc, fps, (resize_dim, resize_dim))
+    ftir_video_writer = cv2.VideoWriter(
+        ftir_file_path, fourcc, fps, (resize_dim, resize_dim)
+    )
 
     # iterate over the frames, crop each frame into the current chamber, and save to the respective video writers
     for i in tqdm(range(frame_count)):
@@ -85,8 +85,12 @@ def process_chamber(file_path, chamber):
         # pad the frame to the desired size
         pad_x = max(0, (resize_dim - smaller_frame_body.shape[0]))
         pad_y = max(0, (resize_dim - smaller_frame_body.shape[1]))
-        resized_frame_body = np.pad(smaller_frame_body, ((0, pad_x), (0, pad_y), (0, 0)), mode='constant')
-        resized_frame_ftir = np.pad(smaller_frame_ftir, ((0, pad_x), (0, pad_y), (0, 0)), mode='constant')
+        resized_frame_body = np.pad(
+            smaller_frame_body, ((0, pad_x), (0, pad_y), (0, 0)), mode="constant"
+        )
+        resized_frame_ftir = np.pad(
+            smaller_frame_ftir, ((0, pad_x), (0, pad_y), (0, 0)), mode="constant"
+        )
 
         # write the frame to the video writer
         body_video_writer.write(resized_frame_body)
@@ -106,12 +110,6 @@ def main():
     root.withdraw()
 
     experiment_folder = select_folder()
-    # Get the experiment folder path from the command line
-    # args = sys.argv[1:]
-    # assert len(args) == 1, "expecting one argument: the full directory path to " \
-    #                        "the experiment folder"
-    #
-    # experiment_folder = args[0]
 
     if not os.path.exists(experiment_folder):
         print("The directory does not exist.")
@@ -122,13 +120,16 @@ def main():
     with concurrent.futures.ThreadPoolExecutor() as executor:
         for file_name in os.listdir(experiment_folder):
             file_path = os.path.join(experiment_folder, file_name)
-            if not file_name.lower().endswith('trans.avi'):
+            if not file_name.lower().endswith("trans.avi"):
                 continue
             print("\nstart to split recording: " + file_name[:-10])
 
             output_folder = os.path.join(experiment_folder, file_name[:-10])
             os.makedirs(output_folder, exist_ok=True)
-            futures = [executor.submit(process_chamber, file_path, chamber) for chamber in chambers]
+            futures = [
+                executor.submit(process_chamber, file_path, chamber)
+                for chamber in chambers
+            ]
             concurrent.futures.wait(futures)
 
     return
@@ -136,4 +137,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
