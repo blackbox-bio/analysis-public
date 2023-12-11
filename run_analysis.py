@@ -37,8 +37,6 @@ def main():
 
     # Get the number of available CPU cores
     num_workers = os.cpu_count() - 2 if os.cpu_count() > 2 else 1
-    # Create a list of argument tuples for process_video
-    video_args_list = [(video, exp_folder, features_folder) for video in video_list]
 
     # Use joblib for parallel processing
     Parallel(n_jobs=num_workers)(
