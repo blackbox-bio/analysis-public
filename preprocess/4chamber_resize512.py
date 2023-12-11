@@ -9,13 +9,13 @@ from tkinter import filedialog
 resize_dim = 512
 # set the video codec
 # fourcc = cv2.VideoWriter_fourcc('F', 'M', 'P', '4')
-fourcc = cv2.VideoWriter_fourcc('F', 'F', 'V', '1')
-chambers = [f'chamber_{i}' for i in range(1, 5)]
+fourcc = cv2.VideoWriter_fourcc("F", "F", "V", "1")
+chambers = [f"chamber_{i}" for i in range(1, 5)]
 coords = {
-    'chamber_1': [(0, 0), (1024, 1024)],
-    'chamber_2': [(1024, 0), (2048, 1024)],
-    'chamber_3': [(0, 1024), (1024, 2048)],
-    'chamber_4': [(1024, 1024), (2048, 2048)],
+    "chamber_1": [(0, 0), (1024, 1024)],
+    "chamber_2": [(1024, 0), (2048, 1024)],
+    "chamber_3": [(0, 1024), (1024, 2048)],
+    "chamber_4": [(1024, 1024), (2048, 2048)],
 }
 
 
@@ -38,10 +38,10 @@ def process_chamber(file_path, chamber):
     # initialize directory paths
     experiment_folder = os.path.dirname(file_path)
     file_name = os.path.basename(file_path)
-    output_folder = os.path.join(experiment_folder, file_name[:-10]+"_512")
+    output_folder = os.path.join(experiment_folder, file_name[:-10] + "_512")
     # open the video capture objects
     cap_body = cv2.VideoCapture(file_path)
-    cap_ftir = cv2.VideoCapture(file_path[:-9] + 'ftir.avi')
+    cap_ftir = cv2.VideoCapture(file_path[:-9] + "ftir.avi")
     # get the frame count and fps
     fps = int(cap_body.get(cv2.CAP_PROP_FPS))
     body_frame_count = int(cap_body.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -50,12 +50,16 @@ def process_chamber(file_path, chamber):
     frame_count = min(body_frame_count, ftir_frame_count)
 
     # create a new video writer for each chamber
-    body_file_name = f'{file_name[:-9]}_{chamber}_body.avi'
+    body_file_name = f"{file_name[:-9]}_{chamber}_body.avi"
     body_file_path = os.path.join(output_folder, body_file_name)
-    body_video_writer = cv2.VideoWriter(body_file_path, fourcc, fps, (resize_dim, resize_dim))
-    ftir_file_name = f'{file_name[:-9]}_{chamber}_ftir.avi'
+    body_video_writer = cv2.VideoWriter(
+        body_file_path, fourcc, fps, (resize_dim, resize_dim)
+    )
+    ftir_file_name = f"{file_name[:-9]}_{chamber}_ftir.avi"
     ftir_file_path = os.path.join(output_folder, ftir_file_name)
-    ftir_video_writer = cv2.VideoWriter(ftir_file_path, fourcc, fps, (resize_dim, resize_dim))
+    ftir_video_writer = cv2.VideoWriter(
+        ftir_file_path, fourcc, fps, (resize_dim, resize_dim)
+    )
 
     # iterate over the frames, crop each frame into the current chamber, and save to the respective video writers
     for i in tqdm(range(frame_count)):
@@ -109,13 +113,16 @@ def main():
     with concurrent.futures.ThreadPoolExecutor() as executor:
         for file_name in os.listdir(experiment_folder):
             file_path = os.path.join(experiment_folder, file_name)
-            if not file_name.lower().endswith('trans.avi'):
+            if not file_name.lower().endswith("trans.avi"):
                 continue
             print("\nstart to split recording: " + file_name[:-10])
 
-            output_folder = os.path.join(experiment_folder, file_name[:-10]+"_512")
+            output_folder = os.path.join(experiment_folder, file_name[:-10] + "_512")
             os.makedirs(output_folder, exist_ok=True)
-            futures = [executor.submit(process_chamber, file_path, chamber) for chamber in chambers]
+            futures = [
+                executor.submit(process_chamber, file_path, chamber)
+                for chamber in chambers
+            ]
             concurrent.futures.wait(futures)
 
     return
