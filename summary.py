@@ -1,3 +1,5 @@
+from typing import Dict, Any
+
 from utils import *
 
 
@@ -16,7 +18,7 @@ def generate_summary_csv(features_folder, summary_csv):
                         features[key][subkey] = np.array(hdf[key][subkey])
 
     # save summary features
-    summary_features = {}
+    summary_features: dict[Any, dict[Any, Any]] = {}
     for video in features.keys():
         summary_features[video] = {}
         summary_features[video]["recording_time (min)"] = (
@@ -46,6 +48,13 @@ def generate_summary_csv(features_folder, summary_csv):
         summary_features[video]["average_front_right_luminance"] = np.nanmean(
             features[video]["front_right_luminance"]
         )
+        summary_features[video]["average_front_to_hind_paw_luminance_ratio"] = (
+            summary_features[video]["average_front_left_luminance"]
+            + summary_features[video]["average_front_right_luminance"]
+        ) / (
+            summary_features[video]["average_hind_left_luminance"]
+            + summary_features[video]["average_hind_right_luminance"]
+        )
         summary_features[video]["hind_left_usage (ratio of time)"] = np.nanmean(
             features[video]["hind_left_luminance"]
             > np.percentile(features[video]["background_luminance"], 95)
@@ -61,9 +70,6 @@ def generate_summary_csv(features_folder, summary_csv):
         summary_features[video]["front_right_usage (ratio of time)"] = np.nanmean(
             features[video]["front_right_luminance"]
             > np.percentile(features[video]["background_luminance"], 95)
-        )
-        summary_features[video]["average background luminance"] = np.nanmean(
-            features[video]["background_luminance"]
         )
 
     df = pd.DataFrame.from_dict(summary_features, orient="index")
