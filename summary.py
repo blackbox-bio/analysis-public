@@ -23,7 +23,7 @@ def generate_summary_csv(features_folder, summary_csv):
             features[video]["recording_time"] / 60
         )
         summary_features[video]["distance_traveled (cm)"] = (
-            np.nansum(features[video]["distance_traveled"]) / 1024 * 15
+            np.nansum(features[video]["distance_traveled"]) / 512 * 15
         )
         summary_features[video]["average_hind_paw_luminance_ratio (l/r)"] = np.nanmean(
             features[video]["average_luminance_ratio"]
@@ -33,6 +33,22 @@ def generate_summary_csv(features_folder, summary_csv):
         )
         summary_features[video]["average_background_luminance"] = np.nanmean(
             features[video]["background_luminance"]
+        )
+        summary_features[video]["hind_left_usage"] = np.nanmean(
+            features[video]["hind_left_luminance"]
+            > np.percentile(features[video]["background_luminance"], 95)
+        )
+        summary_features[video]["hind_right_usage"] = np.nanmean(
+            features[video]["hind_right_luminance"]
+            > np.percentile(features[video]["background_luminance"], 95)
+        )
+        summary_features[video]["front_left_usage"] = np.nanmean(
+            features[video]["front_left_luminance"]
+            > np.percentile(features[video]["background_luminance"], 95)
+        )
+        summary_features[video]["front_right_usage"] = np.nanmean(
+            features[video]["front_right_luminance"]
+            > np.percentile(features[video]["background_luminance"], 95)
         )
 
     df = pd.DataFrame.from_dict(summary_features, orient="index")
