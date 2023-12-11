@@ -19,7 +19,9 @@ def generate_summary_csv(features_folder, summary_csv):
     summary_features = {}
     for video in features.keys():
         summary_features[video] = {}
-        summary_features[video]["recording_time (min)"] = features[video]["recording_time"]/60
+        summary_features[video]["recording_time (min)"] = (
+            features[video]["recording_time"] / 60
+        )
         summary_features[video]["distance_traveled (cm)"] = (
             np.nansum(features[video]["distance_traveled"]) / 1024 * 15
         )
@@ -28,6 +30,9 @@ def generate_summary_csv(features_folder, summary_csv):
         )
         summary_features[video]["average_hind_paw_luminance_ratio (r/l)"] = np.nanmean(
             1 / features[video]["average_luminance_ratio"]
+        )
+        summary_features[video]["average_background_luminance"] = np.nanmean(
+            features[video]["background_luminance"]
         )
 
     df = pd.DataFrame.from_dict(summary_features, orient="index")
