@@ -107,11 +107,14 @@ def cal_paw_luminance(label, cap, size=22):
     hind_left = []
     front_right = []
     front_left = []
+    background_luminance = []
 
     # for i in tqdm(range(500)):
     for i in tqdm(range(num_of_frames)):
         frame = cap.read()[1]  # Read the next frame
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # Convert to grayscale
+
+        # calculate the luminance of the four paws
         x, y = (
             int(label["rhpaw"][["x"]].values[i]),
             int(label["rhpaw"][["y"]].values[i]),
@@ -136,10 +139,14 @@ def cal_paw_luminance(label, cap, size=22):
         )
         front_left.append(np.nanmean(frame[y - size : y + size, x - size : x + size]))
 
+        # calculate background luminance
+        background_luminance.append(np.nanmean(frame))
+
     hind_right = np.array(hind_right)
     hind_left = np.array(hind_left)
     front_right = np.array(front_right)
     front_left = np.array(front_left)
+    background_luminance = np.array(background_luminance)
 
     hind_left_mean = np.nanmean(hind_left)
     hind_right_mean = np.nanmean(hind_right)
@@ -150,7 +157,7 @@ def cal_paw_luminance(label, cap, size=22):
     front_left = np.nan_to_num(front_left, nan=front_left_mean)
     front_right = np.nan_to_num(front_right, nan=front_right_mean)
 
-    return hind_left, hind_right, front_left, front_right
+    return hind_left, hind_right, front_left, front_right, background_luminance
 
 
 def scale_ftir(hind_left, hind_right):

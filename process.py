@@ -30,16 +30,21 @@ def process_video(video, exp_folder, output_folder):
     frame_count = int(ftir_video.get(cv2.CAP_PROP_FRAME_COUNT))
     recording_time = frame_count / fps
 
-    features['recording_time'] = np.array(recording_time)
+    features["recording_time"] = np.array(recording_time)
     # calculate paw luminance
-    hind_left, hind_right, front_left, front_right = cal_paw_luminance(
-        label, ftir_video, size=22
-    )
+    (
+        hind_left,
+        hind_right,
+        front_left,
+        front_right,
+        background_luminance,
+    ) = cal_paw_luminance(label, ftir_video, size=22)
 
     features["hind_left_luminance"] = hind_left
     features["hind_right_luminance"] = hind_right
     features["front_left_luminance"] = front_left
     features["front_right_luminance"] = front_right
+    features["background_luminance"] = background_luminance
 
     hind_left_scaled, hind_right_scaled = scale_ftir(hind_left, hind_right)
     features["hind_left_luminance_scaled"] = hind_left_scaled
