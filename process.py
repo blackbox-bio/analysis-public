@@ -2,6 +2,10 @@ from utils import *
 
 dlc_postfix = "DLC_resnet50_arcteryx500Nov4shuffle1_350000"
 
+# Function to process a video with specified arguments
+def process_video_wrapper(args):
+    return process_video(*args)
+
 
 def process_video(video, exp_folder, output_folder):
 

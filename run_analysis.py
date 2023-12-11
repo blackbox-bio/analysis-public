@@ -1,21 +1,7 @@
-import os
-import pandas as pd
-import numpy as np
-from tqdm import tqdm
-import matplotlib.pyplot as plt
-import matplotlib
-import gc
-import h5py
-from collections import defaultdict
-import cv2
-from scipy.ndimage import gaussian_filter1d
-
-import tkinter as tk
-from tkinter import filedialog
-
 from process import *
 from summary import *
 from dlc_runner import *
+import concurrent.futures
 
 
 def main():
@@ -31,13 +17,10 @@ def main():
     body_videos = get_body_videos([exp_folder])
     run_deeplabcut(dlc_config_path, body_videos)
 
-
     features_folder = os.path.join(exp_folder, "features")
     if not os.path.exists(features_folder):
         # Create the directory
         os.makedirs(features_folder)
-
-
 
     # generate the list of videos to be processed
     video_list = []
@@ -47,9 +30,19 @@ def main():
 
     print(f"In total {len(video_list)} videos to be processed: \n{video_list}")
 
-    # Process the videos iteratively
-    for video in video_list:
-        process_video(video, exp_folder, features_folder)
+    # # Process the videos iteratively
+    # for video in video_list:
+    #     process_video(video, exp_folder, features_folder)
+
+    # Get the number of available CPU cores
+    num_workers = os.cpu_count() - 2 if os.cpu_count() > 2 else 1
+    # Create a list of argument tuples for process_video
+    video_args_list = [(video, exp_folder, features_folder) for video in video_list]
+
+    # Use ThreadPoolExecutor for parallel processing
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
+        # Map the process_video_wrapper function to the list of arguments
+        executor.map(process_video_wrapper, video_args_list)
 
     # generate summary csv from the processed videos
     summary_csv = os.path.join(exp_folder, "summary.csv")
