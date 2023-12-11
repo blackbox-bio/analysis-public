@@ -2,6 +2,7 @@ from process import *
 from summary import *
 from dlc_runner import *
 import concurrent.futures
+from joblib import Parallel, delayed
 
 
 def main():
@@ -39,10 +40,11 @@ def main():
     # Create a list of argument tuples for process_video
     video_args_list = [(video, exp_folder, features_folder) for video in video_list]
 
-    # Use ThreadPoolExecutor for parallel processing
-    with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
-        # Map the process_video_wrapper function to the list of arguments
-        executor.map(process_video_wrapper, video_args_list)
+    # Use joblib for parallel processing
+    Parallel(n_jobs=num_workers)(
+        delayed(process_video_wrapper)(video, exp_folder, features_folder)
+        for video in video_list
+    )
 
     # generate summary csv from the processed videos
     summary_csv = os.path.join(exp_folder, "summary.csv")
