@@ -3,7 +3,7 @@
 .ipynb_checkpoints
 *.ipynb
 processed_folders.txt
-
+./documents/*
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
