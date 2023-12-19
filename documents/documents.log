@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2023.12.18)  18 DEC 2023 10:18
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2023.12.18)  18 DEC 2023 10:31
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -310,21 +310,21 @@ documents/skeleton_tracking.png>
 Package pdftex.def Info: /Users/zihealexzhang/PycharmProjects/analysis-blackbox
 bio/analysis-public/documents/skeleton_tracking.png  used on input line 69.
 (pdftex.def)             Requested size: 241.84843pt x 337.83452pt.
-LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <12> on input line 98.
-LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <8> on input line 98.
-LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <6> on input line 98.
  [1
 
 {/usr/local/texlive/2023/texmf-var/fonts/map/pdftex/updmap/pdftex.map}{/usr/loc
 al/texlive/2023/texmf-dist/fonts/enc/dvips/lm/lm-rm.enc} </Users/zihealexzhang/
 PycharmProjects/analysis-blackboxbio/analysis-public/documents/skeleton_trackin
-g.png>] [2{/usr/local/texlive/2023/texmf-dist/fonts/enc/dvips/lm/lm-mathex.enc}
-{/usr/local/texlive/2023/texmf-dist/fonts/enc/dvips/lm/lm-mathit.enc}{/usr/loca
-l/texlive/2023/texmf-dist/fonts/enc/dvips/lm/lm-mathsy.enc}] (./documents.aux) 
-) 
+g.png>]
+LaTeX Font Info:    External font `lmex10' loaded for size
+(Font)              <12> on input line 90.
+LaTeX Font Info:    External font `lmex10' loaded for size
+(Font)              <8> on input line 90.
+LaTeX Font Info:    External font `lmex10' loaded for size
+(Font)              <6> on input line 90.
+ [2{/usr/local/texlive/2023/texmf-dist/fonts/enc/dvips/lm/lm-mathex.enc}{/usr/l
+ocal/texlive/2023/texmf-dist/fonts/enc/dvips/lm/lm-mathit.enc}{/usr/local/texli
+ve/2023/texmf-dist/fonts/enc/dvips/lm/lm-mathsy.enc}] (./documents.aux) ) 
 Here is how much of TeX's memory you used:
  5362 strings out of 476025
  91357 string characters out of 5790016
@@ -333,13 +333,14 @@ Here is how much of TeX's memory you used:
  543296 words of font info for 55 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  69i,7n,79p,312b,303s stack positions out of 10000i,1000n,20000p,200000b,200000s
-</usr/local/texlive/2023/texmf-dist/fonts/type1/public/lm/lmbx12.pfb></usr/loc
-al/texlive/2023/texmf-dist/fonts/type1/public/lm/lmex10.pfb></usr/local/texlive
-/2023/texmf-dist/fonts/type1/public/lm/lmmi12.pfb></usr/local/texlive/2023/texm
-f-dist/fonts/type1/public/lm/lmr12.pfb></usr/local/texlive/2023/texmf-dist/font
-s/type1/public/lm/lmr17.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/pub
-lic/lm/lmsy10.pfb>
-Output written on documents.pdf (2 pages, 510294 bytes).
+</usr/
+local/texlive/2023/texmf-dist/fonts/type1/public/lm/lmbx12.pfb></usr/local/texl
+ive/2023/texmf-dist/fonts/type1/public/lm/lmex10.pfb></usr/local/texlive/2023/t
+exmf-dist/fonts/type1/public/lm/lmmi12.pfb></usr/local/texlive/2023/texmf-dist/
+fonts/type1/public/lm/lmr12.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1
+/public/lm/lmr17.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/lm/
+lmsy10.pfb>
+Output written on documents.pdf (2 pages, 509643 bytes).
 PDF statistics:
  48 PDF objects out of 1000 (max. 8388607)
  29 compressed objects within 1 object stream
