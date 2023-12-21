@@ -70,7 +70,8 @@ def generate_summary_csv(features_folder, summary_csv):
             features[video]["hind_left_luminance"][
                 features[video]["standing_on_two_paws"]
             ]
-            / features[video]["hind_right_luminance"][
+        ) / np.nanmean(
+            features[video]["hind_right_luminance"][
                 features[video]["standing_on_two_paws"]
             ]
         )
@@ -80,7 +81,8 @@ def generate_summary_csv(features_folder, summary_csv):
             features[video]["hind_right_luminance"][
                 features[video]["standing_on_two_paws"]
             ]
-            / features[video]["hind_left_luminance"][
+        ) / np.nanmean(
+            features[video]["hind_left_luminance"][
                 features[video]["standing_on_two_paws"]
             ]
         )
