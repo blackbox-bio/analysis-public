@@ -27,15 +27,14 @@ def generate_summary_csv(features_folder, summary_csv):
         summary_features[video]["distance_traveled (cm)"] = (
             np.nansum(features[video]["distance_traveled"]) / 512 * 15
         )
-        summary_features[video]["average_hind_paw_luminance_ratio (l/r)"] = np.nanmean(
-            features[video]["average_luminance_ratio"]
-        )
-        summary_features[video]["average_hind_paw_luminance_ratio (r/l)"] = np.nanmean(
-            1 / features[video]["average_luminance_ratio"]
-        )
-        summary_features[video]["average_background_luminance"] = np.nanmean(
-            features[video]["background_luminance"]
-        )
+
+        # paw luminance
+        # summary_features[video]["average_background_luminance"] = np.nanmean(
+        #     features[video]["background_luminance"]
+        # )
+        summary_features[video][
+            "standing_on_two_hind_paws (ratio of time)"
+        ] = np.nanmean(features[video]["standing_on_two_paws"])
         summary_features[video]["average_hind_left_luminance"] = np.nanmean(
             features[video]["hind_left_luminance"]
         )
@@ -48,6 +47,16 @@ def generate_summary_csv(features_folder, summary_csv):
         summary_features[video]["average_front_right_luminance"] = np.nanmean(
             features[video]["front_right_luminance"]
         )
+
+        # paw luminance ratios
+        summary_features[video]["average_hind_paw_luminance_ratio (l/r)"] = (
+            summary_features[video]["average_hind_left_luminance"]
+            / summary_features[video]["average_hind_right_luminance"]
+        )
+        summary_features[video]["average_hind_paw_luminance_ratio (r/l)"] = (
+            summary_features[video]["average_hind_right_luminance"]
+            / summary_features[video]["average_hind_left_luminance"]
+        )
         summary_features[video]["average_front_to_hind_paw_luminance_ratio"] = (
             summary_features[video]["average_front_left_luminance"]
             + summary_features[video]["average_front_right_luminance"]
@@ -55,6 +64,28 @@ def generate_summary_csv(features_folder, summary_csv):
             summary_features[video]["average_hind_left_luminance"]
             + summary_features[video]["average_hind_right_luminance"]
         )
+        summary_features[video][
+            "average_standing_hind_paw_luminance_ratio (l/r)"
+        ] = np.nanmean(
+            features[video]["hind_left_luminance"][
+                features[video]["standing_on_two_paws"]
+            ]
+            / features[video]["hind_right_luminance"][
+                features[video]["standing_on_two_paws"]
+            ]
+        )
+        summary_features[video][
+            "average_standing_hind_paw_luminance_ratio (r/l)"
+        ] = np.nanmean(
+            features[video]["hind_right_luminance"][
+                features[video]["standing_on_two_paws"]
+            ]
+            / features[video]["hind_left_luminance"][
+                features[video]["standing_on_two_paws"]
+            ]
+        )
+
+        # paw usage
         summary_features[video]["hind_left_usage (ratio of time)"] = np.nanmean(
             features[video]["hind_left_luminance"]
             > np.percentile(features[video]["background_luminance"], 95)

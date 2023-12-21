@@ -48,7 +48,9 @@ def four_point_transform(image, tx, ty, cx, cy, wid, length):
         length, the length of the to-be-cropped portion
 
     output:
-        warped: the cropped portion in the size of (wid, length), mouse will be centered by tailbase, aligned by the direction from tailbase to centroid
+        warped: the cropped portion in the size of (wid, length),
+        mouse will be centered by tailbase,
+        aligned by the direction from tailbase to centroid
 
     """
     T = np.array([tx, ty])
@@ -83,6 +85,13 @@ def four_point_transform(image, tx, ty, cx, cy, wid, length):
     warped = cv2.warpPerspective(image, M, (wid, length))
 
     return warped
+
+
+def denoise(luminance, noise):
+    """Take a luminance signal and remove noise from it"""
+    luminance = luminance - noise
+    luminance[luminance < 0] = 0.0
+    return luminance
 
 
 def cal_paw_luminance(label, cap, size=22):
@@ -157,12 +166,18 @@ def cal_paw_luminance(label, cap, size=22):
     front_left = np.nan_to_num(front_left, nan=front_left_mean)
     front_right = np.nan_to_num(front_right, nan=front_right_mean)
 
+    hind_left = denoise(hind_left, background_luminance)
+    hind_right = denoise(hind_right, background_luminance)
+    front_left = denoise(front_left, background_luminance)
+    front_right = denoise(front_right, background_luminance)
+
     return hind_left, hind_right, front_left, front_right, background_luminance
 
 
 def scale_ftir(hind_left, hind_right):
     """helper function for doing min 95-quntile scaler
-    for individual recording, pool left paw and right paw ftir readings and find min and 95 percentile; then use those values to scale the readings"""
+    for individual recording, pool left paw and right paw ftir readings and find min and 95 percentile;
+    then use those values to scale the readings"""
 
     left_paw = np.array(hind_left)
     right_paw = np.array(hind_right)
@@ -181,3 +196,11 @@ def scale_ftir(hind_left, hind_right):
     right_paw = np.nan_to_num(right_paw, nan=right_paw_mean)
 
     return (left_paw, right_paw)
+
+
+def cal_stand_on_two_paws(front_left, front_right, threshold=0.05):
+    """helper function for calculating when both of the front paws are off the ground,
+    which is quantified as the average luminance of the two front paws is below a threshold.
+    return a one-hot vector for when the animal is standing on two hind paws"""
+
+    return ((front_left < threshold) * (front_right < threshold)) == 1

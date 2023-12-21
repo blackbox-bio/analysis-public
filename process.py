@@ -62,6 +62,9 @@ def process_video(video, exp_folder, output_folder):
         (features["hind_left_luminance_scaled"] + 1e-4)
         / (features["hind_right_luminance_scaled"] + 1e-4)
     )
+
+    # calculate when the animal is standing on two hind paws
+    features["standing_on_two_paws"] = cal_stand_on_two_paws(front_left, front_right)
     # -------------------------------------------------------------
 
     # save extracted features
