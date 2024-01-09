@@ -98,6 +98,8 @@ def main():
     # Iterate over all recordings in the folder
 
     for file_name in os.listdir(experiment_folder):
+        if file_name.startswith("."):  # skip hidden files
+            continue
         file_path = os.path.join(experiment_folder, file_name)
         if not file_name.lower().endswith("trans.avi"):
             continue
