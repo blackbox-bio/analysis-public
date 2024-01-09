@@ -8,7 +8,7 @@ from tkinter import filedialog
 
 
 # Set the desired size
-resize_dim = 1024
+resize_dim = 512
 # set the video codec
 fourcc_body = cv2.VideoWriter_fourcc("F", "M", "P", "4")
 fourcc_ftir = cv2.VideoWriter_fourcc("F", "F", "V", "1")
@@ -45,12 +45,12 @@ def process_chamber(file_path):
     frame_count = min(body_frame_count, ftir_frame_count)
 
     # create a new video writer for each chamber
-    body_file_name = f"{file_name[:-9]}_body.avi"
+    body_file_name = f"{file_name[:-9]}512_body.avi"
     body_file_path = os.path.join(output_folder, body_file_name)
     body_video_writer = cv2.VideoWriter(
         body_file_path, fourcc_body, fps, (resize_dim, resize_dim)
     )
-    ftir_file_name = f"{file_name[:-9]}_ftir.avi"
+    ftir_file_name = f"{file_name[:-9]}512_ftir.avi"
     ftir_file_path = os.path.join(output_folder, ftir_file_name)
     ftir_video_writer = cv2.VideoWriter(
         ftir_file_path, fourcc_ftir, fps, (resize_dim, resize_dim)
