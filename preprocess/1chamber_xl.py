@@ -10,7 +10,7 @@ from tkinter import filedialog
 # Set the desired size
 resize_dim = 1024
 # set the video codec
-fourcc_body = cv2.VideoWriter_fourcc("F", "M", "P", "4")
+fourcc_body = cv2.VideoWriter_fourcc("F", "F", "V", "1")
 fourcc_ftir = cv2.VideoWriter_fourcc("F", "F", "V", "1")
 
 
