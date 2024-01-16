@@ -24,8 +24,8 @@ def generate_summary_csv(features_folder, summary_csv):
         summary_features[video]["recording_time (min)"] = (
             features[video]["recording_time"] / 60
         )
-        summary_features[video]["distance_traveled (cm)"] = (
-            np.nansum(features[video]["distance_traveled"]) / 512 * 15
+        summary_features[video]["distance_traveled (pixel)"] = np.nansum(
+            features[video]["distance_traveled"]
         )
 
         # paw luminance
