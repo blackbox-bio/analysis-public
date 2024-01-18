@@ -1,6 +1,4 @@
 import os
-import tkinter as tk
-from tkinter import filedialog
 import deeplabcut
 
 dlc_config_path = r'D:\DLC\blackbox_dlc_deployment\config.yaml'
@@ -85,4 +83,6 @@ def main():
 
 
 if __name__ == '__main__':
+    import tkinter as tk
+    from tkinter import filedialog
     main()
