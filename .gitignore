@@ -8,3 +8,8 @@ documents/*
 __pycache__/
 *.py[cod]
 *$py.class
+
+# nixos env stuff
+/.direnv
+/.hack
+/.venv

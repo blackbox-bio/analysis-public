@@ -6,21 +6,18 @@ dlc_postfix = "DLC_resnet50_arcteryx500Nov4shuffle1_350000"
 def process_video_wrapper(video, exp_folder, features_folder):
     return process_video(video, exp_folder, features_folder)
 
-
-def process_video(video, exp_folder, output_folder):
-
-    print(f"Processing {video}...")
-
-    dlc_path = os.path.join(
-        exp_folder, "videos", video + "_body" + dlc_postfix + "_filtered.h5"
-    )
-
+# Extract features from a video
+#
+# THIS IS AN API ENTRYPOINT! If the signature is modified, ensure api.py matches!
+# The body of this function can change without affecting the API.
+def extract_features(name, ftir_path, tracking_path, dest_path):
     # create a dictionary to store the extracted features
     features = {}
 
     # read DLC tracking
-    df = pd.read_hdf(dlc_path)
-    label = df[dlc_postfix]
+    df = pd.read_hdf(tracking_path)
+    model_id = df.columns[0][0]
+    label = df[model_id]
 
     # calculate distance traveled
     features["distance_traveled"] = np.nansum(cal_distance_(label)).reshape(-1, 1)
@@ -28,7 +25,7 @@ def process_video(video, exp_folder, output_folder):
     # ----calculate paw luminance, average paw luminance ratio, and paw luminance log-ratio----
     # read ftir video
     ftir_video = cv2.VideoCapture(
-        os.path.join(exp_folder, "videos", f"{video}_ftir.avi")
+        ftir_path
     )
     fps = int(ftir_video.get(cv2.CAP_PROP_FPS))
     frame_count = int(ftir_video.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -68,7 +65,21 @@ def process_video(video, exp_folder, output_folder):
     # -------------------------------------------------------------
 
     # save extracted features
-    with h5py.File(os.path.join(output_folder, f"{video}.h5"), "w") as hdf:
-        video_data = hdf.create_group(video)
+    with h5py.File(dest_path, "w") as hdf:
+        video_data = hdf.create_group(name)
         for key in features.keys():
             video_data.create_dataset(key, data=features[key])
+
+def process_video(video, exp_folder, output_folder):
+
+    print(f"Processing {video}...")
+    
+    ftir_path = os.path.join(exp_folder, "videos", f"{video}_ftir.avi")
+    dlc_path = os.path.join(
+        exp_folder, "videos", video + "_body" + dlc_postfix + "_filtered.h5"
+    )
+    dest_path = os.path.join(output_folder, f"{video}.h5")
+
+    extract_features(video, ftir_path, dlc_path, dest_path)
+
+    

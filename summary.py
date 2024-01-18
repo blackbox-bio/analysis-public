@@ -2,7 +2,10 @@ from typing import Dict, Any
 
 from utils import *
 
-
+# Generate a CSV containing a summary of all features extracted from all videos in the features folder
+#
+# THIS IS AN API ENTRYPOINT! If the signature is modified, ensure api.py matches!
+# The body of this function can change without affecting the API.
 def generate_summary_csv(features_folder, summary_csv):
     """
     Generate summary csv from the processed videos
