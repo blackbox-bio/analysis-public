@@ -4,12 +4,16 @@ from typing import TypedDict
 import json
 
 # API functions
-def deeplabcut(args: dict):
+class DeepLabCutArgs(TypedDict):
+    config_path: str
+    videos: list[str]
+
+def deeplabcut(args: DeepLabCutArgs):
     # only import code that depends on deeplabcut if we're actually going to use it
     from dlc_runner import run_deeplabcut
 
-    config_path: str = args['config_path']
-    videos: list[str] = args['videos']
+    config_path = args['config_path']
+    videos = args['videos']
 
     run_deeplabcut(config_path, videos)
 
@@ -19,10 +23,13 @@ class Extraction(TypedDict):
     tracking_path: str
     dest_path: str
 
-def features(args: dict):
+class Extractions(TypedDict):
+    extractions: list[Extraction]
+
+def features(args: Extractions):
     from process import extract_features
 
-    extractions: list[Extraction] = args['extractions']
+    extractions = args['extractions']
 
     for extraction in extractions:
         extract_features(
@@ -32,11 +39,15 @@ def features(args: dict):
             extraction['dest_path']
         )
 
-def summary(args: dict):
+class SummaryArgs(TypedDict):
+    features_dir: str
+    summary_path: str
+
+def summary(args: SummaryArgs):
     from summary import generate_summary_csv
 
-    features_dir: str = args['features_dir']
-    summary_path: str = args['summary_path']
+    features_dir = args['features_dir']
+    summary_path = args['summary_path']
 
     generate_summary_csv(features_dir, summary_path)
 
