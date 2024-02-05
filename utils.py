@@ -10,11 +10,11 @@ from collections import defaultdict
 import cv2
 from scipy.ndimage import gaussian_filter1d
 
-import tkinter as tk
-from tkinter import filedialog
-
 
 def select_folder():
+    import tkinter as tk
+    from tkinter import filedialog
+    
     root = tk.Tk()
     root.withdraw()
 

@@ -1,6 +1,4 @@
 import os
-import tkinter as tk
-from tkinter import filedialog
 import deeplabcut
 
 dlc_config_path = r'D:\DLC\blackbox_dlc_deployment\config.yaml'
@@ -37,6 +35,9 @@ def get_body_videos(directorys):
     return avi_files
 
 # Function to run DeepLabCut on the specified videos
+#
+# THIS IS AN API ENTRYPOINT! If the signature is modified, ensure api.py matches!
+# The body of this function can change without affecting the API.
 def run_deeplabcut(dlc_config_path, body_videos):
     deeplabcut.analyze_videos(dlc_config_path, body_videos, videotype='.avi')
     deeplabcut.filterpredictions(dlc_config_path, body_videos, save_as_csv=False)
@@ -82,4 +83,6 @@ def main():
 
 
 if __name__ == '__main__':
+    import tkinter as tk
+    from tkinter import filedialog
     main()
