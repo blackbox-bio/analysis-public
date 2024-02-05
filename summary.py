@@ -2,23 +2,27 @@ from typing import Dict, Any
 
 from utils import *
 
-# Generate a CSV containing a summary of all features extracted from all videos in the features folder
+# Generate a CSV containing a summary of all features extracted from all recordings selected
 #
 # THIS IS AN API ENTRYPOINT! If the signature is modified, ensure api.py matches!
 # The body of this function can change without affecting the API.
-def generate_summary_csv(features_folder, summary_csv):
+def generate_summary_csv(analysis_folder):
     """
-    Generate summary csv from the processed videos
+    Generate summary csv from the processed recordings
     """
+    recording_list = get_recording_list([analysis_folder])
+    summary_csv = os.path.join(analysis_folder, "summary.csv")
+
     features = defaultdict(dict)
 
     # read features from h5 files
-    for file in tqdm(os.listdir(features_folder)):
-        if ".h5" in file:
-            with h5py.File(os.path.join(features_folder, file), "r") as hdf:
-                for key in hdf.keys():
-                    for subkey in hdf[key].keys():
-                        features[key][subkey] = np.array(hdf[key][subkey])
+    for file in [
+        os.path.join(recording, "features.h5") for recording in recording_list
+    ]:
+        with h5py.File(file, "r") as hdf:
+            for key in hdf.keys():
+                for subkey in hdf[key].keys():
+                    features[key][subkey] = np.array(hdf[key][subkey])
 
     # save summary features
     summary_features: dict[Any, dict[Any, Any]] = {}

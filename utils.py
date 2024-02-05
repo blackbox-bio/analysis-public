@@ -14,7 +14,7 @@ from scipy.ndimage import gaussian_filter1d
 def select_folder():
     import tkinter as tk
     from tkinter import filedialog
-    
+
     root = tk.Tk()
     root.withdraw()
 
@@ -26,6 +26,20 @@ def select_folder():
     )
 
     return folder
+
+
+def get_recording_list(directorys):
+
+    recording_list = []
+
+    for directory in directorys:
+        for root, dirs, files in os.walk(directory):
+            for file in files:
+                # file_path = os.path.join(root, file)
+                if file.endswith("trans_resize.avi"):
+                    recording_list.append(root)
+                    # avi_files.append(os.path.join(root, file))
+    return recording_list
 
 
 def cal_distance_(label, bodypart="tailbase"):

@@ -3,8 +3,9 @@ from utils import *
 dlc_postfix = "DLC_resnet50_arcteryx500Nov4shuffle1_350000"
 
 # Function to process a video with specified arguments
-def process_video_wrapper(video, exp_folder, features_folder):
-    return process_video(video, exp_folder, features_folder)
+def process_recording_wrapper(recording):
+    return process_recording(recording)
+
 
 # Extract features from a video
 #
@@ -24,9 +25,7 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
 
     # ----calculate paw luminance, average paw luminance ratio, and paw luminance log-ratio----
     # read ftir video
-    ftir_video = cv2.VideoCapture(
-        ftir_path
-    )
+    ftir_video = cv2.VideoCapture(ftir_path)
     fps = int(ftir_video.get(cv2.CAP_PROP_FPS))
     frame_count = int(ftir_video.get(cv2.CAP_PROP_FRAME_COUNT))
     recording_time = frame_count / fps
@@ -70,16 +69,18 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
         for key in features.keys():
             video_data.create_dataset(key, data=features[key])
 
-def process_video(video, exp_folder, output_folder):
 
-    print(f"Processing {video}...")
-    
-    ftir_path = os.path.join(exp_folder, "videos", f"{video}_ftir.avi")
-    dlc_path = os.path.join(
-        exp_folder, "videos", video + "_body" + dlc_postfix + "_filtered.h5"
-    )
-    dest_path = os.path.join(output_folder, f"{video}.h5")
+def process_recording(recording):
 
-    extract_features(video, ftir_path, dlc_path, dest_path)
+    print(f"Processing {os.path.basename(recording)}...")
 
-    
+    recording_name = os.path.basename(recording)
+    ftir_path = os.path.join(recording, "ftir_resize.avi")
+
+    dlc_postfix = "DLC_resnet50_arcteryx500Nov4shuffle1_510000"
+    # dlc_path = os.path.join(recording, "trans_resize" + dlc_postfix + ".h5")
+
+    dlc_path = os.path.join(recording, "trans_resize" + dlc_postfix + "_filtered.h5")
+    dest_path = os.path.join(recording, "features.h5")
+
+    extract_features(recording_name, ftir_path, dlc_path, dest_path)
