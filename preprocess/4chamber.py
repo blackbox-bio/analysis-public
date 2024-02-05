@@ -125,6 +125,8 @@ def main():
             file_path = os.path.join(experiment_folder, file_name)
             if not file_name.lower().endswith("trans.avi"):
                 continue
+            if file_name.startswith("."):  # skip hidden files
+                continue
             print("\nstart to split recording: " + file_name[:-10])
 
             futures = [
