@@ -10,6 +10,7 @@ resize_dim = 512
 # set the video codec
 # fourcc = cv2.VideoWriter_fourcc('F', 'M', 'P', '4')
 fourcc = cv2.VideoWriter_fourcc("F", "F", "V", "1")
+# fourcc = cv2.VideoWriter_fourcc("X", "2", "6", "4")
 chambers = [f"chamber_{i}" for i in range(1, 5)]
 coords = {
     "chamber_1": [(0, 0), (1024, 1024)],
@@ -36,9 +37,12 @@ def select_folder():
 def process_chamber(file_path, chamber):
 
     # initialize directory paths
-    experiment_folder = os.path.dirname(file_path)
+    recording_folder = os.path.dirname(file_path)
+    parent_folder = os.path.dirname(recording_folder)
+    analysis_folder = os.path.join(parent_folder, "analysis")
     file_name = os.path.basename(file_path)
-    output_folder = os.path.join(experiment_folder, file_name[:-10] + "_512")
+    output_folder = os.path.join(analysis_folder, file_name[:-10] + chamber)
+    os.makedirs(output_folder, exist_ok=True)
     # open the video capture objects
     cap_body = cv2.VideoCapture(file_path)
     cap_ftir = cv2.VideoCapture(file_path[:-9] + "ftir.avi")
@@ -49,13 +53,13 @@ def process_chamber(file_path, chamber):
     # make sure the frame counts are the same for both videos
     frame_count = min(body_frame_count, ftir_frame_count)
 
-    # create a new video writer for each chamber
-    body_file_name = f"{file_name[:-9]}_{chamber}_body.avi"
+    # create a new video writer for the given chamber
+    body_file_name = "trans_resize.avi"
     body_file_path = os.path.join(output_folder, body_file_name)
     body_video_writer = cv2.VideoWriter(
         body_file_path, fourcc, fps, (resize_dim, resize_dim)
     )
-    ftir_file_name = f"{file_name[:-9]}_{chamber}_ftir.avi"
+    ftir_file_name = "ftir_resize.avi"
     ftir_file_path = os.path.join(output_folder, ftir_file_name)
     ftir_video_writer = cv2.VideoWriter(
         ftir_file_path, fourcc, fps, (resize_dim, resize_dim)
@@ -117,8 +121,6 @@ def main():
                 continue
             print("\nstart to split recording: " + file_name[:-10])
 
-            output_folder = os.path.join(experiment_folder, file_name[:-10] + "_512")
-            os.makedirs(output_folder, exist_ok=True)
             futures = [
                 executor.submit(process_chamber, file_path, chamber)
                 for chamber in chambers
