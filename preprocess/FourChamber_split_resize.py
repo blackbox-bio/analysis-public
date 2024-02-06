@@ -10,8 +10,9 @@ full_dim = 1024
 resize_dim = 512
 # set the video codec
 # fourcc = cv2.VideoWriter_fourcc('F', 'M', 'P', '4')
-fourcc = cv2.VideoWriter_fourcc("F", "F", "V", "1")
-# fourcc = cv2.VideoWriter_fourcc("X", "2", "6", "4")
+# fourcc = cv2.VideoWriter_fourcc("F", "F", "V", "1")
+fourcc = cv2.VideoWriter_fourcc("X", "2", "6", "4")
+
 chambers = [f"chamber_{i}" for i in range(1, 5)]
 coords = {
     "chamber_1": [(0, 0), (1024, 1024)],
@@ -41,12 +42,20 @@ def process_chamber(file_path, chamber, fulres=False):
     recording_folder = os.path.dirname(file_path)
     parent_folder = os.path.dirname(recording_folder)
     analysis_folder = os.path.join(parent_folder, f"{recording_folder}_analysis")
+
+    # get the recording names
     file_name = os.path.basename(file_path)
-    output_folder = os.path.join(analysis_folder, file_name[:-10] + chamber)
+    recording_name = file_name.split("-trans")[0]
+    recording_postfix = file_name.split("-trans")[1]
+    ftir_file_name = recording_name + "-ftir" + recording_postfix
+
+    # create the output folder
+    output_folder = os.path.join(analysis_folder, recording_name + chamber)
     os.makedirs(output_folder, exist_ok=True)
+
     # open the video capture objects
     cap_body = cv2.VideoCapture(file_path)
-    cap_ftir = cv2.VideoCapture(file_path[:-9] + "ftir.avi")
+    cap_ftir = cv2.VideoCapture(os.path.join(recording_folder, ftir_file_name))
     # get the frame count and fps
     fps = int(cap_body.get(cv2.CAP_PROP_FPS))
     body_frame_count = int(cap_body.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -134,7 +143,7 @@ def FourChamber_split_resize(experiment_folder, fulres=False):
     with concurrent.futures.ThreadPoolExecutor() as executor:
         for file_name in os.listdir(experiment_folder):
             file_path = os.path.join(experiment_folder, file_name)
-            if not file_name.lower().endswith("trans.avi"):
+            if "-trans" not in file_name.lower():
                 continue
             if file_name.startswith("."):  # skip hidden files
                 continue
@@ -166,7 +175,7 @@ def main():
     with concurrent.futures.ThreadPoolExecutor() as executor:
         for file_name in os.listdir(experiment_folder):
             file_path = os.path.join(experiment_folder, file_name)
-            if not file_name.lower().endswith("trans.avi"):
+            if "-trans" not in file_name.lower():
                 continue
             if file_name.startswith("."):  # skip hidden files
                 continue
