@@ -3,6 +3,10 @@ from summary import *
 from dlc_runner import *
 import concurrent.futures
 from joblib import Parallel, delayed
+import sys
+
+sys.path.append("./preprocess/")
+from FourChamber_split_resize import *
 
 
 def main():
@@ -12,7 +16,14 @@ def main():
     root.withdraw()
 
     # input the path to the experiment folder
-    analysis_folder = select_folder()
+    experiment_folder = select_folder()
+
+    # split and resize the 4chamber recordings
+    FourChamber_split_resize(experiment_folder, fulres=True)
+
+    experiment_name = os.path.basename(experiment_folder)
+    parent_folder = os.path.dirname(experiment_folder)
+    analysis_folder = os.path.join(parent_folder, f"{experiment_name}_analysis")
 
     # generate the list of recordings to be processed
     recording_list = get_recording_list([analysis_folder])

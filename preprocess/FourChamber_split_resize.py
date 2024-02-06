@@ -6,6 +6,7 @@ import tkinter as tk
 from tkinter import filedialog
 
 # Set the desired size
+full_dim = 1024
 resize_dim = 512
 # set the video codec
 # fourcc = cv2.VideoWriter_fourcc('F', 'M', 'P', '4')
@@ -34,7 +35,7 @@ def select_folder():
     return folder
 
 
-def process_chamber(file_path, chamber):
+def process_chamber(file_path, chamber, fulres=False):
 
     # initialize directory paths
     recording_folder = os.path.dirname(file_path)
@@ -65,6 +66,19 @@ def process_chamber(file_path, chamber):
         ftir_file_path, fourcc, fps, (resize_dim, resize_dim)
     )
 
+    if fulres:
+        # also create new video writers for the full resolution videos
+        body_file_fullres_name = "trans_FullRes.avi"
+        body_file_fullres_path = os.path.join(output_folder, body_file_fullres_name)
+        body_video_fullres_writer = cv2.VideoWriter(
+            body_file_fullres_path, fourcc, fps, (full_dim, full_dim)
+        )
+        ftir_file_fullres_name = "ftir_FullRes.avi"
+        ftir_file_fullres_path = os.path.join(output_folder, ftir_file_fullres_name)
+        ftir_video_fullres_writer = cv2.VideoWriter(
+            ftir_file_fullres_path, fourcc, fps, (full_dim, full_dim)
+        )
+
     # iterate over the frames, crop each frame into the current chamber, and save to the respective video writers
     for i in tqdm(range(frame_count)):
         ret_body, frame_body = cap_body.read()
@@ -93,14 +107,23 @@ def process_chamber(file_path, chamber):
         body_video_writer.write(resized_frame_body)
         ftir_video_writer.write(resized_frame_ftir)
 
+        if fulres:
+            # also write the frame to the full resolution video writers
+            body_video_fullres_writer.write(smaller_frame_body)
+            ftir_video_fullres_writer.write(smaller_frame_ftir)
+
     # Release video writers and video capture objects
     body_video_writer.release()
     ftir_video_writer.release()
     cap_body.release()
     cap_ftir.release()
 
+    if fulres:
+        body_video_fullres_writer.release()
+        ftir_video_fullres_writer.release()
 
-def FourChamber_split_resize(experiment_folder):
+
+def FourChamber_split_resize(experiment_folder, fulres=False):
 
     if not os.path.exists(experiment_folder):
         print("The directory does not exist.")
@@ -118,7 +141,7 @@ def FourChamber_split_resize(experiment_folder):
             print("\nstart to split recording: " + file_name[:-10])
 
             futures = [
-                executor.submit(process_chamber, file_path, chamber)
+                executor.submit(process_chamber, file_path, chamber, fulres)
                 for chamber in chambers
             ]
             concurrent.futures.wait(futures)
@@ -150,7 +173,7 @@ def main():
             print("\nstart to split recording: " + file_name[:-10])
 
             futures = [
-                executor.submit(process_chamber, file_path, chamber)
+                executor.submit(process_chamber, file_path, chamber, False)
                 for chamber in chambers
             ]
             concurrent.futures.wait(futures)
