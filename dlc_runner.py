@@ -40,9 +40,17 @@ def get_recording_list(directorys):
 def run_deeplabcut(dlc_config_path, body_videos):
     deeplabcut.analyze_videos(dlc_config_path, body_videos, videotype=".avi")
     for video in body_videos:
-        # deeplabcut.create_labeled_video(dlc_config_path, [video], videotype=".avi")
         deeplabcut.filterpredictions(dlc_config_path, [video], save_as_csv=False)
-
+        # deeplabcut.create_labeled_video(
+        #     dlc_config_path, [video], videotype=".avi", filtered=True
+        # )
+    deeplabcut.create_labeled_video(
+        dlc_config_path,
+        body_videos,
+        videotype=".avi",
+        filtered=True,
+        draw_skeleton=True,
+    )
     return
 
 
