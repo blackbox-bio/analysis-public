@@ -39,7 +39,7 @@ def process_chamber(file_path, chamber):
     # initialize directory paths
     recording_folder = os.path.dirname(file_path)
     parent_folder = os.path.dirname(recording_folder)
-    analysis_folder = os.path.join(parent_folder, "analysis")
+    analysis_folder = os.path.join(parent_folder, f"{recording_folder}_analysis")
     file_name = os.path.basename(file_path)
     output_folder = os.path.join(analysis_folder, file_name[:-10] + chamber)
     os.makedirs(output_folder, exist_ok=True)
@@ -98,6 +98,32 @@ def process_chamber(file_path, chamber):
     ftir_video_writer.release()
     cap_body.release()
     cap_ftir.release()
+
+
+def FourChamber_split_resize(experiment_folder):
+
+    if not os.path.exists(experiment_folder):
+        print("The directory does not exist.")
+        return
+
+    # Iterate over all recordings in the folder
+    # Using multithreading to speed up the process
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        for file_name in os.listdir(experiment_folder):
+            file_path = os.path.join(experiment_folder, file_name)
+            if not file_name.lower().endswith("trans.avi"):
+                continue
+            if file_name.startswith("."):  # skip hidden files
+                continue
+            print("\nstart to split recording: " + file_name[:-10])
+
+            futures = [
+                executor.submit(process_chamber, file_path, chamber)
+                for chamber in chambers
+            ]
+            concurrent.futures.wait(futures)
+
+        return
 
 
 def main():

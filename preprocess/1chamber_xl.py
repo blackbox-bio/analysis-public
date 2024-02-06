@@ -33,7 +33,7 @@ def process_chamber(file_path):
     # initialize directory paths
     recording_folder = os.path.dirname(file_path)
     parent_folder = os.path.dirname(recording_folder)
-    analysis_folder = os.path.join(parent_folder, "analysis")
+    analysis_folder = os.path.join(parent_folder, f"{recording_folder}_analysis")
     file_name = os.path.basename(file_path)
     output_folder = os.path.join(analysis_folder, file_name[:-10])
     os.makedirs(output_folder, exist_ok=True)
