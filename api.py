@@ -1,12 +1,12 @@
 import argparse
 from enum import Enum
-from typing import TypedDict
+from typing import TypedDict, List
 import json
 
 # API functions
 class DeepLabCutArgs(TypedDict):
     config_path: str
-    videos: list[str]
+    videos: List[str]
 
 def deeplabcut(args: DeepLabCutArgs):
     # only import code that depends on deeplabcut if we're actually going to use it
@@ -24,7 +24,7 @@ class Extraction(TypedDict):
     dest_path: str
 
 class Extractions(TypedDict):
-    extractions: list[Extraction]
+    extractions: List[Extraction]
 
 def features(args: Extractions):
     from process import extract_features
