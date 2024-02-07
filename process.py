@@ -21,7 +21,7 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
     label = df[model_id]
 
     # calculate distance traveled
-    features["distance_traveled"] = np.nansum(cal_distance_(label)).reshape(-1, 1)
+    features["distance_delta"] = cal_distance_(label).reshape(-1)
 
     # ----calculate paw luminance, average paw luminance ratio, and paw luminance log-ratio----
     # read ftir video
@@ -31,6 +31,8 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
     recording_time = frame_count / fps
 
     features["recording_time"] = np.array(recording_time)
+    features["fps"] = np.array(fps)
+    features["frame_count"] = np.array(frame_count)
     # calculate paw luminance
     (
         hind_left,

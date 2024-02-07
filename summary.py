@@ -34,7 +34,7 @@ def generate_summary_csv(analysis_folder):
         )
         # 2. distance traveled
         summary_features[video]["distance_traveled (pixel)"] = np.nansum(
-            features[video]["distance_traveled"]
+            features[video]["distance_delta"]
         )
 
         # summary_features[video]["average_background_luminance"] = np.nanmean(
@@ -120,23 +120,3 @@ def generate_summary_csv(analysis_folder):
     # Save DataFrame to CSV with specified precision
     df.to_csv(summary_csv, float_format="%.2f")
     return
-
-
-# # save summary features
-#     summary_features = {
-#         "video_name": video,
-#         "recording_time (min)": recording_time / 60,
-#         "distance_traveled (cm)": np.nansum(features["distance_traveled"]) / 1024 * 15,
-#         "average_hind_paw_luminance_ratio (l/r)": np.nanmean(
-#             features["average_luminance_ratio"]
-#         ),
-#         "average_hind_paw_luminance_ratio (r/l)": np.nanmean(
-#             1 / features["average_luminance_ratio"]
-#         ),
-#     }
-#     df = pd.DataFrame.from_dict([summary_features])
-#     summary_csv = os.path.join(output_folder, "summary.csv")
-#
-#     # Save DataFrame to CSV with specified precision
-#     df.to_csv(summary_csv, index=False, float_format="%.2f")
-#     return
