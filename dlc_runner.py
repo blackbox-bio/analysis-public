@@ -3,7 +3,7 @@ import deeplabcut
 
 dlc_config_path = r"/Users/zihealexzhang/work_local/blackbox_data/arcteryx500-alex-2023-11-04/config.yaml"
 # dlc_config_path = r"D:\DLC\blackbox_dlc_deployment\config.yaml"
-# /Users/zihealexzhang/work_local/blackbox_data/arcteryx500-alex-2023-11-04
+
 selected_folders = []
 
 
