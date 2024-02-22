@@ -39,17 +39,29 @@ def features(args: Extractions):
             extraction['dest_path']
         )
 
-class SummaryArgs(TypedDict):
+class SummaryArgsV1(TypedDict):
     features_dir: str
     summary_path: str
 
-def summary(args: SummaryArgs):
-    from summary import generate_summary_csv
+def summary_v1(args: SummaryArgsV1):
+    from summary import generate_summary_v1
 
     features_dir = args['features_dir']
     summary_path = args['summary_path']
 
-    generate_summary_csv(features_dir, summary_path)
+    generate_summary_v1(features_dir, summary_path)
+
+class SummaryArgsV2(TypedDict):
+    features_files: List[str]
+    summary_path: str
+
+def summary_v2(args: SummaryArgsV2):
+    from summary import generate_summary_v2
+
+    features_files = args['features_files']
+    summary_path = args['summary_path']
+
+    generate_summary_v2(features_files, summary_path)
 
 # Palmreader <-> Analysis API
 # The following code is relied upon by the Palmreader software. Take special care when modifying it.
@@ -69,6 +81,8 @@ def main():
     # a JSON literal that will be parsed into function arguments for the given function
     # the structure of this literal depends on the function being called
     p.add_argument('--args', type=str, required=True, dest='args')
+    # the version of the API to use. defaults to 1 for backwards compatibility
+    p.add_argument('--api-version', type=int, default=1, dest='api_version')
 
     args = p.parse_args()
 
@@ -78,7 +92,10 @@ def main():
     elif args.function == ApiFunction.FEATURES:
         features(api_args)
     elif args.function == ApiFunction.SUMMARY:
-        summary(api_args)
+        if args.api_version == 1:
+            summary_v1(api_args)
+        else:
+            summary_v2(api_args)
 
 if __name__ == '__main__':
     main()
