@@ -135,6 +135,7 @@ def cal_paw_luminance(label, cap, size=22):
     # loop infinitely because we cannot trust `CAP_PROP_FRAME_COUNT`
     # https://stackoverflow.com/questions/31472155/python-opencv-cv2-cv-cv-cap-prop-frame-count-get-wrong-numbers
     # for i in tqdm(range(500)):
+    i = 0
     while True:
         ret, frame = cap.read()  # Read the next frame
 
@@ -170,6 +171,8 @@ def cal_paw_luminance(label, cap, size=22):
 
         # calculate background luminance
         background_luminance.append(np.nanmean(frame))
+
+        i += 1
 
     hind_right = np.array(hind_right)
     hind_left = np.array(hind_left)
