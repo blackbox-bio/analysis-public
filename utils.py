@@ -107,7 +107,6 @@ def denoise(luminance, noise):
     luminance[luminance < 0] = 0.0
     return luminance
 
-
 def cal_paw_luminance(label, cap, size=22):
     """
     helper function for extracting the paw luminance signals of both hind paws from the ftir video
@@ -132,9 +131,16 @@ def cal_paw_luminance(label, cap, size=22):
     front_left = []
     background_luminance = []
 
+    # loop infinitely because we cannot trust `CAP_PROP_FRAME_COUNT`
+    # https://stackoverflow.com/questions/31472155/python-opencv-cv2-cv-cv-cap-prop-frame-count-get-wrong-numbers
     # for i in tqdm(range(500)):
-    for i in tqdm(range(num_of_frames)):
-        frame = cap.read()[1]  # Read the next frame
+    i = 0
+    while True:
+        ret, frame = cap.read()  # Read the next frame
+
+        if not ret:
+            break
+
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # Convert to grayscale
 
         # calculate the luminance of the four paws
@@ -165,6 +171,8 @@ def cal_paw_luminance(label, cap, size=22):
         # calculate background luminance
         background_luminance.append(np.nanmean(frame))
 
+        i += 1
+
     hind_right = np.array(hind_right)
     hind_left = np.array(hind_left)
     front_right = np.array(front_right)
@@ -185,7 +193,7 @@ def cal_paw_luminance(label, cap, size=22):
     front_left = denoise(front_left, background_luminance)
     front_right = denoise(front_right, background_luminance)
 
-    return hind_left, hind_right, front_left, front_right, background_luminance
+    return hind_left, hind_right, front_left, front_right, background_luminance, i
 
 
 def scale_ftir(hind_left, hind_right):

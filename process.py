@@ -26,13 +26,6 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
     # ----calculate paw luminance, average paw luminance ratio, and paw luminance log-ratio----
     # read ftir video
     ftir_video = cv2.VideoCapture(ftir_path)
-    fps = int(ftir_video.get(cv2.CAP_PROP_FPS))
-    frame_count = int(ftir_video.get(cv2.CAP_PROP_FRAME_COUNT))
-    recording_time = frame_count / fps
-
-    features["recording_time"] = np.array(recording_time)
-    features["fps"] = np.array(fps)
-    features["frame_count"] = np.array(frame_count)
     # calculate paw luminance
     (
         hind_left,
@@ -40,7 +33,15 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
         front_left,
         front_right,
         background_luminance,
+        frame_count
     ) = cal_paw_luminance(label, ftir_video, size=22)
+
+    fps = int(ftir_video.get(cv2.CAP_PROP_FPS))
+    recording_time = frame_count / fps
+
+    features["recording_time"] = np.array(recording_time)
+    features["fps"] = np.array(fps)
+    features["frame_count"] = np.array(frame_count)
 
     features["hind_left_luminance"] = hind_left
     features["hind_right_luminance"] = hind_right
