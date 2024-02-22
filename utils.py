@@ -107,7 +107,6 @@ def denoise(luminance, noise):
     luminance[luminance < 0] = 0.0
     return luminance
 
-
 def cal_paw_luminance(label, cap, size=22):
     """
     helper function for extracting the paw luminance signals of both hind paws from the ftir video
@@ -194,7 +193,7 @@ def cal_paw_luminance(label, cap, size=22):
     front_left = denoise(front_left, background_luminance)
     front_right = denoise(front_right, background_luminance)
 
-    return hind_left, hind_right, front_left, front_right, background_luminance
+    return hind_left, hind_right, front_left, front_right, background_luminance, i
 
 
 def scale_ftir(hind_left, hind_right):
