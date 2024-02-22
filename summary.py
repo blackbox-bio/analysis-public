@@ -1,24 +1,30 @@
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from utils import *
 
-# Generate a CSV containing a summary of all features extracted from all recordings selected
-#
-# THIS IS AN API ENTRYPOINT! If the signature is modified, ensure api.py matches!
-# The body of this function can change without affecting the API.
-def generate_summary_csv(analysis_folder):
+def generate_summary_v1(features_folder: str, summary_dest: str):
     """
-    Generate summary csv from the processed recordings
+    v1 API expects all features to be in a single folder. this function collects all .h5 files in the given folder and uses them
     """
-    recording_list = get_recording_list([analysis_folder])
-    summary_csv = os.path.join(analysis_folder, "summary.csv")
+    features_files = []
 
+    for file in os.listdir(features_folder):
+        if file.endswith(".h5"):
+            features_files.append(os.path.join(features_folder, file))
+
+    generate_summary_generic(features_files, summary_dest)
+
+def generate_summary_v2(features_files: List[str], summary_dest: str):
+    """
+    v2 API expects a list of .h5 files. this function uses them directly
+    """
+    generate_summary_generic(features_files, summary_dest)
+
+def generate_summary_generic(features_files: List[str], summary_dest: str):
     features = defaultdict(dict)
 
     # read features from h5 files
-    for file in [
-        os.path.join(recording, "features.h5") for recording in recording_list
-    ]:
+    for file in features_files:
         with h5py.File(file, "r") as hdf:
             for key in hdf.keys():
                 for subkey in hdf[key].keys():
@@ -118,5 +124,16 @@ def generate_summary_csv(analysis_folder):
     df = pd.DataFrame.from_dict(summary_features, orient="index")
 
     # Save DataFrame to CSV with specified precision
-    df.to_csv(summary_csv, float_format="%.2f")
+    df.to_csv(summary_dest, float_format="%.2f")
     return
+
+def generate_summary_csv(analysis_folder):
+    """
+    Generate summary csv from the processed recordings
+    """
+    recording_list = get_recording_list([analysis_folder])
+    summary_csv = os.path.join(analysis_folder, "summary.csv")
+
+    features_files = [os.path.join(recording, "features.h5") for recording in recording_list]
+
+    generate_summary_generic(features_files, summary_csv)
