@@ -132,9 +132,15 @@ def cal_paw_luminance(label, cap, size=22):
     front_left = []
     background_luminance = []
 
+    # loop infinitely because we cannot trust `CAP_PROP_FRAME_COUNT`
+    # https://stackoverflow.com/questions/31472155/python-opencv-cv2-cv-cv-cap-prop-frame-count-get-wrong-numbers
     # for i in tqdm(range(500)):
-    for i in tqdm(range(num_of_frames)):
-        frame = cap.read()[1]  # Read the next frame
+    while True:
+        ret, frame = cap.read()  # Read the next frame
+
+        if not ret:
+            break
+
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # Convert to grayscale
 
         # calculate the luminance of the four paws
