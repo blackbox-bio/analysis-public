@@ -2,24 +2,6 @@ from typing import Dict, Any, List
 
 from utils import *
 
-def generate_summary_v1(features_folder: str, summary_dest: str):
-    """
-    v1 API expects all features to be in a single folder. this function collects all .h5 files in the given folder and uses them
-    """
-    features_files = []
-
-    for file in os.listdir(features_folder):
-        if file.endswith(".h5"):
-            features_files.append(os.path.join(features_folder, file))
-
-    generate_summary_generic(features_files, summary_dest)
-
-def generate_summary_v2(features_files: List[str], summary_dest: str):
-    """
-    v2 API expects a list of .h5 files. this function uses them directly
-    """
-    generate_summary_generic(features_files, summary_dest)
-
 def generate_summary_generic(features_files: List[str], summary_dest: str):
     features = defaultdict(dict)
 
