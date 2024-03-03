@@ -2,7 +2,10 @@ from typing import Dict, Any
 
 from utils import *
 
-
+# Generate a CSV containing a summary of all features extracted from all videos in the features folder
+#
+# THIS IS AN API ENTRYPOINT! If the signature is modified, ensure api.py matches!
+# The body of this function can change without affecting the API.
 def generate_summary_csv(features_folder, summary_csv):
     """
     Generate summary csv from the processed videos
@@ -21,20 +24,23 @@ def generate_summary_csv(features_folder, summary_csv):
     summary_features: dict[Any, dict[Any, Any]] = {}
     for video in features.keys():
         summary_features[video] = {}
+        # 1. recording time
         summary_features[video]["recording_time (min)"] = (
             features[video]["recording_time"] / 60
         )
+        # 2. distance traveled
         summary_features[video]["distance_traveled (pixel)"] = np.nansum(
             features[video]["distance_traveled"]
         )
 
-        # paw luminance
         # summary_features[video]["average_background_luminance"] = np.nanmean(
         #     features[video]["background_luminance"]
         # )
+        # 3. standing on two hind paws
         summary_features[video][
             "standing_on_two_hind_paws (ratio of time)"
         ] = np.nanmean(features[video]["standing_on_two_paws"])
+        # 4-7. paw luminance
         summary_features[video]["average_hind_left_luminance"] = np.nanmean(
             features[video]["hind_left_luminance"]
         )
@@ -48,7 +54,7 @@ def generate_summary_csv(features_folder, summary_csv):
             features[video]["front_right_luminance"]
         )
 
-        # paw luminance ratios
+        # 8-12. paw luminance ratios
         summary_features[video]["average_hind_paw_luminance_ratio (l/r)"] = (
             summary_features[video]["average_hind_left_luminance"]
             / summary_features[video]["average_hind_right_luminance"]
@@ -87,7 +93,7 @@ def generate_summary_csv(features_folder, summary_csv):
             ]
         )
 
-        # paw usage
+        # 13-16. paw usage
         summary_features[video]["hind_left_usage (ratio of time)"] = np.nanmean(
             features[video]["hind_left_luminance"]
             > np.percentile(features[video]["background_luminance"], 95)
