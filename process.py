@@ -33,7 +33,7 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
         front_left,
         front_right,
         background_luminance,
-        frame_count
+        frame_count,
     ) = cal_paw_luminance(label, ftir_video, size=22)
 
     fps = int(ftir_video.get(cv2.CAP_PROP_FPS))
@@ -80,7 +80,7 @@ def process_recording(recording):
     recording_name = os.path.basename(recording)
     ftir_path = os.path.join(recording, "ftir_resize.avi")
 
-    dlc_postfix = "DLC_resnet50_arcteryx500Nov4shuffle1_510000"
+    dlc_postfix = "DLC_resnet50_arcteryx500Nov4shuffle1_350000"
     # dlc_path = os.path.join(recording, "trans_resize" + dlc_postfix + ".h5")
 
     dlc_path = os.path.join(recording, "trans_resize" + dlc_postfix + "_filtered.h5")
