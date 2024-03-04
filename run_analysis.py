@@ -19,7 +19,7 @@ def main():
     experiment_folder = select_folder()
 
     # split and resize the 4chamber recordings
-    FourChamber_split_resize(experiment_folder, fulres=True)
+    # FourChamber_split_resize(experiment_folder, fulres=True)
 
     experiment_name = os.path.basename(experiment_folder)
     parent_folder = os.path.dirname(experiment_folder)
