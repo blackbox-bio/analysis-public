@@ -33,7 +33,7 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
         front_left,
         front_right,
         background_luminance,
-        frame_count
+        frame_count,
     ) = cal_paw_luminance(label, ftir_video, size=22)
 
     fps = int(ftir_video.get(cv2.CAP_PROP_FPS))
@@ -49,21 +49,21 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
     features["front_right_luminance"] = front_right
     features["background_luminance"] = background_luminance
 
-    hind_left_scaled, hind_right_scaled = scale_ftir(hind_left, hind_right)
-    features["hind_left_luminance_scaled"] = hind_left_scaled
-    features["hind_right_luminance_scaled"] = hind_right_scaled
-
-    # calculate luminance logratio
-    features["average_luminance_ratio"] = np.nansum(
-        features["hind_left_luminance"]
-    ) / np.nansum(features["hind_right_luminance"]).reshape(-1, 1)
-    features["luminance_logratio"] = np.log(
-        (features["hind_left_luminance_scaled"] + 1e-4)
-        / (features["hind_right_luminance_scaled"] + 1e-4)
-    )
+    # hind_left_scaled, hind_right_scaled = scale_ftir(hind_left, hind_right)
+    # features["hind_left_luminance_scaled"] = hind_left_scaled
+    # features["hind_right_luminance_scaled"] = hind_right_scaled
+    #
+    # # calculate luminance logratio
+    # features["average_luminance_ratio"] = np.nansum(
+    #     features["hind_left_luminance"]
+    # ) / np.nansum(features["hind_right_luminance"]).reshape(-1, 1)
+    # features["luminance_logratio"] = np.log(
+    #     (features["hind_left_luminance_scaled"] + 1e-4)
+    #     / (features["hind_right_luminance_scaled"] + 1e-4)
+    # )
 
     # calculate when the animal is standing on two hind paws
-    features["standing_on_two_paws"] = cal_stand_on_two_paws(front_left, front_right)
+    features["both_front_paws_lifted"] = both_front_paws_lifted(front_left, front_right)
     # -------------------------------------------------------------
 
     # save extracted features
@@ -80,7 +80,7 @@ def process_recording(recording):
     recording_name = os.path.basename(recording)
     ftir_path = os.path.join(recording, "ftir_resize.avi")
 
-    dlc_postfix = "DLC_resnet50_arcteryx500Nov4shuffle1_510000"
+    dlc_postfix = "DLC_resnet50_arcteryx500Nov4shuffle1_350000"
     # dlc_path = os.path.join(recording, "trans_resize" + dlc_postfix + ".h5")
 
     dlc_path = os.path.join(recording, "trans_resize" + dlc_postfix + "_filtered.h5")

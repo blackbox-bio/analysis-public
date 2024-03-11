@@ -52,6 +52,18 @@ def cal_distance_(label, bodypart="tailbase"):
     return d_location
 
 
+# def cal_body_mean_movement(label):
+#     """using DLC tracking of several main body parts to calculate mean body movement
+#        first calculate the frame to frame speed for each body part, then average them
+#        return body_mean_movement"""
+#     bodyparts = ['tailbase', 'centroid', 'neck', 'snout', 'hlpaw', 'hrpaw', 'flpaw', 'frpaw']
+#     place_holder = {}
+#     for body in bodyparts:
+#         place_holder[body] = cal_distance_(label, body)
+#
+#     return np.mean(np.vstack([place_holder[body] for body in bodyparts]).T, axis=1, keepdims=True)
+
+
 def four_point_transform(image, tx, ty, cx, cy, wid, length):
     """
     helper function for center and align a single video frame
@@ -106,6 +118,7 @@ def denoise(luminance, noise):
     luminance = luminance - noise
     luminance[luminance < 0] = 0.0
     return luminance
+
 
 def cal_paw_luminance(label, cap, size=22):
     """
@@ -220,7 +233,7 @@ def scale_ftir(hind_left, hind_right):
     return (left_paw, right_paw)
 
 
-def cal_stand_on_two_paws(front_left, front_right, threshold=0.05):
+def both_front_paws_lifted(front_left, front_right, threshold=1e-4):
     """helper function for calculating when both of the front paws are off the ground,
     which is quantified as the average luminance of the two front paws is below a threshold.
     return a one-hot vector for when the animal is standing on two hind paws"""
