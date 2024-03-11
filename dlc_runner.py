@@ -37,13 +37,24 @@ def get_recording_list(directorys):
 #
 # THIS IS AN API ENTRYPOINT! If the signature is modified, ensure api.py matches!
 # The body of this function can change without affecting the API.
-def run_deeplabcut(dlc_config_path, body_videos):
+def run_deeplabcut(dlc_config_path, body_videos, also_generate_skeleton=True):
     deeplabcut.analyze_videos(dlc_config_path, body_videos, videotype=".avi")
     for video in body_videos:
         deeplabcut.filterpredictions(dlc_config_path, [video], save_as_csv=False)
         # deeplabcut.create_labeled_video(
         #     dlc_config_path, [video], videotype=".avi", filtered=True
         # )
+
+    if also_generate_skeleton:
+        generate_skeleton(dlc_config_path, body_videos)
+    
+    return
+
+# Function to generate a skeleton video from the specified videos
+#
+# THIS IS AN API ENTRYPOINT! If the signature is modified, ensure api.py matches!
+# The body of this function can change without affecting the API.
+def generate_skeleton(dlc_config_path, body_videos):
     deeplabcut.create_labeled_video(
         dlc_config_path,
         body_videos,
@@ -52,7 +63,6 @@ def run_deeplabcut(dlc_config_path, body_videos):
         draw_skeleton=True,
     )
     return
-
 
 # Function to prompt the user to select folders using a GUI dialog
 def select_folders():
