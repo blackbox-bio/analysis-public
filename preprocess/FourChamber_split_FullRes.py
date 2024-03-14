@@ -8,7 +8,7 @@ from tkinter import filedialog
 
 
 # Set the desired size
-resize_dim = 1024
+full_dim = 1024
 # set the video codec
 fourcc = cv2.VideoWriter_fourcc("F", "F", "V", "1")
 chambers = [f"chamber_{i}" for i in range(1, 5)]
@@ -37,9 +37,12 @@ def select_folder():
 def process_chamber(file_path, chamber):
 
     # initialize directory paths
-    experiment_folder = os.path.dirname(file_path)
+    recording_folder = os.path.dirname(file_path)
+    parent_folder = os.path.dirname(recording_folder)
+    analysis_folder = os.path.join(parent_folder, f"{recording_folder}_analysis")
     file_name = os.path.basename(file_path)
-    output_folder = os.path.join(experiment_folder, file_name[:-10])
+    output_folder = os.path.join(analysis_folder, file_name[:-10] + chamber)
+    os.makedirs(output_folder, exist_ok=True)
     # open the video capture objects
     cap_body = cv2.VideoCapture(file_path)
     cap_ftir = cv2.VideoCapture(file_path[:-9] + "ftir.avi")
@@ -51,15 +54,15 @@ def process_chamber(file_path, chamber):
     frame_count = min(body_frame_count, ftir_frame_count)
 
     # create a new video writer for each chamber
-    body_file_name = f"{file_name[:-9]}_{chamber}_body.avi"
+    body_file_name = "trans_raw.avi"
     body_file_path = os.path.join(output_folder, body_file_name)
     body_video_writer = cv2.VideoWriter(
-        body_file_path, fourcc, fps, (resize_dim, resize_dim)
+        body_file_path, fourcc, fps, (full_dim, full_dim)
     )
-    ftir_file_name = f"{file_name[:-9]}_{chamber}_ftir.avi"
+    ftir_file_name = "ftir_raw.avi"
     ftir_file_path = os.path.join(output_folder, ftir_file_name)
     ftir_video_writer = cv2.VideoWriter(
-        ftir_file_path, fourcc, fps, (resize_dim, resize_dim)
+        ftir_file_path, fourcc, fps, (full_dim, full_dim)
     )
 
     # iterate over the frames, crop each frame into the current chamber, and save to the respective video writers
@@ -83,8 +86,8 @@ def process_chamber(file_path, chamber):
         smaller_frame_ftir = frame_ftir[y1:y2, x1:x2]
 
         # pad the frame to the desired size
-        pad_x = max(0, (resize_dim - smaller_frame_body.shape[0]))
-        pad_y = max(0, (resize_dim - smaller_frame_body.shape[1]))
+        pad_x = max(0, (full_dim - smaller_frame_body.shape[0]))
+        pad_y = max(0, (full_dim - smaller_frame_body.shape[1]))
         resized_frame_body = np.pad(
             smaller_frame_body, ((0, pad_x), (0, pad_y), (0, 0)), mode="constant"
         )
@@ -122,10 +125,10 @@ def main():
             file_path = os.path.join(experiment_folder, file_name)
             if not file_name.lower().endswith("trans.avi"):
                 continue
+            if file_name.startswith("."):  # skip hidden files
+                continue
             print("\nstart to split recording: " + file_name[:-10])
 
-            output_folder = os.path.join(experiment_folder, file_name[:-10])
-            os.makedirs(output_folder, exist_ok=True)
             futures = [
                 executor.submit(process_chamber, file_path, chamber)
                 for chamber in chambers
