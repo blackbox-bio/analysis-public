@@ -106,19 +106,19 @@ def generate_summary_generic(features_files: List[str], summary_dest: str):
             ]
         )
 
-        # 13-16. paw usage
-        summary_features[video]["hind_left_usage (ratio of time)"] = np.nanmean(
-            features[video]["hind_left_luminance"] > 1e-4
-        )
-        summary_features[video]["hind_right_usage (ratio of time)"] = np.nanmean(
-            features[video]["hind_right_luminance"] > 1e-4
-        )
-        summary_features[video]["front_left_usage (ratio of time)"] = np.nanmean(
-            features[video]["front_left_luminance"] > 1e-4
-        )
-        summary_features[video]["front_right_usage (ratio of time)"] = np.nanmean(
-            features[video]["front_right_luminance"] > 1e-4
-        )
+        # # 13-16. paw usage
+        # summary_features[video]["hind_left_usage (ratio of time)"] = np.nanmean(
+        #     features[video]["hind_left_luminance"] > 1e-4
+        # )
+        # summary_features[video]["hind_right_usage (ratio of time)"] = np.nanmean(
+        #     features[video]["hind_right_luminance"] > 1e-4
+        # )
+        # summary_features[video]["front_left_usage (ratio of time)"] = np.nanmean(
+        #     features[video]["front_left_luminance"] > 1e-4
+        # )
+        # summary_features[video]["front_right_usage (ratio of time)"] = np.nanmean(
+        #     features[video]["front_right_luminance"] > 1e-4
+        # )
 
         # 17-20 time spent paw lifted (not touching the ground)
         summary_features[video]["hind_left_paw_lifted_time (seconds)"] = (
@@ -136,6 +136,45 @@ def generate_summary_generic(features_files: List[str], summary_dest: str):
         summary_features[video]["front_right_paw_lifted_time (seconds)"] = (
             np.sum(features[video]["front_right_luminance"] < 1e-4)
             / features[video]["fps"]
+        )
+        # body parts distance
+        # 21-26. lateral body parts distance
+        summary_features[video]["hip_width (pixel)"] = np.nanmean(
+            features[video]["hip_width"]
+        )
+        summary_features[video]["ankle_distance (pixel)"] = np.nanmean(
+            features[video]["ankle_distance"]
+        )
+        summary_features[video]["hind_paws_distance (pixel)"] = np.nanmean(
+            features[video]["hind_paws_distance"]
+        )
+        summary_features[video]["shoulder_width (pixel)"] = np.nanmean(
+            features[video]["shoulder_width"]
+        )
+        summary_features[video]["front_paws_distance (pixel)"] = np.nanmean(
+            features[video]["front_paws_distance"]
+        )
+        summary_features[video]["cheek_distance (pixel)"] = np.nanmean(
+            features[video]["cheek_distance"]
+        )
+        # 27-29. midline body parts distance
+        summary_features[video]["tailbase_tailtip_distance (pixel)"] = np.nanmean(
+            features[video]["tailbase_tailtip_distance"]
+        )
+        summary_features[video]["hip_tailbase_distance (pixel)"] = np.nanmean(
+            features[video]["hip_tailbase_distance"]
+        )
+        summary_features[video]["hip_sternumtail_distance (pixel)"] = np.nanmean(
+            features[video]["hip_sternumtail_distance"]
+        )
+        summary_features[video][
+            "sternumtail_sternumhead_distance (pixel)"
+        ] = np.nanmean(features[video]["sternumtail_sternumhead_distance"])
+        summary_features[video]["sternumhead_neck_distance (pixel)"] = np.nanmean(
+            features[video]["sternumhead_neck_distance"]
+        )
+        summary_features[video]["neck_snout_distance (pixel)"] = np.nanmean(
+            features[video]["neck_snout_distance"]
         )
 
     df = pd.DataFrame.from_dict(summary_features, orient="index")
