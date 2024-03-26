@@ -94,25 +94,31 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
     )
     features["neck_snout_distance"] = body_parts_distance(label, "neck", "snout")
 
-    # midline body parts vectors
+    # body parts vectors
     sternumtail_sternumhead_vector = get_vector(label, "sternumtail", "sternumhead")
     neck_snout_vector = get_vector(label, "neck", "snout")
     tailbase_hip_vector = get_vector(label, "tailbase", "hip")
     tailtip_tailbase_vector = get_vector(label, "tailtip", "tailbase")
+    tailbase_hlpaw_vec = get_vector(label, "tailbase", "lhpaw")
+    tailbase_hrpaw_vec = get_vector(label, "tailbase", "rhpaw")
 
-    # features["sternumtail_sternumhead_vector"] = get_vector(label, "sternumtail", "sternumhead")
-    # features["neck_snout_vector"] = get_vector(label, "neck", "snout")
-    # features["tailbase_hip_vector"] = get_vector(label, "tailbase", "hip")
-    # features["tailtip_tailbase_vector"] = get_vector(label, "tailtip", "tailbase")
-    # midline body parts angles
-
+    # body parts angles
     features["chest_head_angle"] = get_angle(
         neck_snout_vector, sternumtail_sternumhead_vector
     )
     features["hip_chest_angle"] = get_angle(
         sternumtail_sternumhead_vector, tailbase_hip_vector
     )
-    features["tail_hip_angle"] = get_angle(tailbase_hip_vector, tailtip_tailbase_vector)
+    # note the negative sign for the tail_hip_angle
+    features["tail_hip_angle"] = -get_angle(
+        tailbase_hip_vector, tailtip_tailbase_vector
+    )
+    features["hip_tailbase_hlpaw_angle"] = get_angle(
+        tailbase_hip_vector, tailbase_hlpaw_vec
+    )
+    features["hip_tailbase_hrpaw_angle"] = get_angle(
+        tailbase_hip_vector, tailbase_hrpaw_vec
+    )
 
     # -------------------------------------------------------------
 

@@ -188,6 +188,14 @@ def generate_summary_generic(features_files: List[str], summary_dest: str):
             features[video]["tail_hip_angle"]
         )
 
+        # 36-37. hind paw angles
+        summary_features[video]["hip_tailbase_hlpaw_angle (degree)"] = np.nanmean(
+            features[video]["hip_tailbase_hlpaw_angle"]
+        )
+        summary_features[video]["hip_tailbase_hrpaw_angle (degree)"] = np.nanmean(
+            features[video]["hip_tailbase_hrpaw_angle"]
+        )
+
     df = pd.DataFrame.from_dict(summary_features, orient="index")
 
     # Save DataFrame to CSV with specified precision
