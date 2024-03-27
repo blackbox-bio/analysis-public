@@ -52,6 +52,41 @@ def cal_distance_(label, bodypart="tailbase"):
     return d_location
 
 
+def get_distance(x1, y1, x2, y2):
+    """helper function to calculate distance between two points"""
+    return np.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+
+
+def body_parts_distance(label, bp1, bp2):
+    """helper function to calculate distance between two body parts"""
+    x1 = label[bp1]["x"]
+    y1 = label[bp1]["y"]
+    x2 = label[bp2]["x"]
+    y2 = label[bp2]["y"]
+    return get_distance(x1, y1, x2, y2)
+
+
+def get_vector(label, bp1, bp2):
+    """helper function to calculate vector from bp1 to bp2"""
+    x1 = label[bp1]["x"]
+    y1 = label[bp1]["y"]
+    x2 = label[bp2]["x"]
+    y2 = label[bp2]["y"]
+    return np.array([x2 - x1, y2 - y1])
+
+
+def get_angle(v1, v2):
+    """helper function to calculate angle between two vectors"""
+    theta = np.sum(v1 * v2, axis=0) / (
+        np.linalg.norm(v1, axis=0) * np.linalg.norm(v2, axis=0)
+    )
+    angle = np.arccos(theta) / np.pi * 180
+    sign = np.sign(np.cross(v1, v2, axis=0))
+    sign[sign == 0] = 1  # if cross product is 0, set sign to 1
+    counterclockwise_angle = angle * sign
+    return counterclockwise_angle
+
+
 # def cal_body_mean_movement(label):
 #     """using DLC tracking of several main body parts to calculate mean body movement
 #        first calculate the frame to frame speed for each body part, then average them

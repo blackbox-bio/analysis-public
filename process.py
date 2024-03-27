@@ -64,6 +64,62 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
 
     # calculate when the animal is standing on two hind paws
     features["both_front_paws_lifted"] = both_front_paws_lifted(front_left, front_right)
+
+    # body parts distance
+
+    # lateral body parts distance
+    # lower body parts distance
+    features["hip_width"] = body_parts_distance(label, "lhip", "rhip")
+    features["ankle_distance"] = body_parts_distance(label, "lankle", "rankle")
+    features["hind_paws_distance"] = body_parts_distance(label, "lhpaw", "rhpaw")
+    # upper body parts distance
+    features["shoulder_width"] = body_parts_distance(label, "lshoulder", "rshoulder")
+    features["front_paws_distance"] = body_parts_distance(label, "lfpaw", "rfpaw")
+    # face parts distance
+    features["cheek_distance"] = body_parts_distance(label, "lcheek", "rcheek")
+
+    # midline body parts distance
+    features["tailbase_tailtip_distance"] = body_parts_distance(
+        label, "tailbase", "tailtip"
+    )
+    features["hip_tailbase_distance"] = body_parts_distance(label, "hip", "tailbase")
+    features["hip_sternumtail_distance"] = body_parts_distance(
+        label, "hip", "sternumtail"
+    )
+    features["sternumtail_sternumhead_distance"] = body_parts_distance(
+        label, "sternumtail", "sternumhead"
+    )
+    features["sternumhead_neck_distance"] = body_parts_distance(
+        label, "sternumhead", "neck"
+    )
+    features["neck_snout_distance"] = body_parts_distance(label, "neck", "snout")
+
+    # body parts vectors
+    sternumtail_sternumhead_vector = get_vector(label, "sternumtail", "sternumhead")
+    neck_snout_vector = get_vector(label, "neck", "snout")
+    tailbase_hip_vector = get_vector(label, "tailbase", "hip")
+    tailtip_tailbase_vector = get_vector(label, "tailtip", "tailbase")
+    tailbase_hlpaw_vec = get_vector(label, "tailbase", "lhpaw")
+    tailbase_hrpaw_vec = get_vector(label, "tailbase", "rhpaw")
+
+    # body parts angles
+    features["chest_head_angle"] = get_angle(
+        neck_snout_vector, sternumtail_sternumhead_vector
+    )
+    features["hip_chest_angle"] = get_angle(
+        sternumtail_sternumhead_vector, tailbase_hip_vector
+    )
+    # note the negative sign for the tail_hip_angle
+    features["tail_hip_angle"] = -get_angle(
+        tailbase_hip_vector, tailtip_tailbase_vector
+    )
+    features["hip_tailbase_hlpaw_angle"] = get_angle(
+        tailbase_hip_vector, tailbase_hlpaw_vec
+    )
+    features["hip_tailbase_hrpaw_angle"] = get_angle(
+        tailbase_hrpaw_vec, tailbase_hip_vector
+    )
+
     # -------------------------------------------------------------
 
     # save extracted features
