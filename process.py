@@ -117,7 +117,7 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
         tailbase_hip_vector, tailbase_hlpaw_vec
     )
     features["hip_tailbase_hrpaw_angle"] = get_angle(
-        tailbase_hip_vector, tailbase_hrpaw_vec
+        tailbase_hrpaw_vec, tailbase_hip_vector
     )
 
     # -------------------------------------------------------------
