@@ -88,6 +88,28 @@ def skeleton(args: SkeletonArgs):
 
     generate_skeleton(config_path, videos)
 
+class PairGridArgs(TypedDict):
+    summary_path: str
+    vars: List[str]
+    hue: str
+    diag_kind: str
+    upper_kind: str
+    lower_kind: str
+    dest_path: str
+
+def pair_grid(args: PairGridArgs):
+    from graphs import generate_pairgrid
+
+    summary_path = args['summary_path']
+    vars = args['vars']
+    hue = args['hue']
+    diag_kind = args['diag_kind']
+    upper_kind = args['upper_kind']
+    lower_kind = args['lower_kind']
+    dest_path = args['dest_path']
+
+    generate_pairgrid(summary_path, vars, hue, diag_kind, upper_kind, lower_kind, dest_path)
+
 # Palmreader <-> Analysis API
 # The following code is relied upon by the Palmreader software. Take special care when modifying it.
 class ApiFunction(Enum):
@@ -95,6 +117,7 @@ class ApiFunction(Enum):
     FEATURES = 'features'
     SUMMARY = 'summary'
     SKELETON = 'skeleton'
+    PAIRGRID = 'pairgrid'
 
     def __str__(self):
         return self.value
@@ -124,6 +147,8 @@ def main():
             summary_v2(api_args)
     elif args.function == ApiFunction.SKELETON:
         skeleton(api_args)
+    elif args.function == ApiFunction.PAIRGRID:
+        pair_grid(api_args)
 
 if __name__ == '__main__':
     main()
