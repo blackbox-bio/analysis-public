@@ -36,6 +36,9 @@ def generate_summary_generic(features_files: List[str], summary_dest: str):
     # save summary features
     summary_features: dict[Any, dict[Any, Any]] = {}
     for video in features.keys():
+
+        # Todo, pre-process the features with a time window
+
         summary_features[video] = {}
         # 1. recording time
         summary_features[video]["recording_time (min)"] = (
