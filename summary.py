@@ -157,7 +157,7 @@ def generate_summary_generic(features_files: List[str], summary_dest: str):
         summary_features[video]["cheek_distance (pixel)"] = np.nanmean(
             features[video]["cheek_distance"]
         )
-        # 27-29. midline body parts distance
+        # 27-32. midline body parts distance
         summary_features[video]["tailbase_tailtip_distance (pixel)"] = np.nanmean(
             features[video]["tailbase_tailtip_distance"]
         )
@@ -175,6 +175,25 @@ def generate_summary_generic(features_files: List[str], summary_dest: str):
         )
         summary_features[video]["neck_snout_distance (pixel)"] = np.nanmean(
             features[video]["neck_snout_distance"]
+        )
+
+        # 33-35. midline body parts angles
+        summary_features[video]["chest_head_angle (degree)"] = np.nanmean(
+            features[video]["chest_head_angle"]
+        )
+        summary_features[video]["hip_chest_angle (degree)"] = np.nanmean(
+            features[video]["hip_chest_angle"]
+        )
+        summary_features[video]["tail_hip_angle (degree)"] = np.nanmean(
+            features[video]["tail_hip_angle"]
+        )
+
+        # 36-37. hind paw angles
+        summary_features[video]["hip_tailbase_hlpaw_angle (degree)"] = np.nanmean(
+            features[video]["hip_tailbase_hlpaw_angle"]
+        )
+        summary_features[video]["hip_tailbase_hrpaw_angle (degree)"] = np.nanmean(
+            features[video]["hip_tailbase_hrpaw_angle"]
         )
 
     df = pd.DataFrame.from_dict(summary_features, orient="index")
