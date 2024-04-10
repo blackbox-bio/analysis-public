@@ -1,3 +1,5 @@
+# globally import things that all functions share
+# don't import anything not strictly required for the API itself. import API specific things in the functions themselves
 import argparse
 from enum import Enum
 from typing import TypedDict, List
@@ -98,7 +100,9 @@ class PairGridArgs(TypedDict):
     dest_path: str
 
 def pair_grid(args: PairGridArgs):
-    from graphs import generate_pairgrid
+    import pandas as pd
+    import numpy as np
+    from summary_viz import summary_viz_preprocess, generate_PairGrid_plot
 
     summary_path = args['summary_path']
     vars = args['vars']
@@ -108,7 +112,54 @@ def pair_grid(args: PairGridArgs):
     lower_kind = args['lower_kind']
     dest_path = args['dest_path']
 
-    generate_pairgrid(summary_path, vars, hue, diag_kind, upper_kind, lower_kind, dest_path)
+    df = pd.read_csv(summary_path)
+
+    # TODO: allow users to choose which rows to include
+    row_mask = np.full(len(df), True)
+
+    df = summary_viz_preprocess(df, row_mask, vars, hue)
+
+    generate_PairGrid_plot(
+        df,
+        hue,
+        diag_kind,
+        upper_kind,
+        lower_kind,
+        dest_path,
+    )
+
+class BarPlotsArgs(TypedDict):
+    summary_path: str
+    vars: List[str]
+    hue: str
+    sort_by_significance: bool
+    dest_path: str
+
+def bar_plots(args: BarPlotsArgs):
+    import pandas as pd
+    import numpy as np
+    from summary_viz import summary_viz_preprocess, generate_bar_plots
+
+    summary_path = args['summary_path']
+    vars = args['vars']
+    hue = args['hue']
+    sort_by_significance = args['sort_by_significance']
+    dest_path = args['dest_path']
+
+    df = pd.read_csv(summary_path)
+
+    # TODO: allow users to choose which rows to include
+    row_mask = np.full(len(df), True)
+
+    df = summary_viz_preprocess(df, row_mask, vars, hue)
+
+    generate_bar_plots(
+        df,
+        hue,
+        dest_path,
+        sort_by_significance
+    )
+
 
 # Palmreader <-> Analysis API
 # The following code is relied upon by the Palmreader software. Take special care when modifying it.
@@ -118,6 +169,7 @@ class ApiFunction(Enum):
     SUMMARY = 'summary'
     SKELETON = 'skeleton'
     PAIRGRID = 'pairgrid'
+    BAR_PLOTS = 'bar_plots'
 
     def __str__(self):
         return self.value
@@ -149,6 +201,8 @@ def main():
         skeleton(api_args)
     elif args.function == ApiFunction.PAIRGRID:
         pair_grid(api_args)
+    elif args.function == ApiFunction.BAR_PLOTS:
+        bar_plots(api_args)
 
 if __name__ == '__main__':
     main()
