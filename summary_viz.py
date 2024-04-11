@@ -90,7 +90,13 @@ def _horizontal_concat_step(prev, next):
     
     return cv.hconcat([prev, next])
 
-def generate_bar_plots(df, group_variable, dest_path, sort_by_significance=False):
+def _get_group_label(group_variable):
+    """
+    Variables provided through Palmreader start with "PV:", which is not necessary for the plot.
+    """
+    return group_variable[4:] if group_variable.startswith("PV:") else group_variable
+
+def generate_bar_plots(df, group_variable: str, dest_path, sort_by_significance=False):
     """
     Generate a bar plot for each column in `df` grouped by `group_variable`.
 
@@ -108,6 +114,8 @@ def generate_bar_plots(df, group_variable, dest_path, sort_by_significance=False
 
     joined = None
 
+    group_label = _get_group_label(group_variable)
+
     # Generate individual bar plots for each numerical column
     for column in sorted_columns:
 
@@ -122,7 +130,7 @@ def generate_bar_plots(df, group_variable, dest_path, sort_by_significance=False
             # dodge=True,
         )
 
-        plt.title(f"{column} grouped by {group_variable}")
+        plt.title(f"{column} grouped by {group_label}")
         
         plot = plt.gcf()
 
@@ -148,6 +156,8 @@ def generate_PairGrid_plot(
     else:
         sorted_columns = df.select_dtypes(include="number").columns
 
+    group_label = _get_group_label(group_variable)
+
     g = sns.PairGrid(df, hue=group_variable, diag_sharey=False)
 
     diag = get_plot_fn(diag_kind)
@@ -157,6 +167,6 @@ def generate_PairGrid_plot(
     g.map_diag(diag)
     g.map_upper(upper)
     g.map_lower(lower)
-    g.add_legend(adjust_subtitles=True)
+    g.add_legend(adjust_subtitles=True, title=group_label)
     
     g.savefig(dest_path)

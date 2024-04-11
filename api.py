@@ -91,26 +91,27 @@ def skeleton(args: SkeletonArgs):
     generate_skeleton(config_path, videos)
 
 class PairGridArgs(TypedDict):
-    summary_path: str
+    # graph arguments arrive in camelCase because of a Palmreader optimization
+    summaryPath: str
     vars: List[str]
     hue: str
-    diag_kind: str
-    upper_kind: str
-    lower_kind: str
-    dest_path: str
+    diagKind: str
+    upperKind: str
+    lowerKind: str
+    destPath: str
 
 def pair_grid(args: PairGridArgs):
     import pandas as pd
     import numpy as np
     from summary_viz import summary_viz_preprocess, generate_PairGrid_plot
 
-    summary_path = args['summary_path']
+    summary_path = args['summaryPath']
     vars = args['vars']
     hue = args['hue']
-    diag_kind = args['diag_kind']
-    upper_kind = args['upper_kind']
-    lower_kind = args['lower_kind']
-    dest_path = args['dest_path']
+    diag_kind = args['diagKind']
+    upper_kind = args['upperKind']
+    lower_kind = args['lowerKind']
+    dest_path = args['destPath']
 
     df = pd.read_csv(summary_path)
 
@@ -129,22 +130,23 @@ def pair_grid(args: PairGridArgs):
     )
 
 class BarPlotsArgs(TypedDict):
-    summary_path: str
+    # graph arguments arrive in camelCase because of a Palmreader optimization
+    summaryPath: str
     vars: List[str]
     hue: str
-    sort_by_significance: bool
-    dest_path: str
+    sortBySignificance: bool
+    destPath: str
 
 def bar_plots(args: BarPlotsArgs):
     import pandas as pd
     import numpy as np
     from summary_viz import summary_viz_preprocess, generate_bar_plots
 
-    summary_path = args['summary_path']
+    summary_path = args['summaryPath']
     vars = args['vars']
     hue = args['hue']
-    sort_by_significance = args['sort_by_significance']
-    dest_path = args['dest_path']
+    sort_by_significance = args['sortBySignificance']
+    dest_path = args['destPath']
 
     df = pd.read_csv(summary_path)
 
