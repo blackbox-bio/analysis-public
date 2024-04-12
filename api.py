@@ -93,6 +93,7 @@ def skeleton(args: SkeletonArgs):
 class PairGridArgs(TypedDict):
     # graph arguments arrive in camelCase because of a Palmreader optimization
     summaryPath: str
+    enabledRows: List[bool]
     vars: List[str]
     hue: str
     diagKind: str
@@ -106,6 +107,7 @@ def pair_grid(args: PairGridArgs):
     from summary_viz import summary_viz_preprocess, generate_PairGrid_plot
 
     summary_path = args['summaryPath']
+    enabled_rows = args['enabledRows']
     vars = args['vars']
     hue = args['hue']
     diag_kind = args['diagKind']
@@ -115,10 +117,7 @@ def pair_grid(args: PairGridArgs):
 
     df = pd.read_csv(summary_path)
 
-    # TODO: allow users to choose which rows to include
-    row_mask = np.full(len(df), True)
-
-    df = summary_viz_preprocess(df, row_mask, vars, hue)
+    df = summary_viz_preprocess(df, enabled_rows, vars, hue)
 
     generate_PairGrid_plot(
         df,
@@ -132,6 +131,7 @@ def pair_grid(args: PairGridArgs):
 class BarPlotsArgs(TypedDict):
     # graph arguments arrive in camelCase because of a Palmreader optimization
     summaryPath: str
+    enabledRows: List[bool]
     vars: List[str]
     hue: str
     sortBySignificance: bool
@@ -143,6 +143,7 @@ def bar_plots(args: BarPlotsArgs):
     from summary_viz import summary_viz_preprocess, generate_bar_plots
 
     summary_path = args['summaryPath']
+    enabled_rows = args['enabledRows']
     vars = args['vars']
     hue = args['hue']
     sort_by_significance = args['sortBySignificance']
@@ -150,10 +151,7 @@ def bar_plots(args: BarPlotsArgs):
 
     df = pd.read_csv(summary_path)
 
-    # TODO: allow users to choose which rows to include
-    row_mask = np.full(len(df), True)
-
-    df = summary_viz_preprocess(df, row_mask, vars, hue)
+    df = summary_viz_preprocess(df, enabled_rows, vars, hue)
 
     generate_bar_plots(
         df,
