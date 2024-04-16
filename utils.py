@@ -49,6 +49,7 @@ def cal_distance_(label, bodypart="tailbase"):
     d_x = np.diff(x)
     d_y = np.diff(y)
     d_location = np.sqrt(d_x**2 + d_y**2)
+    d_location = np.insert(d_location, 0, 0)
     return d_location
 
 
@@ -168,10 +169,10 @@ def cal_paw_luminance(label, cap, size=22):
     hind_right: paw luminance of the right hind paw
     """
 
-    num_of_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    fps = cap.get(cv2.CAP_PROP_FPS)
+    # num_of_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    # fps = cap.get(cv2.CAP_PROP_FPS)
 
-    print(f"video length is {num_of_frames/fps/60} mins")
+    # print(f"video length is {num_of_frames/fps/60} mins")
 
     hind_right = []
     hind_left = []

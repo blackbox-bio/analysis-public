@@ -23,7 +23,9 @@ def generate_summary_v2(features_files: List[str], summary_dest: str):
     generate_summary_generic(features_files, summary_dest)
 
 
-def generate_summary_generic(features_files: List[str], summary_dest: str):
+def generate_summary_generic(
+    features_files: List[str], summary_dest: str, time_bin=(0, -1)
+):
     features = defaultdict(dict)
 
     # read features from h5 files
@@ -33,17 +35,73 @@ def generate_summary_generic(features_files: List[str], summary_dest: str):
                 for subkey in hdf[key].keys():
                     features[key][subkey] = np.array(hdf[key][subkey])
 
+    # New -> take a time bin as a tuple of start and end time in minutes
+    # binning the features
+    for video in features.keys():
+        frame_count = features[video]["frame_count"]
+        fps = features[video]["fps"]
+
+        start_frame = int(time_bin[0] * 60 * fps)
+        if time_bin[1] == -1:
+            end_frame = frame_count
+        else:
+            end_frame = int(time_bin[1] * 60 * fps)
+
+        # check if the time bin is valid
+        if start_frame >= frame_count:
+            raise ValueError(
+                "Invalid time bin: start time is greater than the total recording time"
+            )
+        if start_frame < 0:
+            raise ValueError("Invalid time bin: start time is negative")
+        if end_frame > frame_count:
+            # raise ValueError(
+            #     "Invalid time bin: end time is greater than the total recording time"
+            # )
+            # if end time is greater than the total recording time, set it to the end of the recording
+            end_frame = frame_count
+
+        if end_frame < 0:
+            raise ValueError("Invalid time bin: end time is negative")
+        if end_frame <= start_frame:
+            raise ValueError("Invalid time bin: end time is less than start time")
+
+        # bin the features
+        for key in features[video].keys():
+
+            # change the frame count to the time bin
+            if key == "frame_count":
+                # features[video][key] = end_frame - start_frame
+                continue
+
+            # skip fps
+            if key == "fps":
+                continue
+
+            features[video][key] = features[video][key][start_frame:end_frame]
+
+        # add start and end time to the features
+        features[video]["start_time"] = start_frame / fps / 60
+        features[video]["end_time"] = end_frame / fps / 60
+
     # save summary features
     summary_features: dict[Any, dict[Any, Any]] = {}
     for video in features.keys():
 
-        # Todo, pre-process the features with a time window
-
         summary_features[video] = {}
         # 1. recording time
-        summary_features[video]["recording_time (min)"] = (
-            features[video]["recording_time"] / 60
+        summary_features[video]["total recording_time (min)"] = (
+            features[video]["frame_count"] / features[video]["fps"] / 60
         )
+
+        summary_features[video]["summary start_time (min)"] = features[video][
+            "start_time"
+        ]
+        summary_features[video]["summary end_time (min)"] = features[video]["end_time"]
+        summary_features[video]["summary time duration (min)"] = (
+            features[video]["end_time"] - features[video]["start_time"]
+        )
+
         # 2. distance traveled
         summary_features[video]["distance_traveled (pixel)"] = np.nansum(
             features[video]["distance_delta"]
@@ -206,7 +264,7 @@ def generate_summary_generic(features_files: List[str], summary_dest: str):
     return
 
 
-def generate_summary_csv(analysis_folder):
+def generate_summary_csv(analysis_folder, time_bin=(0, -1)):
     """
     Generate summary csv from the processed recordings
     """
@@ -217,4 +275,4 @@ def generate_summary_csv(analysis_folder):
         os.path.join(recording, "features.h5") for recording in recording_list
     ]
 
-    generate_summary_generic(features_files, summary_csv)
+    generate_summary_generic(features_files, summary_csv, time_bin)

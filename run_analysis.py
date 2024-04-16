@@ -53,7 +53,7 @@ def main():
     )
 
     # generate summary csv from the processed videos
-    generate_summary_csv(analysis_folder)
+    generate_summary_csv(analysis_folder, (0, -1))
 
 
 if __name__ == "__main__":
