@@ -93,11 +93,10 @@ def generate_summary_generic(
         summary_features[video]["total recording_time (min)"] = (
             features[video]["frame_count"] / features[video]["fps"] / 60
         )
+        summary_features[video][
+            "summary start_time-end_time (min)"
+        ] = f'{features[video]["start_time"]:.2f}-{features[video]["end_time"]:.2f}'
 
-        summary_features[video]["summary start_time (min)"] = features[video][
-            "start_time"
-        ]
-        summary_features[video]["summary end_time (min)"] = features[video]["end_time"]
         summary_features[video]["summary time duration (min)"] = (
             features[video]["end_time"] - features[video]["start_time"]
         )
@@ -259,20 +258,29 @@ def generate_summary_generic(
 
     df = pd.DataFrame.from_dict(summary_features, orient="index")
 
-    # Save DataFrame to CSV with specified precision
-    df.to_csv(summary_dest, float_format="%.2f")
-    return
+    # # Save DataFrame to CSV with specified precision
+    # df.to_csv(summary_dest, float_format="%.2f")
+    return df
 
 
-def generate_summary_csv(analysis_folder, time_bin=(0, -1)):
+def generate_summary_csv(analysis_folder, time_bins):
     """
     Generate summary csv from the processed recordings
     """
     recording_list = get_recording_list([analysis_folder])
-    summary_csv = os.path.join(analysis_folder, "summary.csv")
+    summary_dest = os.path.join(analysis_folder, "summary.csv")
 
     features_files = [
         os.path.join(recording, "features.h5") for recording in recording_list
     ]
 
-    generate_summary_generic(features_files, summary_csv, time_bin)
+    for c, time_bin in enumerate(time_bins):
+        if c == 0:
+            df = generate_summary_generic(features_files, summary_dest, time_bin)
+        else:
+            df = pd.concat(
+                [df, generate_summary_generic(features_files, summary_dest, time_bin)]
+            )
+    # df = generate_summary_generic(features_files, summary_dest, time_bin)
+
+    df.to_csv(summary_dest, float_format="%.2f")
