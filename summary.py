@@ -23,9 +23,7 @@ def generate_summary_v2(features_files: List[str], summary_dest: str):
     generate_summary_generic(features_files, summary_dest)
 
 
-def generate_summary_generic(
-    features_files: List[str], summary_dest: str, time_bin=(0, -1)
-):
+def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
     features = defaultdict(dict)
 
     # read features from h5 files
@@ -276,11 +274,9 @@ def generate_summary_csv(analysis_folder, time_bins):
 
     for c, time_bin in enumerate(time_bins):
         if c == 0:
-            df = generate_summary_generic(features_files, summary_dest, time_bin)
+            df = generate_summary_generic(features_files, time_bin)
         else:
-            df = pd.concat(
-                [df, generate_summary_generic(features_files, summary_dest, time_bin)]
-            )
+            df = pd.concat([df, generate_summary_generic(features_files, time_bin)])
     # df = generate_summary_generic(features_files, summary_dest, time_bin)
 
     df.to_csv(summary_dest, float_format="%.2f")
