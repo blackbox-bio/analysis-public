@@ -1,3 +1,5 @@
+# globally import things that all functions share
+# don't import anything not strictly required for the API itself. import API specific things in the functions themselves
 import argparse
 from enum import Enum
 from typing import TypedDict, List
@@ -88,6 +90,77 @@ def skeleton(args: SkeletonArgs):
 
     generate_skeleton(config_path, videos)
 
+class PairGridArgs(TypedDict):
+    # graph arguments arrive in camelCase because of a Palmreader optimization
+    summaryPath: str
+    enabledRows: List[bool]
+    vars: List[str]
+    hue: str
+    diagKind: str
+    upperKind: str
+    lowerKind: str
+    destPath: str
+
+def pair_grid(args: PairGridArgs):
+    import pandas as pd
+    import numpy as np
+    from summary_viz import summary_viz_preprocess, generate_PairGrid_plot
+
+    summary_path = args['summaryPath']
+    enabled_rows = args['enabledRows']
+    vars = args['vars']
+    hue = args['hue']
+    diag_kind = args['diagKind']
+    upper_kind = args['upperKind']
+    lower_kind = args['lowerKind']
+    dest_path = args['destPath']
+
+    df = pd.read_csv(summary_path)
+
+    df = summary_viz_preprocess(df, enabled_rows, vars, hue)
+
+    generate_PairGrid_plot(
+        df,
+        hue,
+        diag_kind,
+        upper_kind,
+        lower_kind,
+        dest_path,
+    )
+
+class BarPlotsArgs(TypedDict):
+    # graph arguments arrive in camelCase because of a Palmreader optimization
+    summaryPath: str
+    enabledRows: List[bool]
+    vars: List[str]
+    hue: str
+    sortBySignificance: bool
+    destPath: str
+
+def bar_plots(args: BarPlotsArgs):
+    import pandas as pd
+    import numpy as np
+    from summary_viz import summary_viz_preprocess, generate_bar_plots
+
+    summary_path = args['summaryPath']
+    enabled_rows = args['enabledRows']
+    vars = args['vars']
+    hue = args['hue']
+    sort_by_significance = args['sortBySignificance']
+    dest_path = args['destPath']
+
+    df = pd.read_csv(summary_path)
+
+    df = summary_viz_preprocess(df, enabled_rows, vars, hue)
+
+    generate_bar_plots(
+        df,
+        hue,
+        dest_path,
+        sort_by_significance
+    )
+
+
 # Palmreader <-> Analysis API
 # The following code is relied upon by the Palmreader software. Take special care when modifying it.
 class ApiFunction(Enum):
@@ -95,6 +168,8 @@ class ApiFunction(Enum):
     FEATURES = 'features'
     SUMMARY = 'summary'
     SKELETON = 'skeleton'
+    PAIRGRID = 'pairgrid'
+    BAR_PLOTS = 'bar_plots'
 
     def __str__(self):
         return self.value
@@ -124,6 +199,10 @@ def main():
             summary_v2(api_args)
     elif args.function == ApiFunction.SKELETON:
         skeleton(api_args)
+    elif args.function == ApiFunction.PAIRGRID:
+        pair_grid(api_args)
+    elif args.function == ApiFunction.BAR_PLOTS:
+        bar_plots(api_args)
 
 if __name__ == '__main__':
     main()

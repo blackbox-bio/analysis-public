@@ -1,8 +1,30 @@
-import pandas as pd
+from io import BytesIO
+import numpy as np
 import seaborn as sns
 from scipy.stats import ttest_ind, f_oneway
 import matplotlib.pyplot as plt
+import cv2 as cv
+from enum import Enum
 
+class GraphType(Enum):
+    KDE = "kde"
+    HIST = "hist"
+    REG = "reg"
+
+    def __str__(self):
+        return self.value
+
+def get_plot_fn(kind: str):
+    _kind = GraphType(kind)
+
+    if _kind == GraphType.KDE:
+        return sns.kdeplot
+    elif _kind == GraphType.HIST:
+        return sns.histplot
+    elif _kind == GraphType.REG:
+        return sns.regplot
+    else:
+        raise ValueError(f"Unknown graph type: {_kind}")
 
 def summary_viz_preprocess(df, rows_to_include, columns_to_include, group_variable):
     """
@@ -52,13 +74,47 @@ def rank_columns_by_significance(df, group_variable):
     return sorted_columns
 
 
-def generate_bar_plots(df, group_variable, sort_by_significance=False):
+def _plot_to_cv2_image(plot):
+    buf = BytesIO()
+    plot.savefig(buf, format="png")
+    buf.seek(0)
+    img = cv.imdecode(np.frombuffer(buf.read(), np.uint8), cv.IMREAD_UNCHANGED)
+    return img
+
+def _horizontal_concat_step(prev, next):
+    """
+    Concatenate two images horizontally. If `prev` is None, return `next`.
+    """
+    if prev is None:
+        return next
+    
+    return cv.hconcat([prev, next])
+
+def _get_group_label(group_variable):
+    """
+    Variables provided through Palmreader start with "PV:", which is not necessary for the plot.
+    """
+    return group_variable[4:] if group_variable.startswith("PV:") else group_variable
+
+def generate_bar_plots(df, group_variable: str, dest_path, sort_by_significance=False):
+    """
+    Generate a bar plot for each column in `df` grouped by `group_variable`.
+
+    This function will independently generate a graph for each column then concatenate them horizontally,
+    saving the result to `dest_path`.
+
+    If `sort_by_significance` is True, the columns will be ranked by significance between groups.
+    """
 
     # Rank columns by significance
     if sort_by_significance:
         sorted_columns = rank_columns_by_significance(df, group_variable)
     else:
         sorted_columns = df.select_dtypes(include="number").columns
+
+    joined = None
+
+    group_label = _get_group_label(group_variable)
 
     # Generate individual bar plots for each numerical column
     for column in sorted_columns:
@@ -74,11 +130,25 @@ def generate_bar_plots(df, group_variable, sort_by_significance=False):
             # dodge=True,
         )
 
-        plt.title(f"{column} grouped by {group_variable}")
-        plt.show()
+        plt.title(f"{column} grouped by {group_label}")
+        
+        plot = plt.gcf()
+
+        img = _plot_to_cv2_image(plot)
+        joined = _horizontal_concat_step(joined, img)
+    
+    cv.imwrite(dest_path, joined)
 
 
-def generate_PairGrid_plot(df, group_variable, sort_by_significance=False):
+def generate_PairGrid_plot(
+        df,
+        group_variable: str,
+        diag_kind: str,
+        upper_kind: str,
+        lower_kind: str,
+        dest_path: str,
+        sort_by_significance=False
+):
 
     # Rank columns by significance
     if sort_by_significance:
@@ -86,9 +156,17 @@ def generate_PairGrid_plot(df, group_variable, sort_by_significance=False):
     else:
         sorted_columns = df.select_dtypes(include="number").columns
 
+    group_label = _get_group_label(group_variable)
+
     g = sns.PairGrid(df, hue=group_variable, diag_sharey=False)
-    g.map_diag(sns.kdeplot)
-    g.map_upper(sns.scatterplot)
-    g.map_lower(sns.kdeplot, fill=False)
-    g.add_legend(adjust_subtitles=True)
-    plt.show()
+
+    diag = get_plot_fn(diag_kind)
+    upper = get_plot_fn(upper_kind)
+    lower = get_plot_fn(lower_kind)
+
+    g.map_diag(diag)
+    g.map_upper(upper)
+    g.map_lower(lower)
+    g.add_legend(adjust_subtitles=True, title=group_label)
+    
+    g.savefig(dest_path)
