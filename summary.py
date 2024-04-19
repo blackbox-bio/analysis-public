@@ -124,6 +124,12 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
         summary_features[video]["average_front_right_luminance"] = np.nanmean(
             features[video]["front_right_luminance"]
         )
+        summary_features[video]["average_all_paws_sum_luminance"] = (
+            np.nanmean(features[video]["hind_left_luminance"])
+            + np.nanmean(features[video]["hind_right_luminance"])
+            + np.nanmean(features[video]["front_left_luminance"])
+            + np.nanmean(features[video]["front_right_luminance"])
+        )
 
         # 8-12. paw luminance ratios
         summary_features[video]["average_hind_paw_luminance_ratio (l/r)"] = (
