@@ -1,27 +1,6 @@
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 
 from utils import *
-
-
-def generate_summary_v1(features_folder: str, summary_dest: str):
-    """
-    v1 API expects all features to be in a single folder. this function collects all .h5 files in the given folder and uses them
-    """
-    features_files = []
-
-    for file in os.listdir(features_folder):
-        if file.endswith(".h5"):
-            features_files.append(os.path.join(features_folder, file))
-
-    generate_summary_generic(features_files, summary_dest)
-
-
-def generate_summary_v2(features_files: List[str], summary_dest: str):
-    """
-    v2 API expects a list of .h5 files. this function uses them directly
-    """
-    generate_summary_generic(features_files, summary_dest)
-
 
 def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
     features = defaultdict(dict)
@@ -266,6 +245,19 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
     # df.to_csv(summary_dest, float_format="%.2f")
     return df
 
+def _df_concat_step(prev, next):
+    if prev is None:
+        return next
+    
+    return pd.concat([prev, next])
+
+def generate_summaries_generic(features_files: List[str], time_bins: List[Tuple[float, float]]):
+    df = None
+
+    for time_bin in time_bins:
+        df = _df_concat_step(df, generate_summary_generic(features_files, time_bin))
+    
+    return df
 
 def generate_summary_csv(analysis_folder, time_bins):
     """
@@ -278,11 +270,6 @@ def generate_summary_csv(analysis_folder, time_bins):
         os.path.join(recording, "features.h5") for recording in recording_list
     ]
 
-    for c, time_bin in enumerate(time_bins):
-        if c == 0:
-            df = generate_summary_generic(features_files, time_bin)
-        else:
-            df = pd.concat([df, generate_summary_generic(features_files, time_bin)])
-    # df = generate_summary_generic(features_files, summary_dest, time_bin)
+    df = generate_summaries_generic(features_files, time_bins)
 
     df.to_csv(summary_dest, float_format="%.2f")

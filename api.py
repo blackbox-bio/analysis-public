@@ -2,7 +2,7 @@
 # don't import anything not strictly required for the API itself. import API specific things in the functions themselves
 import argparse
 from enum import Enum
-from typing import TypedDict, List
+from typing import TypedDict, List, Tuple
 import json
 
 # API functions
@@ -61,7 +61,9 @@ def summary_v1(args: SummaryArgsV1):
         if file.endswith(".h5"):
             features_files.append(os.path.join(features_dir, file))
 
-    generate_summary_generic(features_files, summary_path)
+    df = generate_summary_generic(features_files, summary_path)
+
+    df.to_csv(summary_path, float_format="%.2f")
 
 class SummaryArgsV2(TypedDict):
     features_files: List[str]
@@ -76,7 +78,25 @@ def summary_v2(args: SummaryArgsV2):
     features_files = args['features_files']
     summary_path = args['summary_path']
 
-    generate_summary_generic(features_files, summary_path)
+    df = generate_summary_generic(features_files)
+
+    df.to_csv(summary_path, float_format="%.2f")
+
+class SummaryArgsV3(TypedDict):
+    features_files: List[str]
+    summary_path: str
+    time_bins: List[Tuple[float, float]]
+
+def summary_v3(args: SummaryArgsV3):
+    from summary import generate_summaries_generic
+
+    features_files = args['features_files']
+    summary_path = args['summary_path']
+    time_bins = args['time_bins']
+
+    df = generate_summaries_generic(features_files, time_bins)
+
+    df.to_csv(summary_path, float_format="%.2f")
 
 class SkeletonArgs(TypedDict):
     config_path: str
@@ -195,8 +215,10 @@ def main():
     elif args.function == ApiFunction.SUMMARY:
         if args.api_version == 1:
             summary_v1(api_args)
-        else:
+        elif args.api_version == 2:
             summary_v2(api_args)
+        else:
+            summary_v3(api_args)
     elif args.function == ApiFunction.SKELETON:
         skeleton(api_args)
     elif args.function == ApiFunction.PAIRGRID:
