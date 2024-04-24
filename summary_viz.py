@@ -76,7 +76,7 @@ def rank_columns_by_significance(df, group_variable):
 
 def _plot_to_cv2_image(plot):
     buf = BytesIO()
-    plot.savefig(buf, format="png")
+    plot.savefig(buf, format="png", dpi=300)
     buf.seek(0)
     img = cv.imdecode(np.frombuffer(buf.read(), np.uint8), cv.IMREAD_UNCHANGED)
     return img
@@ -118,6 +118,7 @@ def generate_bar_plots(df, group_variable: str, dest_path, sort_by_significance=
 
     # Generate individual bar plots for each numerical column
     for column in sorted_columns:
+        plt.figure()
 
         sns.boxplot(
             x=group_variable,
@@ -125,12 +126,12 @@ def generate_bar_plots(df, group_variable: str, dest_path, sort_by_significance=
             data=df,
             # fill = False,
             # split = True,
-            # legend = 'auto',
-            #
+            legend = 'auto',
             # dodge=True,
         )
 
         plt.title(f"{column} grouped by {group_label}")
+        plt.tight_layout()
         
         plot = plt.gcf()
 
@@ -169,4 +170,4 @@ def generate_PairGrid_plot(
     g.map_lower(lower)
     g.add_legend(adjust_subtitles=True, title=group_label)
     
-    g.savefig(dest_path)
+    g.savefig(dest_path, dpi=300)

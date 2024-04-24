@@ -88,6 +88,9 @@ class SummaryArgsV3(TypedDict):
     time_bins: List[Tuple[float, float]]
 
 def summary_v3(args: SummaryArgsV3):
+    """
+    v3 API is v2 with time bins
+    """
     from summary import generate_summaries_generic
 
     features_files = args['features_files']

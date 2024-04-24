@@ -71,7 +71,7 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
             features[video]["frame_count"] / features[video]["fps"] / 60
         )
         summary_features[video][
-            "summary start_time-end_time (min)"
+            "PV: summary start_time-end_time (min)"
         ] = f'{features[video]["start_time"]:.2f}-{features[video]["end_time"]:.2f}'
 
         summary_features[video]["summary time duration (min)"] = (
