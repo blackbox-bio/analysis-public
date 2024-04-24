@@ -126,12 +126,11 @@ def generate_bar_plots(df, group_variable: str, dest_path, sort_by_significance=
             data=df,
             # fill = False,
             # split = True,
-            legend = 'auto',
+            # legend = 'auto',
             # dodge=True,
         )
 
         plt.title(f"{column} grouped by {group_label}")
-        plt.tight_layout()
         
         plot = plt.gcf()
 
@@ -169,5 +168,11 @@ def generate_PairGrid_plot(
     g.map_upper(upper)
     g.map_lower(lower)
     g.add_legend(adjust_subtitles=True, title=group_label)
+
+    # rotate all axis labels
+    for arr in g.axes:
+        for axis in arr:
+            axis.set_xlabel(axis.get_xlabel(), rotation=10)
+            axis.set_ylabel(axis.get_ylabel(), rotation=80, labelpad=25)
     
     g.savefig(dest_path, dpi=300)
