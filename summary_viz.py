@@ -130,9 +130,11 @@ def generate_bar_plots(df, group_variable: str, dest_path, sort_by_significance=
             # dodge=True,
         )
 
-        plt.title(f"{column} grouped by {group_label}")
+        plt.title(f"{column} grouped by {group_label}", wrap=True)
         
         plot = plt.gcf()
+        # remove PV: from the x-axis label
+        plot.get_axes()[0].set_xlabel(group_label)
 
         img = _plot_to_cv2_image(plot)
         joined = _horizontal_concat_step(joined, img)
