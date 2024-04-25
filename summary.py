@@ -1,29 +1,8 @@
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 
 from utils import *
 
-
-def generate_summary_v1(features_folder: str, summary_dest: str):
-    """
-    v1 API expects all features to be in a single folder. this function collects all .h5 files in the given folder and uses them
-    """
-    features_files = []
-
-    for file in os.listdir(features_folder):
-        if file.endswith(".h5"):
-            features_files.append(os.path.join(features_folder, file))
-
-    generate_summary_generic(features_files, summary_dest)
-
-
-def generate_summary_v2(features_files: List[str], summary_dest: str):
-    """
-    v2 API expects a list of .h5 files. this function uses them directly
-    """
-    generate_summary_generic(features_files, summary_dest)
-
-
-def generate_summary_generic(features_files: List[str], summary_dest: str):
+def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
     features = defaultdict(dict)
 
     # read features from h5 files
@@ -33,14 +12,72 @@ def generate_summary_generic(features_files: List[str], summary_dest: str):
                 for subkey in hdf[key].keys():
                     features[key][subkey] = np.array(hdf[key][subkey])
 
+    # New -> take a time bin as a tuple of start and end time in minutes
+    # binning the features
+    for video in features.keys():
+        frame_count = features[video]["frame_count"]
+        fps = features[video]["fps"]
+
+        start_frame = int(time_bin[0] * 60 * fps)
+        if time_bin[1] == -1:
+            end_frame = frame_count
+        else:
+            end_frame = int(time_bin[1] * 60 * fps)
+
+        # check if the time bin is valid
+        if start_frame >= frame_count:
+            raise ValueError(
+                "Invalid time bin: start time is greater than the total recording time"
+            )
+        if start_frame < 0:
+            raise ValueError("Invalid time bin: start time is negative")
+        if end_frame > frame_count:
+            # raise ValueError(
+            #     "Invalid time bin: end time is greater than the total recording time"
+            # )
+            # if end time is greater than the total recording time, set it to the end of the recording
+            end_frame = frame_count
+
+        if end_frame < 0:
+            raise ValueError("Invalid time bin: end time is negative")
+        if end_frame <= start_frame:
+            raise ValueError("Invalid time bin: end time is less than start time")
+
+        # bin the features
+        for key in features[video].keys():
+
+            # change the frame count to the time bin
+            if key == "frame_count":
+                # features[video][key] = end_frame - start_frame
+                continue
+
+            # skip fps
+            if key == "fps":
+                continue
+
+            features[video][key] = features[video][key][start_frame:end_frame]
+
+        # add start and end time to the features
+        features[video]["start_time"] = start_frame / fps / 60
+        features[video]["end_time"] = end_frame / fps / 60
+
     # save summary features
     summary_features: dict[Any, dict[Any, Any]] = {}
     for video in features.keys():
+
         summary_features[video] = {}
         # 1. recording time
-        summary_features[video]["recording_time (min)"] = (
-            features[video]["recording_time"] / 60
+        summary_features[video]["total recording_time (min)"] = (
+            features[video]["frame_count"] / features[video]["fps"] / 60
         )
+        summary_features[video][
+            "PV: bin start-end (min)"
+        ] = f'{features[video]["start_time"]:.2f} - {features[video]["end_time"]:.2f}'
+
+        summary_features[video]["bin duration (min)"] = (
+            features[video]["end_time"] - features[video]["start_time"]
+        )
+
         # 2. distance traveled
         summary_features[video]["distance_traveled (pixel)"] = np.nansum(
             features[video]["distance_delta"]
@@ -65,6 +102,12 @@ def generate_summary_generic(features_files: List[str], summary_dest: str):
         )
         summary_features[video]["average_front_right_luminance"] = np.nanmean(
             features[video]["front_right_luminance"]
+        )
+        summary_features[video]["average_all_paws_sum_luminance"] = (
+            np.nanmean(features[video]["hind_left_luminance"])
+            + np.nanmean(features[video]["hind_right_luminance"])
+            + np.nanmean(features[video]["front_left_luminance"])
+            + np.nanmean(features[video]["front_right_luminance"])
         )
 
         # 8-12. paw luminance ratios
@@ -198,20 +241,35 @@ def generate_summary_generic(features_files: List[str], summary_dest: str):
 
     df = pd.DataFrame.from_dict(summary_features, orient="index")
 
-    # Save DataFrame to CSV with specified precision
-    df.to_csv(summary_dest, float_format="%.2f")
-    return
+    # # Save DataFrame to CSV with specified precision
+    # df.to_csv(summary_dest, float_format="%.2f")
+    return df
 
+def _df_concat_step(prev, next):
+    if prev is None:
+        return next
+    
+    return pd.concat([prev, next])
 
-def generate_summary_csv(analysis_folder):
+def generate_summaries_generic(features_files: List[str], time_bins: List[Tuple[float, float]]):
+    df = None
+
+    for time_bin in time_bins:
+        df = _df_concat_step(df, generate_summary_generic(features_files, time_bin))
+    
+    return df
+
+def generate_summary_csv(analysis_folder, time_bins):
     """
     Generate summary csv from the processed recordings
     """
     recording_list = get_recording_list([analysis_folder])
-    summary_csv = os.path.join(analysis_folder, "summary.csv")
+    summary_dest = os.path.join(analysis_folder, "summary.csv")
 
     features_files = [
         os.path.join(recording, "features.h5") for recording in recording_list
     ]
 
-    generate_summary_generic(features_files, summary_csv)
+    df = generate_summaries_generic(features_files, time_bins)
+
+    df.to_csv(summary_dest, float_format="%.2f")

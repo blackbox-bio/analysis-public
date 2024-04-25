@@ -37,9 +37,9 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
     ) = cal_paw_luminance(label, ftir_video, size=22)
 
     fps = int(ftir_video.get(cv2.CAP_PROP_FPS))
-    recording_time = frame_count / fps
+    # recording_time = frame_count / fps
 
-    features["recording_time"] = np.array(recording_time)
+    # features["recording_time"] = np.array(recording_time)
     features["fps"] = np.array(fps)
     features["frame_count"] = np.array(frame_count)
 
