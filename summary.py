@@ -2,6 +2,7 @@ from typing import Dict, Any, List, Tuple
 
 from utils import *
 
+
 def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
     features = defaultdict(dict)
 
@@ -239,25 +240,39 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
             features[video]["hip_tailbase_hrpaw_angle"]
         )
 
+        # paw luminance rework!!
+        paws = ["lhpaw", "rhpaw", "lfpaw", "rfpaw"]
+        lum_quant = ["luminescence", "print_size", "luminance_rework"]
+        for paw in paws:
+            for quant in lum_quant:
+                summary_features[video][f"average_{paw}_{quant}"] = np.nanmean(
+                    features[video][f"{paw}_{quant}"]
+                )
+
     df = pd.DataFrame.from_dict(summary_features, orient="index")
 
     # # Save DataFrame to CSV with specified precision
     # df.to_csv(summary_dest, float_format="%.2f")
     return df
 
+
 def _df_concat_step(prev, next):
     if prev is None:
         return next
-    
+
     return pd.concat([prev, next])
 
-def generate_summaries_generic(features_files: List[str], time_bins: List[Tuple[float, float]]):
+
+def generate_summaries_generic(
+    features_files: List[str], time_bins: List[Tuple[float, float]]
+):
     df = None
 
     for time_bin in time_bins:
         df = _df_concat_step(df, generate_summary_generic(features_files, time_bin))
-    
+
     return df
+
 
 def generate_summary_csv(analysis_folder, time_bins):
     """
