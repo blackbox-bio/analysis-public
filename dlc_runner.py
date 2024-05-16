@@ -1,7 +1,9 @@
 import os
 import deeplabcut
 
-dlc_config_path = r'D:\DLC\blackbox_dlc_deployment\config.yaml'
+dlc_config_path = r"/Users/zihealexzhang/work_local/blackbox_data/arcteryx500-alex-2023-11-04/config.yaml"
+# dlc_config_path = r"D:\DLC\blackbox_dlc_deployment\config.yaml"
+
 selected_folders = []
 
 
@@ -16,32 +18,50 @@ selected_folders = []
 #             body_videos.extend(videos)
 #     return body_videos
 
-def get_body_videos(directorys):
-    # Get the current time
-    # current_time = datetime.now()
-    # Calculate the time 24 hours ago
-    # twenty_four_hours_ago = current_time - timedelta(hours=24)
 
-    avi_files = []
+def get_recording_list(directorys):
+
+    recording_list = []
 
     for directory in directorys:
         for root, dirs, files in os.walk(directory):
             for file in files:
                 # file_path = os.path.join(root, file)
-                if file.endswith(".avi") and "_body" in file:
-                    # Check if the file is created in the last 24 hours
-                    # if os.path.getctime(file_path) > twenty_four_hours_ago.timestamp():
-                    avi_files.append(os.path.join(root, file))
-    return avi_files
+                if file.endswith("trans_resize.avi"):
+                    recording_list.append(root)
+                    # avi_files.append(os.path.join(root, file))
+    return recording_list
+
 
 # Function to run DeepLabCut on the specified videos
 #
 # THIS IS AN API ENTRYPOINT! If the signature is modified, ensure api.py matches!
 # The body of this function can change without affecting the API.
-def run_deeplabcut(dlc_config_path, body_videos):
-    deeplabcut.analyze_videos(dlc_config_path, body_videos, videotype='.avi')
-    deeplabcut.filterpredictions(dlc_config_path, body_videos, save_as_csv=False)
+def run_deeplabcut(dlc_config_path, body_videos, also_generate_skeleton=True):
+    deeplabcut.analyze_videos(dlc_config_path, body_videos, videotype=".avi")
+    for video in body_videos:
+        deeplabcut.filterpredictions(dlc_config_path, [video], save_as_csv=False)
+        # deeplabcut.create_labeled_video(
+        #     dlc_config_path, [video], videotype=".avi", filtered=True
+        # )
 
+    if also_generate_skeleton:
+        generate_skeleton(dlc_config_path, body_videos)
+    
+    return
+
+# Function to generate a skeleton video from the specified videos
+#
+# THIS IS AN API ENTRYPOINT! If the signature is modified, ensure api.py matches!
+# The body of this function can change without affecting the API.
+def generate_skeleton(dlc_config_path, body_videos):
+    deeplabcut.create_labeled_video(
+        dlc_config_path,
+        body_videos,
+        videotype=".avi",
+        filtered=True,
+        draw_skeleton=True,
+    )
     return
 
 # Function to prompt the user to select folders using a GUI dialog
@@ -52,7 +72,9 @@ def select_folders():
     # Ask the user to select subfolders to process
     selected_folders = []
     while True:
-        folder = filedialog.askdirectory(parent=root, title='Select a subfolder to process (Cancel to finish)')
+        folder = filedialog.askdirectory(
+            parent=root, title="Select a subfolder to process (Cancel to finish)"
+        )
         if folder:
             selected_folders.append(folder)
         else:
@@ -65,7 +87,8 @@ def main():
     root = tk.Tk()
     root.withdraw()
 
-    dlc_config_path = r'D:\DLC\arcteryx500-alex-2023-11-04\config.yaml'
+    # dlc_config_path = r"D:\DLC\arcteryx500-alex-2023-11-04\config.yaml"
+    dlc_config_path = r"/Users/zihealexzhang/work_local/blackbox_data/arcteryx500-alex-2023-11-04/config.yaml"
 
     # Ask the user to select subfolders to process
     selected_folders = select_folders()
@@ -82,7 +105,8 @@ def main():
     return
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import tkinter as tk
     from tkinter import filedialog
+
     main()
