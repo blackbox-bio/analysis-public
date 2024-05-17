@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import cv2 as cv
 from enum import Enum
 
+
 class GraphType(Enum):
     KDE = "kde"
     HIST = "hist"
@@ -13,6 +14,7 @@ class GraphType(Enum):
 
     def __str__(self):
         return self.value
+
 
 def get_plot_fn(kind: str):
     _kind = GraphType(kind)
@@ -25,6 +27,7 @@ def get_plot_fn(kind: str):
         return sns.regplot
     else:
         raise ValueError(f"Unknown graph type: {_kind}")
+
 
 def summary_viz_preprocess(df, rows_to_include, columns_to_include, group_variable):
     """
@@ -81,20 +84,23 @@ def _plot_to_cv2_image(plot):
     img = cv.imdecode(np.frombuffer(buf.read(), np.uint8), cv.IMREAD_UNCHANGED)
     return img
 
+
 def _horizontal_concat_step(prev, next):
     """
     Concatenate two images horizontally. If `prev` is None, return `next`.
     """
     if prev is None:
         return next
-    
+
     return cv.hconcat([prev, next])
+
 
 def _get_group_label(group_variable):
     """
     Variables provided through Palmreader start with "PV:", which is not necessary for the plot.
     """
     return group_variable[4:] if group_variable.startswith("PV:") else group_variable
+
 
 def generate_bar_plots(df, group_variable: str, dest_path, sort_by_significance=False):
     """
@@ -120,36 +126,75 @@ def generate_bar_plots(df, group_variable: str, dest_path, sort_by_significance=
     for column in sorted_columns:
         plt.figure()
 
-        sns.boxplot(
+        # sns.boxplot(
+        #     x=group_variable,
+        #     y=column,
+        #     data=df,
+        #     # fill = False,
+        #     # split = True,
+        #     # legend = 'auto',
+        #     # dodge=True,
+        # )
+        # ax = sns.barplot(
+        #     x=group_variable,
+        #     y=column,
+        #     data=df,
+        #     edgecolor="black",
+        #     linewidth=2,
+        #     fill=False,
+        #     errorbar="se",
+        #     capsize=0.1,
+        # )
+        ax = sns.pointplot(
             x=group_variable,
             y=column,
             data=df,
-            # fill = False,
-            # split = True,
-            # legend = 'auto',
-            # dodge=True,
+            hue=group_variable,
+            # markers="_",
+            # scale=0.5,
+            # markersize=10,
+            errorbar="se",
+            capsize=0.1,
         )
 
+        sns.stripplot(
+            x=group_variable,
+            y=column,
+            data=df,
+            # color="black",
+            hue=group_variable,
+            # dodge=True,
+            alpha=0.4,
+            jitter=True,
+            legend=False,
+            ax=ax,
+        )
+
+        ax.set_facecolor("none")
+        # Remove the legend
+        if ax.get_legend() is not None:
+            ax.get_legend().remove()
+
         plt.title(f"{column} grouped by {group_label}", wrap=True)
-        
+
         plot = plt.gcf()
         # remove PV: from the x-axis label
         plot.get_axes()[0].set_xlabel(group_label)
 
         img = _plot_to_cv2_image(plot)
         joined = _horizontal_concat_step(joined, img)
-    
+
     cv.imwrite(dest_path, joined)
 
 
 def generate_PairGrid_plot(
-        df,
-        group_variable: str,
-        diag_kind: str,
-        upper_kind: str,
-        lower_kind: str,
-        dest_path: str,
-        sort_by_significance=False
+    df,
+    group_variable: str,
+    diag_kind: str,
+    upper_kind: str,
+    lower_kind: str,
+    dest_path: str,
+    sort_by_significance=False,
 ):
 
     # Rank columns by significance
@@ -176,5 +221,5 @@ def generate_PairGrid_plot(
         for axis in arr:
             axis.set_xlabel(axis.get_xlabel(), rotation=10)
             axis.set_ylabel(axis.get_ylabel(), rotation=80, labelpad=25)
-    
+
     g.savefig(dest_path, dpi=300)
