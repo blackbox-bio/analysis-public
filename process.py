@@ -42,6 +42,7 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
     # features["recording_time"] = np.array(recording_time)
     features["fps"] = np.array(fps)
     features["frame_count"] = np.array(frame_count)
+    features["animal_detection"] = detect_animal_in_recording(label, fps)
 
     features["hind_left_luminance"] = hind_left
     features["hind_right_luminance"] = hind_right

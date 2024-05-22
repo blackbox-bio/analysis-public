@@ -2,6 +2,7 @@ from typing import Dict, Any, List, Tuple
 
 from utils import *
 
+
 def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
     features = defaultdict(dict)
 
@@ -12,7 +13,37 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
                 for subkey in hdf[key].keys():
                     features[key][subkey] = np.array(hdf[key][subkey])
 
-    # New -> take a time bin as a tuple of start and end time in minutes
+    # trim the recording length by automatic animal detection
+    for video in features.keys():
+        if "animal_detection" in features[video].keys():
+            animal_detection = features[video]["animal_detection"]
+            frame_count = features[video]["frame_count"]
+            fps = features[video]["fps"]
+            start_frame = 0
+            end_frame = frame_count  # default to the end of the recording
+
+            # find the start frame
+            for i in range(frame_count):
+                if animal_detection[i] == 1:
+                    start_frame = i
+                    break
+
+            # bin the features
+            for key in features[video].keys():
+
+                # change the frame count to the time bin
+                if key == "frame_count":
+                    # features[video][key] = end_frame - start_frame
+                    continue
+
+                # skip fps
+                if key == "fps":
+                    continue
+                features[video][key] = features[video][key][start_frame:end_frame]
+            features[video]["frame_count"] = end_frame - start_frame
+            features[video]["start_time"] = start_frame / fps / 60
+            features[video]["end_time"] = end_frame / fps / 60
+
     # binning the features
     for video in features.keys():
         frame_count = features[video]["frame_count"]
@@ -245,19 +276,24 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
     # df.to_csv(summary_dest, float_format="%.2f")
     return df
 
+
 def _df_concat_step(prev, next):
     if prev is None:
         return next
-    
+
     return pd.concat([prev, next])
 
-def generate_summaries_generic(features_files: List[str], time_bins: List[Tuple[float, float]]):
+
+def generate_summaries_generic(
+    features_files: List[str], time_bins: List[Tuple[float, float]]
+):
     df = None
 
     for time_bin in time_bins:
         df = _df_concat_step(df, generate_summary_generic(features_files, time_bin))
-    
+
     return df
+
 
 def generate_summary_csv(analysis_folder, time_bins):
     """
