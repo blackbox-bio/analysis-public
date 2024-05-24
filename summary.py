@@ -41,8 +41,6 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
                     continue
                 features[video][key] = features[video][key][start_frame:end_frame]
             features[video]["frame_count"] = end_frame - start_frame
-            features[video]["start_time"] = start_frame / fps / 60
-            features[video]["end_time"] = end_frame / fps / 60
 
     # binning the features
     for video in features.keys():
