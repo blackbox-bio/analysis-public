@@ -13,7 +13,35 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
                 for subkey in hdf[key].keys():
                     features[key][subkey] = np.array(hdf[key][subkey])
 
-    # New -> take a time bin as a tuple of start and end time in minutes
+    # trim the recording length by automatic animal detection
+    for video in features.keys():
+        if "animal_detection" in features[video].keys():
+            animal_detection = features[video]["animal_detection"]
+            frame_count = features[video]["frame_count"]
+            fps = features[video]["fps"]
+            start_frame = 0
+            end_frame = frame_count  # default to the end of the recording
+
+            # find the start frame
+            for i in range(frame_count):
+                if animal_detection[i] == 1:
+                    start_frame = i
+                    break
+
+            # bin the features
+            for key in features[video].keys():
+
+                # change the frame count to the time bin
+                if key == "frame_count":
+                    # features[video][key] = end_frame - start_frame
+                    continue
+
+                # skip fps
+                if key == "fps":
+                    continue
+                features[video][key] = features[video][key][start_frame:end_frame]
+            features[video]["frame_count"] = end_frame - start_frame
+
     # binning the features
     for video in features.keys():
         frame_count = features[video]["frame_count"]

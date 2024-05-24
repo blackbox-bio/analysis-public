@@ -9,6 +9,7 @@ import h5py
 from collections import defaultdict
 import cv2
 from scipy.ndimage import gaussian_filter1d
+from scipy.ndimage import median_filter
 
 
 def select_folder():
@@ -26,6 +27,23 @@ def select_folder():
     )
 
     return folder
+
+
+def detect_animal_in_recording(label, fps, likelihood_threshold=0.5, temp_threshood=10):
+    """
+    :param label: DLC tracking file
+    :param fps: fps of the recording
+    :param likelihood_threshold
+    :param temp_threshood: use 10 seconds as the threshold for the mouse to be considered as detected
+    :return: a boolean mask for whether the mouse is detected in the recording for each frame
+    """
+    likelihood_columns = [col for col in label.columns if "likelihood" in col]
+    likelihood = label[likelihood_columns].values
+    likelihood = np.mean(likelihood, axis=1)
+    detection = likelihood > likelihood_threshold
+    detection = median_filter(detection, size=temp_threshood * fps + 1)
+
+    return detection
 
 
 def get_recording_list(directorys):
