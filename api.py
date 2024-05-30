@@ -61,7 +61,7 @@ def summary_v1(args: SummaryArgsV1):
         if file.endswith(".h5"):
             features_files.append(os.path.join(features_dir, file))
 
-    df = generate_summary_generic(features_files, summary_path)
+    df = generate_summary_generic(features_files)
 
     df.to_csv(summary_path, float_format="%.2f")
 
