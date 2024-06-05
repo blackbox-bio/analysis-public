@@ -1,5 +1,5 @@
 from utils import *
-from paw_luminance_rework import *
+# from paw_luminance_rework import *
 
 dlc_postfix = "DLC_resnet50_arcteryx500Nov4shuffle1_350000"
 
