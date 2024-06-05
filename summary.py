@@ -278,6 +278,25 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
                 )
 
     df = pd.DataFrame.from_dict(summary_features, orient="index")
+    # rename the columns related to paw luminance rework
+    for paw in paws:
+        quant = "luminescence"
+        df.rename(
+            columns={f"average_{paw}_{quant}": f"average_{paw}_{quant}"},
+            inplace=True,
+        )
+        quant = "print_size"
+        df.rename(
+            columns={f"average_{paw}_{quant}": f"average_{paw}_{quant} (pixel area)"},
+            inplace=True,
+        )
+        quant = "luminance_rework"
+        df.rename(
+            columns={
+                f"average_{paw}_{quant}": f"average_{paw}_luminance (normalized by print size)"
+            },
+            inplace=True,
+        )
 
     # # Save DataFrame to CSV with specified precision
     # df.to_csv(summary_dest, float_format="%.2f")
