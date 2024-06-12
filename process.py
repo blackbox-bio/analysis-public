@@ -65,7 +65,7 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
     # )
 
     # calculate when the animal is standing on two hind paws
-    features["both_front_paws_lifted"] = both_front_paws_lifted(front_left, front_right)
+    # features["both_front_paws_lifted"] = both_front_paws_lifted(front_left, front_right)
 
     # body parts distance
 
