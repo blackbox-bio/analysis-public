@@ -118,84 +118,133 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
 
         # paw luminance rework!!
         paws = ["lhpaw", "rhpaw", "lfpaw", "rfpaw"]
+        paws_dict = {
+            "lhpaw": "hind_left",
+            "rhpaw": "hind_right",
+            "lfpaw": "front_left",
+            "rfpaw": "front_right",
+        }
         # lum_quant = ["luminescence", "print_size", "luminance_rework"]
-        lum_quant = ["luminescence", "print_size",]
+        # lum_quant = ["luminescence", "print_size",]
+
+        # paw luminescence/print/luminance for internal use
+        lh_luminescence = np.nanmean(features[video]["lhpaw_luminescence"])
+        rh_luminescence = np.nanmean(features[video]["rhpaw_luminescence"])
+        lf_luminescence = np.nanmean(features[video]["lfpaw_luminescence"])
+        rf_luminescence = np.nanmean(features[video]["rfpaw_luminescence"])
+        lf_print = np.nanmean(features[video]["lfpaw_print_size"])
+        rf_print = np.nanmean(features[video]["rfpaw_print_size"])
+        lh_print = np.nanmean(features[video]["lhpaw_print_size"])
+        rh_print = np.nanmean(features[video]["rhpaw_print_size"])
+        lh_luminance = np.nanmean(features[video]["lhpaw_luminance_rework"])
+        rh_luminance = np.nanmean(features[video]["rhpaw_luminance_rework"])
+        lf_luminance = np.nanmean(features[video]["lfpaw_luminance_rework"])
+        rf_luminance = np.nanmean(features[video]["rfpaw_luminance_rework"])
+
+        quant = "print_size"
+        summary_features[video]["average_overall_print_size (pixel area)"] = (
+            lf_print + rf_print + lh_print + rh_print
+        )
         for paw in paws:
-            for quant in lum_quant:
-                summary_features[video][f"average_{paw}_{quant}"] = np.nanmean(
-                    features[video][f"{paw}_{quant}"]
-                )
+            summary_features[video][f"average_{paws_dict[paw]}_{quant} (pixel area)"] = np.nanmean(
+                features[video][f"{paw}_{quant}"]
+            )
+            summary_features[video][f"relative_{paws_dict[paw]}_{quant} (ratio)"] = (
+                np.nanmean(features[video][f"{paw}_{quant}"])
+                / summary_features[video]["average_overall_print_size (pixel area)"]
+            )
 
-        # 3. both_front_paws_lifted
-        standing_ratio = both_front_paws_lifted(features[video]["lfpaw_luminance_rework"], features[video]["rfpaw_luminance_rework"])
-        summary_features[video]["both_front_paws_lifted (ratio of time)"] = np.nanmean(standing_ratio)
+        quant = "luminescence"
+        summary_features[video]["average_overall_luminescence (pixel intensity)"] = (
+            lf_luminescence + rf_luminescence + lh_luminescence + rh_luminescence
+        )
+        for paw in paws:
+            summary_features[video][f"average_{paws_dict[paw]}_{quant} (pixel intensity)"] = np.nanmean(
+                features[video][f"{paw}_{quant}"]
+            )
+            summary_features[video][f"relative_{paws_dict[paw]}_{quant} (ratio)"] = (
+                np.nanmean(features[video][f"{paw}_{quant}"])
+                / summary_features[video]["average_overall_luminescence (pixel intensity)"]
+            )
 
+        quant = "luminance_rework"
+        summary_features[video]["average_overall_luminance (pixel intensity/area)"] = (
+            lf_luminance + rf_luminance + lh_luminance + rh_luminance
+        )
+        for paw in paws:
+            summary_features[video][f"average_{paws_dict[paw]}_luminance (pixel intensity/area)"] = np.nanmean(
+                features[video][f"{paw}_{quant}"]
+            )
+            summary_features[video][f"relative{paws_dict[paw]}_luminance (ratio)"] = (
+                np.nanmean(features[video][f"{paw}_{quant}"])
+                / summary_features[video]["average_overall_luminance (pixel intensity/area)"]
+            )
 
-        # 4-7. paw luminance
+        # 8-12. paw luminescence/print/luminance ratios
+        summary_features[video]["average_hind_paw_luminescence_ratio (l/r)"] = (
+            lh_luminescence / rh_luminescence
+        )
+        summary_features[video]["average_hind_paw_luminescence_ratio (r/l)"] = (
+            rh_luminescence / lh_luminescence
+        )
+        summary_features[video]["average_front_to_hind_paw_luminescence_ratio"] = (
+        lf_luminescence + rf_luminescence) / (lh_luminescence + rh_luminescence)
 
-        summary_features[video]["average_hind_left_luminance"] = np.nanmean(
-            features[video]["lhpaw_luminance_rework"]
-        )
-        summary_features[video]["average_hind_right_luminance"] = np.nanmean(
-            features[video]["rhpaw_luminance_rework"]
-        )
-        summary_features[video]["average_front_left_luminance"] = np.nanmean(
-            features[video]["lfpaw_luminance_rework"]
-        )
-        summary_features[video]["average_front_right_luminance"] = np.nanmean(
-            features[video]["rfpaw_luminance_rework"]
-        )
-        summary_features[video]["average_all_paws_sum_luminance"] = (
-            np.nanmean(features[video]["lhpaw_luminance_rework"])
-            + np.nanmean(features[video]["rhpaw_luminance_rework"])
-            + np.nanmean(features[video]["lfpaw_luminance_rework"])
-            + np.nanmean(features[video]["rfpaw_luminance_rework"])
-        )
+        # calculate a boolean array for standing (both front paws lifted)
+        standing = both_front_paws_lifted(features[video]["lfpaw_luminance_rework"],
+                                                features[video]["rfpaw_luminance_rework"])
 
-        # paw luminance normalized by sum of paw luminance
-        summary_features[video]["relative_hind_left_luminance"] = (
-            summary_features[video]["average_hind_left_luminance"]
-            / summary_features[video]["average_all_paws_sum_luminance"]
-        )
-        summary_features[video]["relative_hind_right_luminance"] = (
-            summary_features[video]["average_hind_right_luminance"]
-            / summary_features[video]["average_all_paws_sum_luminance"]
-        )
-        summary_features[video]["relative_front_left_luminance"] = (
-            summary_features[video]["average_front_left_luminance"]
-            / summary_features[video]["average_all_paws_sum_luminance"]
-        )
-        summary_features[video]["relative_front_right_luminance"] = (
-            summary_features[video]["average_front_right_luminance"]
-            / summary_features[video]["average_all_paws_sum_luminance"]
-        )
-
-        # 8-12. paw luminance ratios
-        summary_features[video]["average_hind_paw_luminance_ratio (l/r)"] = (
-            summary_features[video]["average_hind_left_luminance"]
-            / summary_features[video]["average_hind_right_luminance"]
-        )
-        summary_features[video]["average_hind_paw_luminance_ratio (r/l)"] = (
-            summary_features[video]["average_hind_right_luminance"]
-            / summary_features[video]["average_hind_left_luminance"]
-        )
-        summary_features[video]["average_front_to_hind_paw_luminance_ratio"] = (
-            summary_features[video]["average_front_left_luminance"]
-            + summary_features[video]["average_front_right_luminance"]
-        ) / (
-            summary_features[video]["average_hind_left_luminance"]
-            + summary_features[video]["average_hind_right_luminance"]
-        )
-        summary_features[video]["average_standing_hind_paw_luminance_ratio (l/r)"] = np.nanmean(
-            features[video]["lhpaw_luminance_rework"][standing_ratio]
+        summary_features[video]["average_standing_hind_paw_luminescence_ratio (l/r)"] = np.nanmean(
+            features[video]["lhpaw_luminance_rework"][standing]
         ) / np.nanmean(
-            features[video]["rhpaw_luminance_rework"][standing_ratio]
+            features[video]["rhpaw_luminance_rework"][standing]
         )
         summary_features[video]["average_standing_hind_paw_luminance_ratio (r/l)"] = np.nanmean(
-            features[video]["rhpaw_luminance_rework"][standing_ratio]
+            features[video]["rhpaw_luminance_rework"][standing]
         ) / np.nanmean(
-            features[video]["lhpaw_luminance_rework"][standing_ratio]
+            features[video]["lhpaw_luminance_rework"][standing]
         )
+
+        summary_features[video]["average_hind_paw_print_size_ratio (l/r)"] = (
+            lh_print / rh_print
+        )
+        summary_features[video]["average_hind_paw_print_size_ratio (r/l)"] = (
+            rh_print / lh_print
+        )
+        summary_features[video]["average_front_to_hind_paw_print_size_ratio"] = (
+            lf_print + rf_print) / (lh_print + rh_print)
+
+        summary_features[video]["average_standing_hind_paw_print_size_ratio (l/r)"] = np.nanmean(
+            features[video]["lhpaw_print_size"][standing]
+        ) / np.nanmean(
+            features[video]["rhpaw_print_size"][standing]
+        )
+        summary_features[video]["average_standing_hind_paw_print_size_ratio (r/l)"] = np.nanmean(
+            features[video]["rhpaw_print_size"][standing]
+        ) / np.nanmean(
+            features[video]["lhpaw_print_size"][standing]
+        )
+
+        summary_features[video]["average_hind_paw_luminance_ratio (l/r)"] = (
+            lh_luminance / rh_luminance
+        )
+        summary_features[video]["average_hind_paw_luminance_ratio (r/l)"] = (
+            rh_luminance / lh_luminance
+        )
+        summary_features[video]["average_front_to_hind_paw_luminance_ratio"] = (
+            lf_luminance + rf_luminance) / (lh_luminance + rh_luminance)
+
+        summary_features[video]["average_standing_hind_paw_luminance_ratio (l/r)"] = np.nanmean(
+            features[video]["lhpaw_luminance_rework"][standing]
+        ) / np.nanmean(
+            features[video]["rhpaw_luminance_rework"][standing]
+        )
+        summary_features[video]["average_standing_hind_paw_luminance_ratio (r/l)"] = np.nanmean(
+            features[video]["rhpaw_luminance_rework"][standing]
+        ) / np.nanmean(
+            features[video]["lhpaw_luminance_rework"][standing]
+        )
+
 
         # 17-20 time spent paw lifted (not touching the ground)
         summary_features[video]["hind_left_paw_lifted_time (seconds)"] = (
@@ -214,13 +263,12 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
             np.sum(features[video]["rfpaw_luminance_rework"] < 1e-4)
             / features[video]["fps"]
         )
-
+        summary_features[video]["both_front_paws_lifted (seconds)"] = (
+            np.sum(standing) / features[video]["fps"]
+        )
 
         # ------------legacy --------
-        # 3. both_front_paws_lifted
-        standing_ratio_legacy = both_front_paws_lifted(features[video]["front_left_luminance"],
-                                                features[video]["front_right_luminance"])
-        summary_features[video]["legacy: both_front_paws_lifted (ratio of time)"] = np.nanmean(standing_ratio_legacy)
+
 
         # 4-7. paw luminance
         summary_features[video]["legacy: average_hind_left_luminance"] = np.nanmean(
@@ -277,6 +325,10 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
             summary_features[video]["legacy: average_hind_left_luminance"]
             + summary_features[video]["legacy: average_hind_right_luminance"]
         )
+
+        standing_ratio_legacy = both_front_paws_lifted(features[video]["front_left_luminance"],
+                                                       features[video]["front_right_luminance"])
+
         summary_features[video][
             "legacy: average_standing_hind_paw_luminance_ratio (l/r)"
         ] = np.nanmean(
@@ -326,6 +378,9 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
             np.sum(features[video]["front_right_luminance"] < 1e-4)
             / features[video]["fps"]
         )
+        # 3. both_front_paws_lifted
+
+        summary_features[video]["legacy: both_front_paws_lifted (ratio of time)"] = np.nanmean(standing_ratio_legacy)
         # ------------legacy -------- end
 
         # body parts distance
@@ -387,35 +442,7 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
             features[video]["hip_tailbase_hrpaw_angle"]
         )
 
-
-
     df = pd.DataFrame.from_dict(summary_features, orient="index")
-    # rename the columns related to paw luminance rework
-    paws_dict = {
-        "lhpaw": "hind_left",
-        "rhpaw": "hind_right",
-        "lfpaw": "front_left",
-        "rfpaw": "front_right",
-    }
-    for paw in paws:
-        quant = "luminescence"
-        df.rename(
-            columns={
-                f"average_{paw}_{quant}": f"average_{paws_dict[paw]}_{quant}"},
-            inplace=True,
-        )
-        quant = "print_size"
-        df.rename(
-            columns={f"average_{paw}_{quant}": f"average_{paws_dict[paw]}_{quant} (pixel area)"},
-            inplace=True,
-        )
-        # quant = "luminance_rework"
-        # df.rename(
-        #     columns={
-        #         f"average_{paw}_{quant}": f"average_{paws_dict[paw]}_luminance (normalized by print size)"
-        #     },
-        #     inplace=True,
-        # )
 
     # # Save DataFrame to CSV with specified precision
     # df.to_csv(summary_dest, float_format="%.2f")
