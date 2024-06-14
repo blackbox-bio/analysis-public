@@ -175,7 +175,7 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
             summary_features[video][f"average_{paws_dict[paw]}_luminance (pixel intensity/area)"] = np.nanmean(
                 features[video][f"{paw}_{quant}"]
             )
-            summary_features[video][f"relative{paws_dict[paw]}_luminance (ratio)"] = (
+            summary_features[video][f"relative_{paws_dict[paw]}_luminance (ratio)"] = (
                 np.nanmean(features[video][f"{paw}_{quant}"])
                 / summary_features[video]["average_overall_luminance (pixel intensity/area)"]
             )
