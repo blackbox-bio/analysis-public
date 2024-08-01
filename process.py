@@ -96,13 +96,28 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
     )
     features["neck_snout_distance"] = body_parts_distance(label, "neck", "snout")
 
+    # toe spread and paw length for both hind paws
+    features["hind_left_toes_spread"] = body_parts_distance(label, "lhpd1t", "lhpd5t")
+    features["hind_right_toes_spread"] = body_parts_distance(label, "rhpd1t", "rhpd5t")
+    features["hind_left_paw_length"] = body_parts_distance(label, "lankle", "lhpd3t")
+    features["hind_right_paw_length"] = body_parts_distance(label, "rankle", "rhpd3t")
+
     # body parts vectors
     sternumtail_sternumhead_vector = get_vector(label, "sternumtail", "sternumhead")
+    midline_vector = get_vector(label, "tailbase", "sternumtail")
     neck_snout_vector = get_vector(label, "neck", "snout")
     tailbase_hip_vector = get_vector(label, "tailbase", "hip")
     tailtip_tailbase_vector = get_vector(label, "tailtip", "tailbase")
     tailbase_hlpaw_vec = get_vector(label, "tailbase", "lhpaw")
     tailbase_hrpaw_vec = get_vector(label, "tailbase", "rhpaw")
+    lankle_lhpaw_vec = get_vector(label,"lankle","lhpaw")
+    lankle_lhpd1t_vec = get_vector(label,"lankle","lhpd1t")
+    # lankle_lhpd3t_vec = get_vector(label,"lankle","lhpd3t")
+    lankle_lhpd5t_vec = get_vector(label,"lankle","lhpd5t")
+    rankle_rhpaw_vec = get_vector(label,"rankle","rhpaw")
+    rankle_rhpd1t_vec = get_vector(label,"rankle","rhpd1t")
+    # rankle_rhpd3t_vec = get_vector(label,"rankle","rhpd3t")
+    rankle_rhpd5t_vec = get_vector(label,"rankle","rhpd5t")
 
     # body parts angles
     features["chest_head_angle"] = get_angle(
@@ -120,6 +135,23 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
     )
     features["hip_tailbase_hrpaw_angle"] = get_angle(
         tailbase_hrpaw_vec, tailbase_hip_vector
+    )
+    # paw angles with respect to the midline for both hind paws
+    features["midline_hlpaw_angle"] = get_angle(midline_vector, lankle_lhpaw_vec)
+    features["midline_hrpaw_angle"] = get_angle(rankle_rhpaw_vec, midline_vector)
+
+    # toe angles for both hind paws
+    features["lhpd1t_lankle_lhpaw_angle"] = get_angle(
+        lankle_lhpd1t_vec, lankle_lhpaw_vec
+    )
+    features["lhpd5t_lankle_lhpaw_angle"] = get_angle(
+        lankle_lhpaw_vec, lankle_lhpd5t_vec
+    )
+    features["rhpd1t_rankle_rhpaw_angle"] = get_angle(
+        rankle_rhpaw_vec, rankle_rhpd1t_vec
+    )
+    features["rhpd5t_rankle_rhpaw_angle"] = get_angle(
+        rankle_rhpd5t_vec, lankle_lhpaw_vec
     )
 
     # paw luminance rework!!
