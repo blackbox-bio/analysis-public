@@ -1,7 +1,9 @@
 from utils import *
+
 # from paw_luminance_rework import *
 
 dlc_postfix = "DLC_resnet50_arcteryx500Nov4shuffle1_350000"
+
 
 # Function to process a video with specified arguments
 def process_recording_wrapper(recording):
@@ -26,8 +28,15 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
 
     # ----calculate paw luminance, average paw luminance ratio, and paw luminance log-ratio----
     # read ftir video
+
     ftir_video = cv2.VideoCapture(ftir_path)
-    (paw_luminescence, paw_print_size, paw_luminance, background_luminance, frame_count) = cal_paw_luminance_rework(
+
+    (paw_luminescence,
+     paw_print_size,
+     paw_luminance,
+     background_luminance,
+     frame_count,
+     legacy_paw_luminance) = cal_paw_luminance_rework(
         label, ftir_video, size=22
     )
 
@@ -36,14 +45,6 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
         features[f"{paw}_luminescence"] = paw_luminescence[paw]
         features[f"{paw}_print_size"] = paw_print_size[paw]
         features[f"{paw}_luminance_rework"] = paw_luminance[paw]
-
-    # calculate the legacy paw luminance
-    size = 22
-    hind_left = paw_luminescence["lhpaw"]/np.power(2*size,2)
-    hind_right = paw_luminescence["rhpaw"]/np.power(2*size,2)
-    front_left = paw_luminescence["lfpaw"]/np.power(2*size,2)
-    front_right = paw_luminescence["rfpaw"]/np.power(2*size,2)
-
 
     # calculate paw luminance
     # (
@@ -54,6 +55,11 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
     #     background_luminance,
     #     frame_count,
     # ) = cal_paw_luminance(label, ftir_video, size=22)
+
+    (hind_left,
+     hind_right,
+     front_left,
+     front_right,) = legacy_paw_luminance
 
     fps = int(ftir_video.get(cv2.CAP_PROP_FPS))
     # recording_time = frame_count / fps
@@ -128,14 +134,14 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
     tailtip_tailbase_vector = get_vector(label, "tailtip", "tailbase")
     tailbase_hlpaw_vec = get_vector(label, "tailbase", "lhpaw")
     tailbase_hrpaw_vec = get_vector(label, "tailbase", "rhpaw")
-    lankle_lhpaw_vec = get_vector(label,"lankle","lhpaw")
-    lankle_lhpd1t_vec = get_vector(label,"lankle","lhpd1t")
+    lankle_lhpaw_vec = get_vector(label, "lankle", "lhpaw")
+    lankle_lhpd1t_vec = get_vector(label, "lankle", "lhpd1t")
     # lankle_lhpd3t_vec = get_vector(label,"lankle","lhpd3t")
-    lankle_lhpd5t_vec = get_vector(label,"lankle","lhpd5t")
-    rankle_rhpaw_vec = get_vector(label,"rankle","rhpaw")
-    rankle_rhpd1t_vec = get_vector(label,"rankle","rhpd1t")
+    lankle_lhpd5t_vec = get_vector(label, "lankle", "lhpd5t")
+    rankle_rhpaw_vec = get_vector(label, "rankle", "rhpaw")
+    rankle_rhpd1t_vec = get_vector(label, "rankle", "rhpd1t")
     # rankle_rhpd3t_vec = get_vector(label,"rankle","rhpd3t")
-    rankle_rhpd5t_vec = get_vector(label,"rankle","rhpd5t")
+    rankle_rhpd5t_vec = get_vector(label, "rankle", "rhpd5t")
 
     # body parts angles
     features["chest_head_angle"] = get_angle(
@@ -175,8 +181,6 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
     # paw luminance rework!!
     ftir_video.release()
 
-
-
     # -------------------------------------------------------------
 
     # save extracted features
@@ -187,7 +191,6 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
 
 
 def process_recording(recording):
-
     print(f"Processing {os.path.basename(recording)}...")
 
     recording_name = os.path.basename(recording)

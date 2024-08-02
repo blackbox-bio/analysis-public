@@ -368,6 +368,13 @@ def cal_paw_luminance_rework(label, cap, size=22):
 
     background_luminance = []
 
+    # legacy paw luminance calculation
+    hind_right = []
+    hind_left = []
+    front_right = []
+    front_left = []
+    # legacy end----------------
+
     i = 0
     pbar = tqdm(total=None, dynamic_ncols=True,desc="reworked paw luminance calculation")
 
@@ -380,6 +387,32 @@ def cal_paw_luminance_rework(label, cap, size=22):
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # Convert to grayscale
         # calculate background luminance
         background_luminance.append(np.mean(frame))
+
+        # legacy paw luminance calculation
+        x, y = (
+            int(label["rhpaw"][["x"]].values[i]),
+            int(label["rhpaw"][["y"]].values[i]),
+        )
+        hind_right.append(np.nanmean(frame[y - size: y + size, x - size: x + size]))
+
+        x, y = (
+            int(label["lhpaw"][["x"]].values[i]),
+            int(label["lhpaw"][["y"]].values[i]),
+        )
+        hind_left.append(np.nanmean(frame[y - size: y + size, x - size: x + size]))
+
+        x, y = (
+            int(label["rfpaw"][["x"]].values[i]),
+            int(label["rfpaw"][["y"]].values[i]),
+        )
+        front_right.append(np.nanmean(frame[y - size: y + size, x - size: x + size]))
+
+        x, y = (
+            int(label["lfpaw"][["x"]].values[i]),
+            int(label["lfpaw"][["y"]].values[i]),
+        )
+        front_left.append(np.nanmean(frame[y - size: y + size, x - size: x + size]))
+        # legacy paw luminance calculation end----------------
 
         frame_denoise, paw_print = get_ftir_mask(frame)
 
@@ -412,4 +445,30 @@ def cal_paw_luminance_rework(label, cap, size=22):
     for paw in paws:
         paw_luminance[paw] = denoise(paw_luminance[paw], background_luminance)
 
-    return paw_luminescence, paw_print_size, paw_luminance, background_luminance, i
+    # legacy paw luminance calculation
+    hind_right = np.array(hind_right)
+    hind_left = np.array(hind_left)
+    front_right = np.array(front_right)
+    front_left = np.array(front_left)
+    hind_left_mean = np.nanmean(hind_left)
+    hind_right_mean = np.nanmean(hind_right)
+    front_left_mean = np.nanmean(front_left)
+    front_right_mean = np.nanmean(front_right)
+    hind_left = np.nan_to_num(hind_left, nan=hind_left_mean)
+    hind_right = np.nan_to_num(hind_right, nan=hind_right_mean)
+    front_left = np.nan_to_num(front_left, nan=front_left_mean)
+    front_right = np.nan_to_num(front_right, nan=front_right_mean)
+    hind_left = denoise(hind_left, background_luminance)
+    hind_right = denoise(hind_right, background_luminance)
+    front_left = denoise(front_left, background_luminance)
+    front_right = denoise(front_right, background_luminance)
+
+    legacy_paw_luminance = [
+        hind_left,
+        hind_right,
+        front_left,
+        front_right
+    ]
+    # legacy paw luminance calculation end----------------
+
+    return paw_luminescence, paw_print_size, paw_luminance, background_luminance, i, legacy_paw_luminance
