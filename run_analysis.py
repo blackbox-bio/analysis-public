@@ -40,20 +40,28 @@ def main():
     print(f"In total {len(recording_list)} videos to be processed: ")
     print(f"{[os.path.basename(recording) for recording in recording_list]}")
 
-    # # Process the videos iteratively
-    for recording in recording_list:
-        process_recording_wrapper(recording)
+    # # # Process the videos iteratively
+    # for recording in recording_list:
+    #     process_recording_wrapper(recording)
 
     # # Get the number of available CPU cores
     # num_workers = os.cpu_count() - 2 if os.cpu_count() > 2 else 1
 
-    # num_workers = 4
+    num_workers = 16
     # #
     # # # Use joblib for parallel processing
     # Parallel(n_jobs=num_workers)(
     #     delayed(process_recording_wrapper)(recording) for recording in recording_list
     # )
     #
+    with concurrent.futures.ProcessPoolExecutor(max_workers=num_workers) as executor:
+        futures = [
+            executor.submit(process_recording_wrapper, recording)
+            for recording in recording_list
+        ]
+
+
+
     # generate summary csv from the processed videos
     time_bins = ((0, -1),)
     # time_bins = ((0, 1), (1, 2), (2, 3), (3, 4), (0, 2), (0, 3), (0, 4), (0, -1))
