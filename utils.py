@@ -202,6 +202,7 @@ def cal_paw_luminance(label, cap, size=22):
     # https://stackoverflow.com/questions/31472155/python-opencv-cv2-cv-cv-cap-prop-frame-count-get-wrong-numbers
     # for i in tqdm(range(500)):
     i = 0
+    pbar = tqdm(total=None, dynamic_ncols=True,desc="legacy paw luminance calculation")
     while True:
         ret, frame = cap.read()  # Read the next frame
 
@@ -239,6 +240,10 @@ def cal_paw_luminance(label, cap, size=22):
         background_luminance.append(np.nanmean(frame))
 
         i += 1
+
+        pbar.update(1)
+
+    pbar.close()
 
     hind_right = np.array(hind_right)
     hind_left = np.array(hind_left)
@@ -364,6 +369,8 @@ def cal_paw_luminance_rework(label, cap, size=22):
     background_luminance = []
 
     i = 0
+    pbar = tqdm(total=None, dynamic_ncols=True,desc="reworked paw luminance calculation")
+
     while True:
         ret, frame = cap.read()  # Read the next frame
 
@@ -390,6 +397,11 @@ def cal_paw_luminance_rework(label, cap, size=22):
             paw_luminance[paw].append(luminance)
 
         i += 1
+
+        pbar.update(1)
+
+    pbar.close()
+
     background_luminance = np.array(background_luminance)
     for dict_ in [paw_luminescence, paw_print_size, paw_luminance]:
         for paw in paws:
