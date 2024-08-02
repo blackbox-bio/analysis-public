@@ -27,15 +27,33 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
     # ----calculate paw luminance, average paw luminance ratio, and paw luminance log-ratio----
     # read ftir video
     ftir_video = cv2.VideoCapture(ftir_path)
+    (paw_luminescence, paw_print_size, paw_luminance, background_luminance, frame_count) = cal_paw_luminance_rework(
+        label, ftir_video, size=22
+    )
+
+    paws = ["lhpaw", "rhpaw", "lfpaw", "rfpaw"]
+    for paw in paws:
+        features[f"{paw}_luminescence"] = paw_luminescence[paw]
+        features[f"{paw}_print_size"] = paw_print_size[paw]
+        features[f"{paw}_luminance_rework"] = paw_luminance[paw]
+
+    # calculate the legacy paw luminance
+    size = 22
+    hind_left = paw_luminescence["lhpaw"]/np.power(2*size,2)
+    hind_right = paw_luminescence["rhpaw"]/np.power(2*size,2)
+    front_left = paw_luminescence["lfpaw"]/np.power(2*size,2)
+    front_right = paw_luminescence["rfpaw"]/np.power(2*size,2)
+
+
     # calculate paw luminance
-    (
-        hind_left,
-        hind_right,
-        front_left,
-        front_right,
-        background_luminance,
-        frame_count,
-    ) = cal_paw_luminance(label, ftir_video, size=22)
+    # (
+    #     hind_left,
+    #     hind_right,
+    #     front_left,
+    #     front_right,
+    #     background_luminance,
+    #     frame_count,
+    # ) = cal_paw_luminance(label, ftir_video, size=22)
 
     fps = int(ftir_video.get(cv2.CAP_PROP_FPS))
     # recording_time = frame_count / fps
@@ -156,16 +174,8 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
 
     # paw luminance rework!!
     ftir_video.release()
-    ftir_video = cv2.VideoCapture(ftir_path)
-    (paw_luminescence, paw_print_size, paw_luminance, _, _) = cal_paw_luminance_rework(
-        label, ftir_video, size=22
-    )
 
-    paws = ["lhpaw", "rhpaw", "lfpaw", "rfpaw"]
-    for paw in paws:
-        features[f"{paw}_luminescence"] = paw_luminescence[paw]
-        features[f"{paw}_print_size"] = paw_print_size[paw]
-        features[f"{paw}_luminance_rework"] = paw_luminance[paw]
+
 
     # -------------------------------------------------------------
 
