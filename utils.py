@@ -376,7 +376,7 @@ def cal_paw_luminance_rework(label, cap, size=22):
     # legacy end----------------
 
     i = 0
-    pbar = tqdm(total=None, dynamic_ncols=True,desc="reworked paw luminance calculation")
+    pbar = tqdm(total=None, dynamic_ncols=True,desc="paw luminance calculation")
 
     while True:
         ret, frame = cap.read()  # Read the next frame
