@@ -34,7 +34,7 @@ def main():
     ]
 
     # run deeplabcut
-    # run_deeplabcut(dlc_config_path, body_videos)
+    run_deeplabcut(dlc_config_path, body_videos)
 
     # now that done with DLC tracking, start process the recordings
     print(f"In total {len(recording_list)} videos to be processed: ")
@@ -47,7 +47,7 @@ def main():
     # # Get the number of available CPU cores
     # num_workers = os.cpu_count() - 2 if os.cpu_count() > 2 else 1
 
-    num_workers = 16
+    num_workers = 16 # set to work with 13900K CPU
     # #
     # # # Use joblib for parallel processing
     # Parallel(n_jobs=num_workers)(
