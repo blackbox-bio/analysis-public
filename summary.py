@@ -464,19 +464,19 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
             features[video]["midline_hrpaw_angle"]
         )
 
-        # new toe angles for both hind paws
-        summary_features[video]["lhpd1t_lankle_lhpaw_angle (degree)"] = np.nanmean(
-            features[video]["lhpd1t_lankle_lhpaw_angle"]
-        )
-        summary_features[video]["lhpd5t_lankle_lhpaw_angle (degree)"] = np.nanmean(
-            features[video]["lhpd5t_lankle_lhpaw_angle"]
-        )
-        summary_features[video]["rhpd1t_rankle_rhpaw_angle (degree)"] = np.nanmean(
-            features[video]["rhpd1t_rankle_rhpaw_angle"]
-        )
-        summary_features[video]["rhpd5t_rankle_rhpaw_angle (degree)"] = np.nanmean(
-            features[video]["rhpd5t_rankle_rhpaw_angle"]
-        )
+        # # new toe angles for both hind paws
+        # summary_features[video]["lhpd1t_lankle_lhpaw_angle (degree)"] = np.nanmean(
+        #     features[video]["lhpd1t_lankle_lhpaw_angle"]
+        # )
+        # summary_features[video]["lhpd5t_lankle_lhpaw_angle (degree)"] = np.nanmean(
+        #     features[video]["lhpd5t_lankle_lhpaw_angle"]
+        # )
+        # summary_features[video]["rhpd1t_rankle_rhpaw_angle (degree)"] = np.nanmean(
+        #     features[video]["rhpd1t_rankle_rhpaw_angle"]
+        # )
+        # summary_features[video]["rhpd5t_rankle_rhpaw_angle (degree)"] = np.nanmean(
+        #     features[video]["rhpd5t_rankle_rhpaw_angle"]
+        # )
 
 
     df = pd.DataFrame.from_dict(summary_features, orient="index")
