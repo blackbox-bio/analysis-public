@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 1000px;
+            height: 80vh;
+            position: relative;
+        }
+
+        #video-container {
+            flex-grow: 1;
+            height: 100%;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0;
+            margin: 0;
+        }
+
+        #video-frame {
+            width: 512px;
+            height: 512px;
+            object-fit: contain;
+            padding: 0;
+            margin: 0;
+            background-color: black;
+        }
+
+        .controls-left, .controls-right {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 120px;
+            height: 100%;
+            padding: 10px;
+        }
+
+        .controls-left {
+            justify-content: flex-start;
+        }
+
+        .controls-right {
+            justify-content: flex-start;
+        }
+
+        #slider-container {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 512px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #frame-slider {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        #time-ticks {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            font-size: 12px;
+            color: #333;
+        }
+
+        #time-input-container {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        #time-input {
+            width: 100px;
+            margin-right: 10px;
+            padding: 5px;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        #jump-button {
+            padding: 5px 10px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #play-mode {
+            background-color: lightgray;
+            padding: 15px;
+            text-align: left;
+            width: 100%;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #play-mode h3 {
+            margin: 0 0 10px 0;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        .mode-option {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .mode-option:last-child {
+            margin-bottom: 0;
+        }
+
+        .mode-option .circle {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid gray;
+            margin-right: 10px;
+        }
+
+        .mode-option .circle.selected {
+            background-color: green;
+            border-color: green;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="controls-left">
+            <form method="POST" enctype="multipart/form-data" action="/upload">
+                <input type="file" name="file" accept=".avi" onchange="this.form.submit()">
+            </form>
+        </div>
+
+        <div id="video-container">
+            <img id="video-frame" src="data:image/gif;base64,R0lGODlhAQABAIAAAAUEBA==" alt="Video Stream"> <!-- Placeholder -->
+        </div>
+
+        <div class="controls-right">
+            <div id="play-mode">
+                <h3>Play Mode "f"</h3>
+                <div class="mode-option">
+                    <div class="circle" id="mode-1-frame"></div>
+                    <span>1-frame</span>
+                </div>
+                <div class="mode-option">
+                    <div class="circle" id="mode-5-frame"></div>
+                    <span>5-frame</span>
+                </div>
+                <div class="mode-option">
+                    <div class="circle" id="mode-10-frame"></div>
+                    <span>10-frame</span>
+                </div>
+                <div class="mode-option">
+                    <div class="circle" id="mode-15-frame"></div>
+                    <span>15-frame</span>
+                </div>
+                <div class="mode-option">
+                    <div class="circle" id="mode-20-frame"></div>
+                    <span>20-frame</span>
+                </div>
+                <div class="mode-option">
+                    <div class="circle" id="mode-25-frame"></div>
+                    <span>25-frame</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="slider-container">
+        <input type="range" id="frame-slider" min="0" max="100" value="0" step="1">
+        <div id="time-ticks"></div>
+        <div id="time-input-container">
+            <input type="text" id="time-input" placeholder="00:00.00">
+            <button id="jump-button">Go</button>
+        </div>
+    </div>
+
+    <script>
+        const slider = document.getElementById('frame-slider');
+        const videoFrame = document.getElementById('video-frame');
+        const sliderContainer = document.getElementById('slider-container');
+        const timeTicks = document.getElementById('time-ticks');
+        const timeInput = document.getElementById('time-input');
+        const jumpButton = document.getElementById('jump-button');
+        let totalFrames = 100;
+        let fps = 30;  // You will get this value dynamically
+        let duration = 0;  // In seconds
+        let frameInterval;
+        let isKeyDown = false;
+        let playModes = [1, 5, 10, 15, 20, 25];
+        let currentPlayModeIndex = 0;
+
+        const circles = {
+            0: document.getElementById('mode-1-frame'),
+            1: document.getElementById('mode-5-frame'),
+            2: document.getElementById('mode-10-frame'),
+            3: document.getElementById('mode-15-frame'),
+            4: document.getElementById('mode-20-frame'),
+            5: document.getElementById('mode-25-frame')
+        };
+
+        function formatSliderTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+        function formatTimeInput(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            const ms = Math.floor((seconds % 1) * 100);  // Include milliseconds
+            return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}.${ms < 10 ? '0' : ''}${ms}`;
+        }
+
+        function parseTime(timeStr) {
+            const [mins, secs] = timeStr.split(':').map(Number);
+            return mins * 60 + secs;
+        }
+
+        function generateTimeTicks() {
+            timeTicks.innerHTML = '';
+            const tickInterval = 30;  // Every 30 seconds
+            for (let i = 0; i <= duration; i += tickInterval) {
+                const tick = document.createElement('div');
+                tick.style.flex = '1';
+                tick.style.textAlign = i === 0 ? 'left' : (i === duration ? 'right' : 'center');
+                tick.innerText = formatSliderTime(i);
+                timeTicks.appendChild(tick);
+            }
+        }
+
+        function updateTimeInputDisplay(frameNumber) {
+            const currentTime = formatTimeInput(frameNumber / fps);
+            timeInput.value = currentTime;
+        }
+
+        fetch('/get_video_info')
+            .then(response => response.json())
+            .then(data => {
+                totalFrames = data.total_frames;
+                fps = data.fps;
+                duration = totalFrames / fps;
+                slider.max = totalFrames - 1;
+                updateFrame(0);  // Display the first frame immediately
+                generateTimeTicks();
+            });
+
+        slider.oninput = function() {
+            const frameValue = parseInt(this.value);
+            updateFrame(frameValue);
+            updateTimeInputDisplay(frameValue);
+        };
+
+        function updateFrame(value) {
+            videoFrame.src = `/video_feed?frame=${value}&timestamp=${new Date().getTime()}`;
+        }
+
+        function adjustFrame(value) {
+            let newValue = parseInt(slider.value) + value;
+            if (newValue < 0) newValue = 0;
+            if (newValue >= totalFrames) newValue = totalFrames - 1;
+            slider.value = newValue;
+            updateFrame(newValue);
+            updateTimeInputDisplay(newValue);
+        }
+
+        function updatePlayModeDisplay() {
+            Object.values(circles).forEach(circle => circle.classList.remove('selected'));
+            circles[currentPlayModeIndex].classList.add('selected');
+        }
+
+        jumpButton.addEventListener('click', function() {
+            const timeValue = parseTime(timeInput.value.split(' - ')[0]);
+            const frameNumber = Math.round(timeValue * fps);
+            if (frameNumber >= 0 && frameNumber < totalFrames) {
+                slider.value = frameNumber;
+                updateFrame(frameNumber);
+                updateTimeInputDisplay(frameNumber);
+            } else {
+                alert('Invalid time input.');
+            }
+        });
+
+        document.addEventListener('keydown', function(event) {
+            if ((event.key === "ArrowRight" || event.key === "ArrowLeft") && !isKeyDown) {
+                isKeyDown = true;
+                event.preventDefault();
+                const frameStep = event.key === "ArrowRight" ? playModes[currentPlayModeIndex] : -playModes[currentPlayModeIndex];
+                adjustFrame(frameStep);
+                frameInterval = setInterval(() => adjustFrame(frameStep), 200);  // Set to 200ms
+            }
+        });
+
+        document.addEventListener('keyup', function(event) {
+            if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+                clearInterval(frameInterval);
+                isKeyDown = false;
+            }
+        });
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === "f") {
+                currentPlayModeIndex = (currentPlayModeIndex + 1) % playModes.length;
+                updatePlayModeDisplay();
+            }
+        });
+
+        updatePlayModeDisplay();
+    </script>
+</body>
+</html>

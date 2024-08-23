@@ -10,8 +10,10 @@ from scipy.ndimage import gaussian_filter1d
 import uuid
 
 # Define project directory and file paths
-proj_dir = r"D:\data\Twiss_lab\test_analysis"
-recording_name = "0014"
+proj_dir = r"D:\data\TAMU\hallway-tests_analysis"
+# proj_dir = r"D:\data\Twiss_lab\test_analysis"
+recording_name = "2024-07-31_15-19-11_7917-1-sec-dwell-training-sci"
+# recording_name = "0014"
 features_h5 = os.path.join(proj_dir, recording_name, "features.h5")
 
 # Load the HDF5 file and extract the relevant information into a dictionary for faster access
