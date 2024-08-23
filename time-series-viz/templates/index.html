@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flask Data Visualization</title>
+    <title>Feature Time Series Plotter</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
@@ -12,15 +12,8 @@
         <button id="add-graph-btn">Add Graph</button>
         <button id="reset-zoom-btn">Reset Zoom</button>
         <br>
-        <label>Sigma (Multiplier of FPS = {{ recording_fps }}):</label>
-        <input type="number" id="sigma-input" value="1.0" min="0.1" step="0.1">
-        <br>
-        <label>Select Feature to Plot:</label>
-        <select id="feature-dropdown" multiple>
-            {% for feature in feature_cols %}
-            <option value="{{ feature }}">{{ feature }}</option>
-            {% endfor %}
-        </select>
+        <label>Sigma (Multiplier of FPS = 45):</label>
+        <input type="number" id="sigma-input" value="1" min="0.1" step="0.1">
         <div id="graphs-container"></div>
     </div>
 
