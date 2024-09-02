@@ -16,6 +16,8 @@ recording_name = "2024-07-31_15-19-11_7917-1-sec-dwell-training-sci"
 # recording_name = "0014"
 features_h5 = os.path.join(proj_dir, recording_name, "features.h5")
 
+features_h5 = os.path.join(r"C:\Users\alexz\OneDrive\Desktop\2024-06-25_13-49-06_21\features.h5")
+
 # Load the HDF5 file and extract the relevant information into a dictionary for faster access
 features_data = {}
 recording_fps = 45  # Assuming a fixed FPS for now

@@ -19,30 +19,44 @@
             flex-direction: row;
             align-items: center;
             justify-content: space-between;
-            width: 100%;
-            max-width: 1000px;
-            height: 80vh;
+            width: 90%;
+            max-width: 1400px;
+            height: 100vh;
             position: relative;
+            margin: auto;
         }
 
         #video-container {
             flex-grow: 1;
-            height: 100%;
-            position: relative;
+            height: 90%;
+            position: relative;  /* Set position to relative to use it as the reference for absolute positioning inside */
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-start; /* Aligns the video at the top of the container */
             padding: 0;
             margin: 0;
         }
 
         #video-frame {
-            width: 512px;
-            height: 512px;
+            width: 600px;
+            height: 600px;
             object-fit: contain;
             padding: 0;
             margin: 0;
             background-color: black;
+        }
+
+        #slider-container {
+            position: absolute;
+            bottom: 0px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 0;
         }
 
         .controls-left, .controls-right {
@@ -50,7 +64,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            width: 120px;
+            width: 180px;
             height: 100%;
             padding: 10px;
         }
@@ -61,17 +75,9 @@
 
         .controls-right {
             justify-content: flex-start;
-        }
-
-        #slider-container {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 512px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            width: 180px;
+            height: 100%;
+            padding: 10px;
         }
 
         #frame-slider {
@@ -113,31 +119,36 @@
             align-items: center;
         }
 
-        #play-mode {
+        #play-mode, #behavior-list {
             background-color: lightgray;
             padding: 15px;
             text-align: left;
             width: 100%;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 10px;
         }
 
-        #play-mode h3 {
+        #behavior-list {
+            max-width: 180px;
+        }
+
+        #play-mode h3, #behavior-list h3 {
             margin: 0 0 10px 0;
             text-align: center;
             font-size: 16px;
         }
 
-        .mode-option {
+        .mode-option, .behavior-option {
             display: flex;
             align-items: center;
             margin-bottom: 10px;
         }
 
-        .mode-option:last-child {
+        .mode-option:last-child, .behavior-option:last-child {
             margin-bottom: 0;
         }
 
-        .mode-option .circle {
+        .mode-option .circle, .behavior-option .circle {
             width: 12px;
             height: 12px;
             border-radius: 50%;
@@ -145,22 +156,51 @@
             margin-right: 10px;
         }
 
-        .mode-option .circle.selected {
+        .mode-option .circle.selected, .behavior-option .circle.selected {
             background-color: green;
             border-color: green;
         }
+
+        #add-behavior, #remove-behavior {
+            cursor: pointer;
+            font-size: 14px;
+            padding: 5px 10px;
+            margin-top: 10px;
+            display: block;
+            text-align: center;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+
+        /*#remove-behavior {*/
+        /*    background-color: #dc3545;*/
+        /*}*/
+
+
+
     </style>
 </head>
 <body>
     <div class="container">
         <div class="controls-left">
             <form method="POST" enctype="multipart/form-data" action="/upload">
-                <input type="file" name="file" accept=".avi" onchange="this.form.submit()">
+                <input type="file" name="file" accept=".avi, .mp4" onchange="this.form.submit()">
             </form>
         </div>
 
         <div id="video-container">
             <img id="video-frame" src="data:image/gif;base64,R0lGODlhAQABAIAAAAUEBA==" alt="Video Stream"> <!-- Placeholder -->
+
+            <div id="slider-container">
+                <input type="range" id="frame-slider" min="0" max="100" value="0" step="1">
+                <div id="time-ticks"></div>
+                <div id="time-input-container">
+                    <input type="text" id="time-input" placeholder="00:00.00">
+                    <button id="jump-button">Go</button>
+                </div>
+            </div>
         </div>
 
         <div class="controls-right">
@@ -191,22 +231,19 @@
                     <span>25-frame</span>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <div id="slider-container">
-        <input type="range" id="frame-slider" min="0" max="100" value="0" step="1">
-        <div id="time-ticks"></div>
-        <div id="time-input-container">
-            <input type="text" id="time-input" placeholder="00:00.00">
-            <button id="jump-button">Go</button>
+            <div id="behavior-list">
+                <h3>Behaviors</h3>
+            </div>
+            <button id="add-behavior">Add Behavior</button>
+            <button id="remove-behavior">Remove Behavior</button>
         </div>
     </div>
 
     <script>
         const slider = document.getElementById('frame-slider');
         const videoFrame = document.getElementById('video-frame');
-        const sliderContainer = document.getElementById('slider-container');
+        // const sliderContainer = document.getElementById('slider-container');
         const timeTicks = document.getElementById('time-ticks');
         const timeInput = document.getElementById('time-input');
         const jumpButton = document.getElementById('jump-button');
@@ -217,6 +254,8 @@
         let isKeyDown = false;
         let playModes = [1, 5, 10, 15, 20, 25];
         let currentPlayModeIndex = 0;
+        let behaviors = [];
+        let currentBehaviorIndex = 0;
 
         const circles = {
             0: document.getElementById('mode-1-frame'),
@@ -227,11 +266,90 @@
             5: document.getElementById('mode-25-frame')
         };
 
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchBehaviors(); // Fetch and display behaviors when the page loads
+        });
+
+        async function fetchBehaviors() {
+            try {
+                const response = await fetch('/get_behaviors');
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const data = await response.json();
+                behaviors = data.behaviors;
+                createBehaviorList(); // Populate the behaviors list after fetching
+                updateBehaviorDisplay();
+            } catch (error) {
+                console.error('Error fetching behaviors:', error);
+            }
+        }
+
+        function createBehaviorList() {
+            const behaviorListContainer = document.getElementById('behavior-list');
+            behaviorListContainer.innerHTML = '<h3>Behaviors</h3>'; // Reset the list
+
+            behaviors.forEach((behavior, index) => {
+                const behaviorOption = document.createElement('div');
+                behaviorOption.classList.add('behavior-option');
+
+                const circle = document.createElement('div');
+                circle.classList.add('circle');
+                circle.id = `behavior-${index + 1}`;
+                if (index === currentBehaviorIndex) {
+                    circle.classList.add('selected');
+                }
+
+                const behaviorLabel = document.createElement('span');
+                behaviorLabel.textContent = behavior;
+
+                behaviorOption.appendChild(circle);
+                behaviorOption.appendChild(behaviorLabel);
+                behaviorListContainer.appendChild(behaviorOption);
+            });
+        }
+
+        document.getElementById('add-behavior').addEventListener('click', async () => {
+            const newBehavior = prompt('Enter new behavior name:');
+            if (newBehavior) {
+                const response = await fetch('/add_behavior', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ behavior: newBehavior })
+                });
+                const data = await response.json();
+                behaviors = data.behaviors;
+                createBehaviorList();
+                updateBehaviorDisplay();
+            }
+        });
+
+        document.getElementById('remove-behavior').addEventListener('click', async () => {
+            if (behaviors.length > 0) {
+                const behaviorToRemove = behaviors[currentBehaviorIndex];
+                const response = await fetch('/remove_behavior', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ behavior: behaviorToRemove })
+                });
+                const data = await response.json();
+                behaviors = data.behaviors;
+                currentBehaviorIndex = Math.max(currentBehaviorIndex - 1, 0);
+                createBehaviorList();
+                updateBehaviorDisplay();
+            }
+        });
+
         function formatSliderTime(seconds) {
             const mins = Math.floor(seconds / 60);
             const secs = seconds % 60;
             return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
         }
+
         function formatTimeInput(seconds) {
             const mins = Math.floor(seconds / 60);
             const secs = Math.floor(seconds % 60);
@@ -296,6 +414,14 @@
             circles[currentPlayModeIndex].classList.add('selected');
         }
 
+        function updateBehaviorDisplay() {
+            const behaviorCircles = document.querySelectorAll('.behavior-option .circle');
+            behaviorCircles.forEach(circle => circle.classList.remove('selected'));
+            if (behaviorCircles[currentBehaviorIndex]) {
+                behaviorCircles[currentBehaviorIndex].classList.add('selected');
+            }
+        }
+
         jumpButton.addEventListener('click', function() {
             const timeValue = parseTime(timeInput.value.split(' - ')[0]);
             const frameNumber = Math.round(timeValue * fps);
@@ -314,7 +440,7 @@
                 event.preventDefault();
                 const frameStep = event.key === "ArrowRight" ? playModes[currentPlayModeIndex] : -playModes[currentPlayModeIndex];
                 adjustFrame(frameStep);
-                frameInterval = setInterval(() => adjustFrame(frameStep), 200);  // Set to 200ms
+                frameInterval = setInterval(() => adjustFrame(frameStep), 80);
             }
         });
 
@@ -332,7 +458,23 @@
             }
         });
 
-        updatePlayModeDisplay();
+        document.addEventListener('keydown', function(event) {
+            if (event.key === "ArrowUp") {
+                currentBehaviorIndex = (currentBehaviorIndex - 1 + behaviors.length) % behaviors.length;
+                updateBehaviorDisplay();
+            } else if (event.key === "ArrowDown") {
+                currentBehaviorIndex = (currentBehaviorIndex + 1) % behaviors.length;
+                updateBehaviorDisplay();
+            }
+        });
+
+        // document.getElementById('add-behavior').addEventListener('click', addBehavior);
+        // document.getElementById('remove-behavior').addEventListener('click', removeBehavior);
+        //
+        // fetchBehaviors();
+        // createBehaviorList();
+        // updatePlayModeDisplay();
+        // updateBehaviorDisplay();
     </script>
 </body>
 </html>

@@ -1,0 +1,166 @@
+body {
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #f0f0f0;
+    font-family: Arial, sans-serif;
+}
+
+.container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 1000px;
+    height: 80vh;
+    position: relative;
+}
+
+#video-container {
+    flex-grow: 1;
+    height: 100%;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+    margin: 0;
+}
+
+#video-frame {
+    width: 512px;
+    height: 512px;
+    object-fit: contain;
+    padding: 0;
+    margin: 0;
+    background-color: black;
+}
+
+.controls-left, .controls-right {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 120px;
+    height: 100%;
+    padding: 10px;
+}
+
+.controls-left {
+    justify-content: flex-start;
+}
+
+.controls-right {
+    justify-content: flex-start;
+}
+
+#slider-container {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 512px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#frame-slider {
+    width: 100%;
+    margin-bottom: 5px;
+}
+
+#time-ticks {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    font-size: 12px;
+    color: #333;
+}
+
+#time-input-container {
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
+}
+
+#time-input {
+    width: 100px;
+    margin-right: 10px;
+    padding: 5px;
+    font-size: 14px;
+    text-align: center;
+}
+
+#jump-button {
+    padding: 5px 10px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#play-mode, #behavior-list {
+    background-color: lightgray;
+    padding: 15px;
+    text-align: left;
+    width: 100%;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 10px;
+}
+
+#play-mode h3, #behavior-list h3 {
+    margin: 0 0 10px 0;
+    text-align: center;
+    font-size: 16px;
+}
+
+.mode-option, .behavior-option {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    width: auto;  /* Allow the element to grow in width as needed */
+}
+
+.mode-option:last-child, .behavior-option:last-child {
+    margin-bottom: 0;
+}
+
+.mode-option .circle, .behavior-option .circle {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid gray;
+    margin-right: 10px;
+    flex-shrink: 0;  /* Ensure the circle doesn't shrink */
+}
+
+.behavior-option span {
+    white-space: nowrap;  /* Prevent text from wrapping */
+    display: inline-block;
+    /* Allow the text to fully display */
+}
+
+#add-behavior, #remove-behavior {
+    cursor: pointer;
+    font-size: 14px;
+    padding: 5px 10px;
+    margin-top: 10px;
+    display: block;
+    text-align: center;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+}
+
+#remove-behavior {
+    background-color: #dc3545;
+}
