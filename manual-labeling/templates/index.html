@@ -29,12 +29,20 @@
         #video-container {
             flex-grow: 1;
             height: 90%;
-            position: relative;  /* Set position to relative to use it as the reference for absolute positioning inside */
+            position: relative;
             display: flex;
-            justify-content: center;
-            align-items: flex-start; /* Aligns the video at the top of the container */
+            flex-direction: column; /* Align everything in a vertical column */
+            align-items: center;
             padding: 0;
             margin: 0;
+        }
+
+        #controls-container {
+            width: 100%; /* Take full width of the video container */
+            display: flex;
+            flex-direction: column; /* Stack slider and plot vertically */
+            align-items: center;
+            margin-top: 10px; /* Add some space between the video and controls */
         }
 
         #video-frame {
@@ -47,16 +55,25 @@
         }
 
         #slider-container {
-            position: absolute;
-            bottom: 0px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 600px;
+            width: 600px; /* Width of the slider */
             display: flex;
             flex-direction: column;
             align-items: center;
             margin: 0;
             padding: 0;
+        }
+
+        #plot-container {
+            width: 600px; /* Width of the plot */
+            margin-top: 10px; /* Space between slider and plot */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #score-plot {
+            max-width: 100%;
+            height: auto;
         }
 
         .controls-left, .controls-right {
@@ -174,11 +191,6 @@
             border-radius: 4px;
         }
 
-        /*#remove-behavior {*/
-        /*    background-color: #dc3545;*/
-        /*}*/
-
-
 
     </style>
 </head>
@@ -193,15 +205,24 @@
         <div id="video-container">
             <img id="video-frame" src="data:image/gif;base64,R0lGODlhAQABAIAAAAUEBA==" alt="Video Stream"> <!-- Placeholder -->
 
-            <div id="slider-container">
-                <input type="range" id="frame-slider" min="0" max="100" value="0" step="1">
-                <div id="time-ticks"></div>
-                <div id="time-input-container">
-                    <input type="text" id="time-input" placeholder="00:00.00">
-                    <button id="jump-button">Go</button>
+            <div id="controls-container">
+                <div id="slider-container">
+                    <input type="range" id="frame-slider" min="0" max="100" value="0" step="1">
+                    <div id="time-ticks"></div>
+                    <div id="time-input-container">
+                        <input type="text" id="time-input" placeholder="00:00.00">
+                        <button id="jump-button">Go</button>
+                    </div>
+                </div>
+
+                </div>
+                    <img id="score-plot" src="/plot_score_table" alt="Behavior Score Plot">
                 </div>
             </div>
         </div>
+
+
+
 
         <div class="controls-right">
             <div id="play-mode">
@@ -243,7 +264,6 @@
     <script>
         const slider = document.getElementById('frame-slider');
         const videoFrame = document.getElementById('video-frame');
-        // const sliderContainer = document.getElementById('slider-container');
         const timeTicks = document.getElementById('time-ticks');
         const timeInput = document.getElementById('time-input');
         const jumpButton = document.getElementById('jump-button');
@@ -323,6 +343,8 @@
                 behaviors = data.behaviors;
                 createBehaviorList();
                 updateBehaviorDisplay();
+                refreshScorePlot();
+
             }
         });
 
@@ -341,6 +363,7 @@
                 currentBehaviorIndex = Math.max(currentBehaviorIndex - 1, 0);
                 createBehaviorList();
                 updateBehaviorDisplay();
+                refreshScorePlot();
             }
         });
 
@@ -394,7 +417,32 @@
             const frameValue = parseInt(this.value);
             updateFrame(frameValue);
             updateTimeInputDisplay(frameValue);
+
+            // Update the current frame on the server
+            updateCurrentFrame(frameValue);
+
+            // Update the score plot
+            // document.getElementById("score-plot").src = `/plot_score_table?frame=${frameValue}`;
+            refreshScorePlot();
         };
+
+        async function updateCurrentFrame(frameNumber) {
+            try {
+                const response = await fetch('/update_frame', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ frame_number: frameNumber })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to update frame on server');
+                }
+            } catch (error) {
+                console.error('Error updating frame:', error);
+            }
+        }
 
         function updateFrame(value) {
             videoFrame.src = `/video_feed?frame=${value}&timestamp=${new Date().getTime()}`;
@@ -407,6 +455,13 @@
             slider.value = newValue;
             updateFrame(newValue);
             updateTimeInputDisplay(newValue);
+
+            // Send the current frame to the server
+            updateCurrentFrame(newValue);
+
+            // Update the score plot
+            // document.getElementById("score-plot").src = `/plot_score_table?frame=${newValue}`;
+            refreshScorePlot();
         }
 
         function updatePlayModeDisplay() {
@@ -422,13 +477,17 @@
             }
         }
 
-        jumpButton.addEventListener('click', function() {
+        jumpButton.addEventListener('click', async function () {
             const timeValue = parseTime(timeInput.value.split(' - ')[0]);
             const frameNumber = Math.round(timeValue * fps);
             if (frameNumber >= 0 && frameNumber < totalFrames) {
                 slider.value = frameNumber;
                 updateFrame(frameNumber);
                 updateTimeInputDisplay(frameNumber);
+
+                // Update the current frame on the server
+                await updateCurrentFrame(frameNumber);
+                refreshScorePlot();
             } else {
                 alert('Invalid time input.');
             }
@@ -439,8 +498,16 @@
                 isKeyDown = true;
                 event.preventDefault();
                 const frameStep = event.key === "ArrowRight" ? playModes[currentPlayModeIndex] : -playModes[currentPlayModeIndex];
+
                 adjustFrame(frameStep);
                 frameInterval = setInterval(() => adjustFrame(frameStep), 80);
+
+                // send the current frame to the server
+                const frameValue = parseInt(slider.value);
+                updateCurrentFrame(frameValue);
+                // document.getElementById("score-plot").src = `/plot_score_table?frame=${frameValue}`;
+                refreshScorePlot();
+
             }
         });
 
@@ -450,6 +517,11 @@
                 isKeyDown = false;
             }
         });
+
+        // Refresh the score plot based on the current frame and behavior
+        function refreshScorePlot() {
+                document.getElementById("score-plot").src = `/plot_score_table?timestamp=${new Date().getTime()}`;
+        }
 
         document.addEventListener('keydown', function(event) {
             if (event.key === "f") {
@@ -462,19 +534,42 @@
             if (event.key === "ArrowUp") {
                 currentBehaviorIndex = (currentBehaviorIndex - 1 + behaviors.length) % behaviors.length;
                 updateBehaviorDisplay();
+
+                //send the updated behavior to the server
+                updateCurrentBehavior(currentBehaviorIndex);
+
+                // Update the score plot
+                refreshScorePlot();
             } else if (event.key === "ArrowDown") {
                 currentBehaviorIndex = (currentBehaviorIndex + 1) % behaviors.length;
                 updateBehaviorDisplay();
+
+                //send the updated behavior to the server
+                updateCurrentBehavior(currentBehaviorIndex);
+
+                // Update the score plot
+                refreshScorePlot();
             }
         });
 
-        // document.getElementById('add-behavior').addEventListener('click', addBehavior);
-        // document.getElementById('remove-behavior').addEventListener('click', removeBehavior);
-        //
-        // fetchBehaviors();
-        // createBehaviorList();
-        // updatePlayModeDisplay();
-        // updateBehaviorDisplay();
+        async function updateCurrentBehavior(behaviorIndex) {
+            try {
+                const response = await fetch('/update_behavior', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ behavior_index: behaviorIndex })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to update behavior on server');
+                }
+            } catch (error) {
+                console.error('Error updating behavior:', error);
+            }
+        }
+
     </script>
 </body>
 </html>

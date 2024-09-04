@@ -1,6 +1,12 @@
-from flask import Flask, render_template, request, redirect, url_for, Response, jsonify
+from flask import Flask, render_template, request, redirect, url_for, Response, jsonify, send_file
 import cv2
 import os
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib
+import io
+matplotlib.use('Agg')
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -15,10 +21,36 @@ behaviors = [
     "rearing",
     "pausing",
 ]
+current_frame = None
+current_behavior_index = None
 
 # Create the upload folder if it doesn't exist
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
+
+
+def generate_toy_score_table():
+    global score_table
+    global total_frames
+    global behaviors
+
+    score_table = pd.DataFrame(np.zeros((total_frames, len(behaviors))).astype(int), columns=behaviors)
+    frame_index = 0  # Renamed to avoid conflict with global current_frame
+
+    while frame_index < total_frames:
+        behavior_idx = np.random.randint(0, len(behaviors))
+
+        # Determine the segment length for this behavior
+        if total_frames - frame_index >= 200:
+            segment_length = np.random.randint(200, min(500, total_frames - frame_index))
+        else:
+            segment_length = total_frames - frame_index
+
+        # Update the score table for the current segment of frames
+        score_table.iloc[frame_index:frame_index + segment_length, behavior_idx] = 1
+
+        # Move to the next segment of frames
+        frame_index += segment_length
 
 def extract_video_info(video_path):
     global total_frames
@@ -48,16 +80,40 @@ def get_behaviors():
 
 @app.route('/add_behavior', methods=['POST'])
 def add_behavior():
+    global behaviors
+    global score_table
+
     new_behavior = request.json.get('behavior')
-    if new_behavior:
+
+    if new_behavior and new_behavior not in behaviors:
         behaviors.append(new_behavior)
+
+        # update the score table to add a new column for the new behavior
+        if score_table is not None:
+            score_table[new_behavior] = 0
+
+        else:
+            generate_toy_score_table()
+            score_table[new_behavior] = 0
+
     return jsonify(behaviors=behaviors)
 
 @app.route('/remove_behavior', methods=['POST'])
 def remove_behavior():
+    global behaviors
+    global score_table
+
     behavior_to_remove = request.json.get('behavior')
+
     if behavior_to_remove in behaviors:
+        idx = behaviors.index(behavior_to_remove)
         behaviors.remove(behavior_to_remove)
+
+        # update the score table to remove the column for the behavior
+        if score_table is not None:
+            score_table.drop(columns=behavior_to_remove, inplace=True)
+
+
     return jsonify(behaviors=behaviors)
 
 @app.route('/upload', methods=['POST'])
@@ -99,6 +155,80 @@ def get_video_info_route():
         return jsonify(total_frames=total_frames, fps=fps)
     else:
         return jsonify(total_frames=0, fps=0)
+
+@app.route('/update_frame', methods=['POST'])
+def update_frame():
+    global current_frame
+    frame_number = request.json.get('frame_number')
+
+    if frame_number is not None:
+        current_frame = frame_number
+        # print(f'Current frame: {current_frame}') # debugging
+
+    return jsonify(success=True)
+
+@app.route('/update_behavior', methods=['POST'])
+def update_behavior():
+    global current_behavior_index
+    behavior_index = request.json.get('behavior_index')
+
+    if behavior_index is not None:
+        current_behavior_index = behavior_index
+
+    return jsonify(success=True)
+
+@app.route('/plot_score_table')
+def plot_score_table():
+    global score_table
+    global behaviors
+    global total_frames
+    global video_path
+    global current_frame
+    global current_behavior_index
+
+    if video_path is None:
+        # return a placeholder image
+        fig, ax = plt.subplots(figsize=(10, len(behaviors) * 0.5))
+        ax.imshow(np.zeros((total_frames, len(behaviors))).T, aspect='auto', cmap='Greys', interpolation='none')
+        ax.set_xlabel('Frame Number')
+        ax.set_yticks(range(len(behaviors)))
+        ax.set_yticklabels(behaviors)
+        ax.set_title('Behavior Raster Plot')
+
+        img = io.BytesIO()
+        plt.savefig(img, format='png')
+        img.seek(0)
+        plt.close(fig)
+
+        return send_file(img, mimetype='image/png')
+
+
+    if score_table is None:
+        # generate a toy score table
+        generate_toy_score_table()
+
+    fig, ax = plt.subplots(figsize=(10, len(behaviors) * 0.5))
+    ax.imshow(score_table.T, aspect='auto', cmap='Greys', interpolation='none')
+    ax.set_xlabel('Frame Number')
+    ax.set_yticks(range(len(behaviors)))
+    ax.set_yticklabels(behaviors)
+    ax.set_title('Behavior Raster Plot')
+
+    # shade the current behavior is set
+    if current_behavior_index is not None:
+        ax.axhspan(current_behavior_index - 0.5, current_behavior_index + 0.5, facecolor='lightgray', alpha=0.5)
+
+    # add a red vertical line to indicate the current frame
+    if current_frame is not None:
+        ax.axvline(x=current_frame, color='red',linewidth=2, linestyle='-')
+
+    img = io.BytesIO()
+    plt.savefig(img, format='png')
+    img.seek(0)
+    plt.close(fig)
+
+    return send_file(img, mimetype='image/png')
+
 
 if __name__ == "__main__":
     app.run(debug=True)
