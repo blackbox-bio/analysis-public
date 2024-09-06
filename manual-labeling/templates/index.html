@@ -52,6 +52,20 @@
             padding: 0;
             margin: 0;
             background-color: black;
+            position: relative;
+            z-index: 1;
+        }
+
+        #behavior-overlay{
+            position: absolute;
+            top: 10px; /* Adjust as necessary */
+            left: 10px; /* Adjust as necessary */
+            color: white;
+            font-size: 18px;
+            background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent background */
+            padding: 5px;
+            border-radius: 5px; /* Optional rounded corners */
+            z-index: 2;
         }
 
         #slider-container {
@@ -82,7 +96,7 @@
             align-items: center;
             justify-content: center;
             width: 180px;
-            height: 100%;
+            height: 85%;
             padding: 10px;
         }
 
@@ -93,7 +107,7 @@
         .controls-right {
             justify-content: flex-start;
             width: 180px;
-            height: 100%;
+            height: 85%;
             padding: 10px;
         }
 
@@ -203,8 +217,10 @@
         </div>
 
         <div id="video-container">
-            <img id="video-frame" src="data:image/gif;base64,R0lGODlhAQABAIAAAAUEBA==" alt="Video Stream"> <!-- Placeholder -->
+            <img id="video-frame" src="data:image/gif;base64,R0lGODlhAQABAIAAAAUEBA==" alt="Video Stream">
 
+            <div id="behavior-overlay">
+            </div>
             <div id="controls-container">
                 <div id="slider-container">
                     <input type="range" id="frame-slider" min="0" max="100" value="0" step="1">
@@ -289,6 +305,22 @@
         document.addEventListener('DOMContentLoaded', function() {
             fetchBehaviors(); // Fetch and display behaviors when the page loads
         });
+
+        function updateBehaviorOverlay() {
+                fetch('/get_behaviors_for_frame')
+                    .then(response => response.json())
+                    .then(data => {
+                        const behaviors = data.behaviors;
+                        const overlay = document.getElementById('behavior-overlay');
+
+                        if (behaviors.length > 0) {
+                            overlay.textContent = `Behaviors: ${behaviors.join(', ')}`;
+                        } else {
+                            overlay.textContent = ''; // Clear the overlay if no behaviors are active
+                        }
+                    })
+                    .catch(error => console.error('Error fetching behaviors:', error));
+            }
 
         async function fetchBehaviors() {
             try {
@@ -446,6 +478,7 @@
 
         function updateFrame(value) {
             videoFrame.src = `/video_feed?frame=${value}&timestamp=${new Date().getTime()}`;
+            updateBehaviorOverlay();
         }
 
         function adjustFrame(value) {
@@ -460,8 +493,10 @@
             updateCurrentFrame(newValue);
 
             // Update the score plot
-            // document.getElementById("score-plot").src = `/plot_score_table?frame=${newValue}`;
             refreshScorePlot();
+
+            // Update the behavior overlay
+            updateBehaviorOverlay();
         }
 
         function updatePlayModeDisplay() {

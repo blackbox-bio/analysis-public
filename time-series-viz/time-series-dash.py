@@ -10,13 +10,20 @@ from scipy.ndimage import gaussian_filter1d
 import uuid
 
 # Define project directory and file paths
-proj_dir = r"D:\data\TAMU\hallway-tests_analysis"
-# proj_dir = r"D:\data\Twiss_lab\test_analysis"
-recording_name = "2024-07-31_15-19-11_7917-1-sec-dwell-training-sci"
-# recording_name = "0014"
-features_h5 = os.path.join(proj_dir, recording_name, "features.h5")
+# proj_dir = r"D:\data\TAMU\hallway-tests_analysis"
+# # proj_dir = r"D:\data\Twiss_lab\test_analysis"
+# recording_name = "2024-07-31_15-19-11_7917-1-sec-dwell-training-sci"
+# # recording_name = "0014"
+# features_h5 = os.path.join(proj_dir, recording_name, "features.h5")
 
-features_h5 = os.path.join(r"C:\Users\alexz\OneDrive\Desktop\2024-06-25_13-49-06_21\features.h5")
+
+# features_h5_dir = r"D:\data\RUSH\RUSH_knee-cfa_analysis\2024-07-08_14-10-35_none-0h-1"
+features_h5_dir = r"D:\data\RUSH\RUSH_knee-cfa_analysis\2024-07-11_16-20-32_inj-72h-2"
+# features_h5_dir = r"D:\data\RUSH\RUSH_knee-cfa_analysis\2024-07-15_17-22-50_inj-7d-5"
+# features_h5_dir = r"D:\data\RUSH\RUSH_knee-cfa_analysis\2024-07-09_12-43-25_inj-24h-1"
+# features_h5_dir = r"D:\data\RUSH\RUSH_knee-cfa_analysis\2024-07-15_17-09-14_inj-7d-2"
+
+features_h5 = os.path.join(features_h5_dir, "features.h5")
 
 # Load the HDF5 file and extract the relevant information into a dictionary for faster access
 features_data = {}

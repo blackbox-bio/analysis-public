@@ -177,6 +177,19 @@ def update_behavior():
 
     return jsonify(success=True)
 
+@app.route('/get_behaviors_for_frame', methods=['GET'])
+def get_behaviors_for_frame():
+    global score_table
+    global current_frame
+
+    if current_frame is None or score_table is None:
+        return jsonify(behaviors=[])
+
+    # Get behaviors labeled as 1 in the current frame
+    labeled_behaviors = score_table.columns[score_table.iloc[current_frame] == 1].tolist()
+
+    return jsonify(behaviors=labeled_behaviors)
+
 @app.route('/plot_score_table')
 def plot_score_table():
     global score_table
