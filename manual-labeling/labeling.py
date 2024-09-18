@@ -23,6 +23,7 @@ behaviors = [
 ]
 current_frame = None
 current_behavior_index = None
+labeling_mode = None
 
 # Create the upload folder if it doesn't exist
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
@@ -106,7 +107,7 @@ def remove_behavior():
     behavior_to_remove = request.json.get('behavior')
 
     if behavior_to_remove in behaviors:
-        idx = behaviors.index(behavior_to_remove)
+        # idx = behaviors.index(behavior_to_remove)
         behaviors.remove(behavior_to_remove)
 
         # update the score table to remove the column for the behavior
@@ -159,13 +160,35 @@ def get_video_info_route():
 @app.route('/update_frame', methods=['POST'])
 def update_frame():
     global current_frame
+    global labeling_mode
+    global current_behavior_index
+    global score_table
+
     frame_number = request.json.get('frame_number')
 
     if frame_number is not None:
         current_frame = frame_number
-        # print(f'Current frame: {current_frame}') # debugging
+
+        # if labeling mode is active, update the score table for the current behavior
+        if labeling_mode == "tagging" and current_behavior_index is not None:
+            score_table.iloc[current_frame, current_behavior_index] = 1
+        elif labeling_mode == "removing" and current_behavior_index is not None:
+            score_table.iloc[current_frame, current_behavior_index] = 0
 
     return jsonify(success=True)
+
+@app.route("/toggle_labeling_mode", methods=['POST'])
+def toggle_labeling_mode():
+    global labeling_mode
+
+    mode = request.json.get('mode')
+    if mode == "tagging":
+        labeling_mode = "tagging" if labeling_mode != "tagging" else None
+    elif mode == "removing":
+        labeling_mode = "removing" if labeling_mode != "removing" else None
+
+    return jsonify(labeling_mode=labeling_mode)
+
 
 @app.route('/update_behavior', methods=['POST'])
 def update_behavior():
@@ -225,7 +248,7 @@ def plot_score_table():
     ax.set_xlabel('Frame Number')
     ax.set_yticks(range(len(behaviors)))
     ax.set_yticklabels(behaviors)
-    ax.set_title('Behavior Raster Plot')
+    # ax.set_title('Behavior Raster Plot')
 
     # shade the current behavior is set
     if current_behavior_index is not None:
