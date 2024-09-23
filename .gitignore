@@ -10,10 +10,9 @@ __pycache__/
 *$py.class
 *.avi
 *.mp4
+*.csv
 
 # nixos env stuff
 /.direnv
 /.hack
 /.venv
-*.avi
-*.mp4

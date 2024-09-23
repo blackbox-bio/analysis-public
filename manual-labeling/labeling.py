@@ -11,8 +11,10 @@ matplotlib.use('Agg')
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 video_path = None
-total_frames = 0
 recording_path = None
+score_table_path = None
+
+total_frames = 0
 score_table = None
 behaviors = [
     "locomoting",
@@ -23,11 +25,35 @@ behaviors = [
 ]
 current_frame = None
 current_behavior_index = None
-labeling_mode = None
+labeling_mode = "viewing"
 
 # Create the upload folder if it doesn't exist
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
+
+
+def initialize_score_table():
+    global recording_path
+    global score_table_path
+    global score_table
+    global total_frames
+    global behaviors
+
+    score_table_path = os.path.join(recording_path, 'behavior_score.csv')
+    if os.path.exists(score_table_path):
+        score_table = pd.read_csv(score_table_path, index_col=0)
+        behaviors = score_table.columns.tolist()
+        total_frames = score_table.shape[0]
+    else:
+        score_table = generate_empty_score_table()
+        score_table.to_csv(score_table_path)
+
+
+def generate_empty_score_table():
+    global total_frames
+    global behaviors
+
+    return pd.DataFrame(np.zeros((total_frames, len(behaviors))).astype(int), columns=behaviors)
 
 
 def generate_toy_score_table():
@@ -53,11 +79,13 @@ def generate_toy_score_table():
         # Move to the next segment of frames
         frame_index += segment_length
 
+
 def extract_video_info(video_path):
     global total_frames
     cap = cv2.VideoCapture(video_path)
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     cap.release()
+
 
 def generate_frame(video_path, frame_number):
     cap = cv2.VideoCapture(video_path)
@@ -70,14 +98,17 @@ def generate_frame(video_path, frame_number):
     cap.release()
     return None
 
+
 @app.route('/')
 def index():
     # Render the HTML template and pass the behavior list
     return render_template('index.html', behaviors=behaviors)
 
+
 @app.route('/get_behaviors', methods=['GET'])
 def get_behaviors():
     return jsonify(behaviors=behaviors)
+
 
 @app.route('/add_behavior', methods=['POST'])
 def add_behavior():
@@ -99,6 +130,7 @@ def add_behavior():
 
     return jsonify(behaviors=behaviors)
 
+
 @app.route('/remove_behavior', methods=['POST'])
 def remove_behavior():
     global behaviors
@@ -114,13 +146,14 @@ def remove_behavior():
         if score_table is not None:
             score_table.drop(columns=behavior_to_remove, inplace=True)
 
-
     return jsonify(behaviors=behaviors)
+
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
     global video_path
     global recording_path
+
     if 'file' not in request.files:
         return redirect(url_for('index'))
 
@@ -133,7 +166,9 @@ def upload_file():
         file.save(video_path)
         recording_path = os.path.dirname(video_path)
         extract_video_info(video_path)  # Get total frames after upload
+        initialize_score_table()
         return redirect(url_for('index'))
+
 
 @app.route('/video_feed')
 def video_feed():
@@ -144,6 +179,7 @@ def video_feed():
         if frame_data:
             return Response(frame_data, mimetype='image/jpeg')
     return "", 204  # No content
+
 
 @app.route('/get_video_info')
 def get_video_info_route():
@@ -156,6 +192,7 @@ def get_video_info_route():
         return jsonify(total_frames=total_frames, fps=fps)
     else:
         return jsonify(total_frames=0, fps=0)
+
 
 @app.route('/update_frame', methods=['POST'])
 def update_frame():
@@ -177,15 +214,16 @@ def update_frame():
 
     return jsonify(success=True)
 
+
 @app.route("/toggle_labeling_mode", methods=['POST'])
 def toggle_labeling_mode():
     global labeling_mode
 
     mode = request.json.get('mode')
     if mode == "tagging":
-        labeling_mode = "tagging" if labeling_mode != "tagging" else None
+        labeling_mode = "tagging" if labeling_mode != "tagging" else "viewing"
     elif mode == "removing":
-        labeling_mode = "removing" if labeling_mode != "removing" else None
+        labeling_mode = "removing" if labeling_mode != "removing" else "viewing"
 
     return jsonify(labeling_mode=labeling_mode)
 
@@ -200,6 +238,7 @@ def update_behavior():
 
     return jsonify(success=True)
 
+
 @app.route('/get_behaviors_for_frame', methods=['GET'])
 def get_behaviors_for_frame():
     global score_table
@@ -212,6 +251,7 @@ def get_behaviors_for_frame():
     labeled_behaviors = score_table.columns[score_table.iloc[current_frame] == 1].tolist()
 
     return jsonify(behaviors=labeled_behaviors)
+
 
 @app.route('/plot_score_table')
 def plot_score_table():
@@ -229,7 +269,11 @@ def plot_score_table():
         ax.set_xlabel('Frame Number')
         ax.set_yticks(range(len(behaviors)))
         ax.set_yticklabels(behaviors)
-        ax.set_title('Behavior Raster Plot')
+        # ax.set_title('Behavior Raster Plot')
+
+        # shade the current behavior
+        if current_behavior_index is not None:
+            ax.axhspan(current_behavior_index - 0.5, current_behavior_index + 0.5, facecolor='lightgray', alpha=0.5)
 
         img = io.BytesIO()
         plt.savefig(img, format='png')
@@ -238,10 +282,9 @@ def plot_score_table():
 
         return send_file(img, mimetype='image/png')
 
-
-    if score_table is None:
-        # generate a toy score table
-        generate_toy_score_table()
+    # if score_table is None:
+    #     # generate a toy score table
+    #     generate_toy_score_table()
 
     fig, ax = plt.subplots(figsize=(10, len(behaviors) * 0.5))
     ax.imshow(score_table.T, aspect='auto', cmap='Greys', interpolation='none')
@@ -264,6 +307,44 @@ def plot_score_table():
     plt.close(fig)
 
     return send_file(img, mimetype='image/png')
+
+
+@app.route('/export_csv', methods=['GET'])
+def export_csv():
+    global score_table
+
+    si = io.StringIO()
+    score_table.to_csv(si, index=False)
+
+    output = Response(si.getvalue(), mimetype='text/csv')
+    output.headers['Content-Disposition'] = 'attachment; filename=behavior_score_table.csv'
+    return output
+
+
+@app.route('/upload_score_table', methods=['POST'])
+def upload_score_table():
+    global score_table
+    global behaviors
+    global total_frames
+    global score_table_path
+
+    if 'score_table' not in request.files:
+        return redirect(url_for('index'))
+
+    file = request.files['score_table']
+    if file.filename == '':
+        return redirect(url_for('index'))
+
+    if file:
+        score_table_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+        file.save(score_table_path)
+
+        # Load the score table into memory
+        score_table = pd.read_csv(score_table_path)
+        behaviors = score_table.columns.tolist()
+        total_frames = score_table.shape[0]
+
+        return redirect(url_for('index'))
 
 
 if __name__ == "__main__":

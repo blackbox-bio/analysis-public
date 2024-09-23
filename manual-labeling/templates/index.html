@@ -205,14 +205,60 @@
             border-radius: 4px;
         }
 
+        #labeling-mode {
+            background-color: lightgray;
+            padding: 15px;
+            text-align: left;
+            width: 100%;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 10px;
+        }
 
+        #labeling-mode h3 {
+            margin: 0 0 10px 0;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        .labeling-option {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .labeling-option:last-child {
+            margin-bottom: 0;
+        }
+
+        .labeling-option .circle {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid gray;
+            margin-right: 10px;
+        }
+
+        .labeling-option .circle.selected {
+            background-color: green;
+            border-color: green;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="controls-left">
             <form method="POST" enctype="multipart/form-data" action="/upload">
-                <input type="file" name="file" accept=".avi, .mp4" onchange="this.form.submit()">
+                <label for="video-file">Upload Video</label>
+                <input id="video-file" type="file" name="file" accept=".avi, .mp4" onchange="this.form.submit()">
+            </form>
+
+            <form method="POST" enctype="multipart/form-data" action="/upload_score_table">
+                <label for="score-table">Upload Behavior Score Table</label>
+                <input id="score-table" type="file" name="score_table" accept=".csv" onchange="this.form.submit()">
+            </form>
+
+            <form method="GET" action="/export_csv">
+                <button type="submit">Export Behavior Score Table as CSV</button>
             </form>
         </div>
 
@@ -269,12 +315,29 @@
             <div id="behavior-list">
                 <h3>Behaviors</h3>
             </div>
+
             <button id="add-behavior">Add Behavior</button>
             <button id="remove-behavior">Remove Behavior</button>
+
             <div id="labeling-mode">
                 <h3>Labeling Mode</h3>
-                <div id="labeling-status">Inactive</div>
+                <div class="labeling-option">
+                    <div class="circle" id="mode-viewing"></div>
+                    <span>Viewing</span>
+                </div>
+                <div class="labeling-option">
+                    <div class="circle" id="mode-tagging"></div>
+                    <span>Tagging "t"</span>
+                </div>
+                <div class="labeling-option">
+                    <div class="circle" id="mode-removing"></div>
+                    <span>Removing "r"</span>
+                </div>
+
+<!--                <div id="labeling-status">Viewing</div>-->
             </div>
+
+
         </div>
     </div>
 
@@ -293,7 +356,9 @@
         let currentPlayModeIndex = 0;
         let behaviors = [];
         let currentBehaviorIndex = 0;
-        let labelingMode = null;
+        // let labelingModes = ['viewing', 'tagging', 'removing'];
+        let labelingMode = 'viewing';
+        let currentLabelingModeIndex = 0;
 
         const circles = {
             0: document.getElementById('mode-1-frame'),
@@ -304,8 +369,18 @@
             5: document.getElementById('mode-25-frame')
         };
 
+        const labelingCircles = {
+            0: document.getElementById('mode-viewing'),
+            1: document.getElementById('mode-tagging'),
+            2: document.getElementById('mode-removing')
+        };
+
         document.addEventListener('DOMContentLoaded', function() {
             fetchBehaviors(); // Fetch and display behaviors when the page loads
+            updateCurrentBehavior(currentBehaviorIndex);
+            refreshScorePlot();
+            updatePlayModeDisplay();
+            updateLabelingModeDisplay();
         });
 
         function updateBehaviorOverlay() {
@@ -608,12 +683,31 @@
         }
 
         document.addEventListener('keydown', function(event) {
+            // if (event.key === "t") {
+            //     if (labelingMode === "tagging"){
+            //         toggleLabelingMode('viewing');
+            //     } else {
+            //         toggleLabelingMode('tagging');
+            //     }
+            // } else if (event.key === 'r') {
+            //     if (labelingMode === "removing"){
+            //         toggleLabelingMode('viewing');
+            //     } else {
+            //         toggleLabelingMode('removing');
+            //     }
+            // }
             if (event.key === "t") {
                 toggleLabelingMode('tagging');
             } else if (event.key === 'r') {
                 toggleLabelingMode('removing');
             }
+
         });
+
+        function updateLabelingModeDisplay() {
+            Object.values(labelingCircles).forEach(circle => circle.classList.remove('selected'));
+            labelingCircles[currentLabelingModeIndex].classList.add('selected');
+        }
 
         function toggleLabelingMode(mode) {
             fetch('/toggle_labeling_mode',{
@@ -626,14 +720,19 @@
             .then(response => response.json())
             .then(data => {
                 labelingMode = data.labeling_mode;
-                const labelingStatus = document.getElementById('labeling-status');
+                // const labelingStatus = document.getElementById('labeling-status');
                 if (labelingMode === 'tagging'){
-                    labelingStatus.textContent = 'Tagging';
+                    // labelingStatus.textContent = 'Tagging';
+                    currentLabelingModeIndex = 1;
                 } else if (labelingMode === 'removing') {
-                    labelingStatus.textContent = 'Removing';
+                    // labelingStatus.textContent = 'Removing';
+                    currentLabelingModeIndex = 2;
                 } else {
-                    labelingStatus.textContent = 'Inactive';
+                    // labelingStatus.textContent = 'Viewing';
+                    currentLabelingModeIndex = 0;
                 }
+
+                updateLabelingModeDisplay();
             })
             .catch(error => console.error('Error toggling labeling mode:', error));
         }

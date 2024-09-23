@@ -17,13 +17,9 @@ import uuid
 # features_h5 = os.path.join(proj_dir, recording_name, "features.h5")
 
 
-# features_h5_dir = r"D:\data\RUSH\RUSH_knee-cfa_analysis\2024-07-08_14-10-35_none-0h-1"
-# features_h5_dir = r"D:\data\RUSH\RUSH_knee-cfa_analysis\2024-07-11_16-20-32_inj-72h-2"
-# features_h5_dir = r"D:\data\RUSH\RUSH_knee-cfa_analysis\2024-07-15_17-22-50_inj-7d-5"
-# features_h5_dir = r"D:\data\RUSH\RUSH_knee-cfa_analysis\2024-07-09_12-43-25_inj-24h-1"
-# features_h5_dir = r"D:\data\RUSH\RUSH_knee-cfa_analysis\2024-07-15_17-09-14_inj-7d-2"
+features_h5_dir = r"C:\Users\alexz\OneDrive\Desktop\2024-09-06_16-22-48_7201"
 # features_h5_dir = r'D:\data\Gower_lab\casting_pilot_analysis\2024-08-27_16-29-42_s2'
-features_h5_dir = r'D:\data\Queens\7_dpi_SCI_August_2024_analysis\2024-07-19_16-11-09_8008'
+# features_h5_dir = r'D:\data\Queens\7_dpi_SCI_August_2024_analysis\2024-07-19_16-11-09_8008'
 features_h5 = os.path.join(features_h5_dir, "features.h5")
 
 # Load the HDF5 file and extract the relevant information into a dictionary for faster access
