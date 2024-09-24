@@ -348,7 +348,7 @@
         const timeInput = document.getElementById('time-input');
         const jumpButton = document.getElementById('jump-button');
         let totalFrames = 100;
-        let fps = 30;  // You will get this value dynamically
+        let fps = 45;  // You will get this value dynamically
         let duration = 0;  // In seconds
         let frameInterval;
         let isKeyDown = false;
@@ -520,6 +520,8 @@
                 slider.max = totalFrames - 1;
                 updateFrame(0);  // Display the first frame immediately
                 generateTimeTicks();
+                updateTimeInputDisplay(0);
+                refreshScorePlot();
             });
 
         slider.oninput = function() {

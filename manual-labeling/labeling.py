@@ -153,6 +153,7 @@ def remove_behavior():
 def upload_file():
     global video_path
     global recording_path
+    global current_frame
 
     if 'file' not in request.files:
         return redirect(url_for('index'))
@@ -167,6 +168,7 @@ def upload_file():
         recording_path = os.path.dirname(video_path)
         extract_video_info(video_path)  # Get total frames after upload
         initialize_score_table()
+        current_frame = 0  # Reset current frame to 0
         return redirect(url_for('index'))
 
 
