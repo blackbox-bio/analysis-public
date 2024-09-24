@@ -539,7 +539,7 @@
 
         async function updateCurrentFrame(frameNumber) {
             try {
-                const response = await fetch('/update_frame', {
+                const response = await fetch('/update_frame_no_labeling', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -578,6 +578,27 @@
             updateBehaviorOverlay();
         }
 
+        // Function to handle frame update with labeling
+        function updateFrameWithLabeling(direction, FramesToMove) {
+            fetch('/update_frame_with_labeling', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ direction: direction, FramesToMove: FramesToMove })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const frameValue = data.frame;
+                slider.value = frameValue;
+                updateFrame(frameValue);  // Update the video frame display
+                updateTimeInputDisplay(frameValue);  // Update the time input display
+                // refreshScorePlot();  // Refresh the plot
+                refreshScorePlotWithTimeout();  // Refresh the plot with a timeout
+            })
+            .catch(error => console.error('Error updating frame with labeling:', error));
+        }
+
         function updatePlayModeDisplay() {
             Object.values(circles).forEach(circle => circle.classList.remove('selected'));
             circles[currentPlayModeIndex].classList.add('selected');
@@ -611,16 +632,18 @@
             if ((event.key === "ArrowRight" || event.key === "ArrowLeft") && !isKeyDown) {
                 isKeyDown = true;
                 event.preventDefault();
-                const frameStep = event.key === "ArrowRight" ? playModes[currentPlayModeIndex] : -playModes[currentPlayModeIndex];
+                // const frameStep = event.key === "ArrowRight" ? playModes[currentPlayModeIndex] : -playModes[currentPlayModeIndex];
 
-                adjustFrame(frameStep);
-                frameInterval = setInterval(() => adjustFrame(frameStep), 200);
+                const FramesToMove = playModes[currentPlayModeIndex];
+                const direction = event.key === "ArrowRight" ? "right" : "left";
 
-                // send the current frame to the server
-                const frameValue = parseInt(slider.value);
-                updateCurrentFrame(frameValue);
-                // document.getElementById("score-plot").src = `/plot_score_table?frame=${frameValue}`;
-                refreshScorePlot();
+                // Immediately update frame on initial key press
+                updateFrameWithLabeling(direction, FramesToMove);
+
+                // Set interval to update frame every 200ms
+                frameInterval = setInterval(() => {
+                    updateFrameWithLabeling(direction, FramesToMove);
+                }, 50);
 
             }
         });
@@ -632,15 +655,29 @@
             }
         });
 
+        let lastScorePlotUpdateTimestamp = 0;
         // Refresh the score plot based on the current frame and behavior
         function refreshScorePlot() {
                 document.getElementById("score-plot").src = `/plot_score_table?timestamp=${new Date().getTime()}`;
+                const now = Date.now();
+                lastScorePlotUpdateTimestamp = now;
         }
+
+        // A second refresh the score plot function that has a timeout
+        function refreshScorePlotWithTimeout() {
+            const now = Date.now();
+
+            if (now - lastScorePlotUpdateTimestamp >= 1000) {
+                refreshScorePlot();
+            }
+        }
+
 
         document.addEventListener('keydown', function(event) {
             if (event.key === "f") {
                 currentPlayModeIndex = (currentPlayModeIndex + 1) % playModes.length;
                 updatePlayModeDisplay();
+
             }
         });
 
@@ -685,19 +722,6 @@
         }
 
         document.addEventListener('keydown', function(event) {
-            // if (event.key === "t") {
-            //     if (labelingMode === "tagging"){
-            //         toggleLabelingMode('viewing');
-            //     } else {
-            //         toggleLabelingMode('tagging');
-            //     }
-            // } else if (event.key === 'r') {
-            //     if (labelingMode === "removing"){
-            //         toggleLabelingMode('viewing');
-            //     } else {
-            //         toggleLabelingMode('removing');
-            //     }
-            // }
             if (event.key === "t") {
                 toggleLabelingMode('tagging');
             } else if (event.key === 'r') {

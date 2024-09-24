@@ -196,7 +196,7 @@ def get_video_info_route():
         return jsonify(total_frames=0, fps=0)
 
 
-@app.route('/update_frame', methods=['POST'])
+@app.route('/update_frame_no_labeling', methods=['POST'])
 def update_frame():
     global current_frame
     global labeling_mode
@@ -207,14 +207,48 @@ def update_frame():
 
     if frame_number is not None:
         current_frame = frame_number
-
-        # if labeling mode is active, update the score table for the current behavior
-        if labeling_mode == "tagging" and current_behavior_index is not None:
-            score_table.iloc[current_frame, current_behavior_index] = 1
-        elif labeling_mode == "removing" and current_behavior_index is not None:
-            score_table.iloc[current_frame, current_behavior_index] = 0
+    #
+    #     # if labeling mode is active, update the score table for the current behavior
+    #     if labeling_mode == "tagging" and current_behavior_index is not None:
+    #         score_table.iloc[current_frame, current_behavior_index] = 1
+    #     elif labeling_mode == "removing" and current_behavior_index is not None:
+    #         score_table.iloc[current_frame, current_behavior_index] = 0
 
     return jsonify(success=True)
+
+
+@app.route('/update_frame_with_labeling', methods=['POST'])
+def update_frame_with_labeling():
+    global current_frame
+    global labeling_mode
+    global current_behavior_index
+    global score_table
+
+    direction = request.json.get('direction')  # 'left' or 'right'
+    frames_to_move = request.json.get('FramesToMove', 1)  # Number of frames to move
+    total_frames = score_table.shape[0]  # Total number of frames
+
+    if direction == 'left':
+        new_frame = max(0, current_frame - frames_to_move)
+    elif direction == 'right':
+        new_frame = min(total_frames - 1, current_frame + frames_to_move)
+    else:
+        return jsonify(success=False, message="Invalid direction")
+
+    previous_frame = current_frame
+    current_frame = new_frame
+
+    # Update the score table for all frames between previous_frame and current_frame
+    start_frame = min(previous_frame, current_frame)
+    end_frame = max(previous_frame, current_frame)
+
+    # Perform labeling based on the current mode
+    if labeling_mode == "tagging" and current_behavior_index is not None:
+        score_table.iloc[start_frame:end_frame+1, current_behavior_index] = 1
+    elif labeling_mode == "removing" and current_behavior_index is not None:
+        score_table.iloc[start_frame:end_frame+1, current_behavior_index] = 0
+
+    return jsonify(success=True, frame=current_frame)
 
 
 @app.route("/toggle_labeling_mode", methods=['POST'])
