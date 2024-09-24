@@ -291,25 +291,25 @@
                     <span>1-frame</span>
                 </div>
                 <div class="mode-option">
-                    <div class="circle" id="mode-5-frame"></div>
-                    <span>5-frame</span>
+                    <div class="circle" id="mode-2-frame"></div>
+                    <span>2-frame</span>
                 </div>
                 <div class="mode-option">
-                    <div class="circle" id="mode-10-frame"></div>
-                    <span>10-frame</span>
+                    <div class="circle" id="mode-4-frame"></div>
+                    <span>4-frame</span>
                 </div>
-                <div class="mode-option">
-                    <div class="circle" id="mode-15-frame"></div>
-                    <span>15-frame</span>
-                </div>
-                <div class="mode-option">
-                    <div class="circle" id="mode-20-frame"></div>
-                    <span>20-frame</span>
-                </div>
-                <div class="mode-option">
-                    <div class="circle" id="mode-25-frame"></div>
-                    <span>25-frame</span>
-                </div>
+<!--                <div class="mode-option">-->
+<!--                    <div class="circle" id="mode-15-frame"></div>-->
+<!--                    <span>15-frame</span>-->
+<!--                </div>-->
+<!--                <div class="mode-option">-->
+<!--                    <div class="circle" id="mode-20-frame"></div>-->
+<!--                    <span>20-frame</span>-->
+<!--                </div>-->
+<!--                <div class="mode-option">-->
+<!--                    <div class="circle" id="mode-25-frame"></div>-->
+<!--                    <span>25-frame</span>-->
+<!--                </div>-->
             </div>
 
             <div id="behavior-list">
@@ -352,7 +352,7 @@
         let duration = 0;  // In seconds
         let frameInterval;
         let isKeyDown = false;
-        let playModes = [1, 5, 10, 15, 20, 25];
+        let playModes = [1, 2, 4];
         let currentPlayModeIndex = 0;
         let behaviors = [];
         let currentBehaviorIndex = 0;
@@ -362,11 +362,11 @@
 
         const circles = {
             0: document.getElementById('mode-1-frame'),
-            1: document.getElementById('mode-5-frame'),
-            2: document.getElementById('mode-10-frame'),
-            3: document.getElementById('mode-15-frame'),
-            4: document.getElementById('mode-20-frame'),
-            5: document.getElementById('mode-25-frame')
+            1: document.getElementById('mode-2-frame'),
+            2: document.getElementById('mode-4-frame'),
+            // 3: document.getElementById('mode-15-frame'),
+            // 4: document.getElementById('mode-20-frame'),
+            // 5: document.getElementById('mode-25-frame')
         };
 
         const labelingCircles = {
@@ -537,6 +537,11 @@
             refreshScorePlot();
         };
 
+        slider.addEventListener('keydown', function(event) {
+            if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+                event.preventDefault(); // Prevent the slider from using the arrow keys
+            }
+        });
         async function updateCurrentFrame(frameNumber) {
             try {
                 const response = await fetch('/update_frame_no_labeling', {
