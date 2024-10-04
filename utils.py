@@ -360,6 +360,9 @@ def get_individual_paw_luminance(ftir_frame, ftir_mask, x, y, size=22):
 
 def cal_paw_luminance_rework(label, cap, size=22):
 
+    # # debug
+    # print("calling cal_paw_luminance_rework")
+
     paws = ["lhpaw", "rhpaw", "lfpaw", "rfpaw"]
 
     paw_luminescence = {paw: [] for paw in paws}

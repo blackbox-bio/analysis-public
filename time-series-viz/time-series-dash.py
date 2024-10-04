@@ -9,17 +9,7 @@ import plotly.graph_objs as go
 from scipy.ndimage import gaussian_filter1d
 import uuid
 
-# Define project directory and file paths
-# proj_dir = r"D:\data\TAMU\hallway-tests_analysis"
-# # proj_dir = r"D:\data\Twiss_lab\test_analysis"
-# recording_name = "2024-07-31_15-19-11_7917-1-sec-dwell-training-sci"
-# # recording_name = "0014"
-# features_h5 = os.path.join(proj_dir, recording_name, "features.h5")
-
-
 features_h5_dir = r"C:\Users\alexz\OneDrive\Desktop\2024-09-06_16-22-48_7201"
-# features_h5_dir = r'D:\data\Gower_lab\casting_pilot_analysis\2024-08-27_16-29-42_s2'
-# features_h5_dir = r'D:\data\Queens\7_dpi_SCI_August_2024_analysis\2024-07-19_16-11-09_8008'
 features_h5 = os.path.join(features_h5_dir, "features.h5")
 
 # Load the HDF5 file and extract the relevant information into a dictionary for faster access

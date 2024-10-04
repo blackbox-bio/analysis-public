@@ -179,25 +179,14 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
         rankle_rhpd5t_vec, lankle_lhpaw_vec
     )
 
-    # paw luminance rework!!
     ftir_video.release()
-
-    # paw luminance rework!!
-    ftir_video.release()
-    ftir_video = cv2.VideoCapture(ftir_path)
-    (paw_luminescence, paw_print_size, paw_luminance, _, _) = cal_paw_luminance_rework(
-        label, ftir_video, size=22
-    )
-
-    paws = ["lhpaw", "rhpaw", "lfpaw", "rfpaw"]
-    for paw in paws:
-        features[f"{paw}_luminescence"] = paw_luminescence[paw]
-        features[f"{paw}_print_size"] = paw_print_size[paw]
-        features[f"{paw}_luminance_rework"] = paw_luminance[paw]
 
     # -------------------------------------------------------------
 
     # save extracted features
+
+    # # debug
+    # print(f"Saving features to {dest_path}...")
     with h5py.File(dest_path, "w") as hdf:
         video_data = hdf.create_group(name)
         for key in features.keys():
