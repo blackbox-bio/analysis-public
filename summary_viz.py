@@ -5,6 +5,7 @@ from scipy.stats import ttest_ind, f_oneway
 import matplotlib.pyplot as plt
 import cv2 as cv
 from enum import Enum
+from statsmodels.stats.multitest import multipletests
 
 
 class GraphType(Enum):
@@ -223,3 +224,103 @@ def generate_PairGrid_plot(
             axis.set_ylabel(axis.get_ylabel(), rotation=80, labelpad=25)
 
     g.savefig(dest_path, dpi=300)
+
+
+def generate_heatmap_plot(df, group_variable: str, dest_path: str):
+    """
+    Generate a heatmap of group-level mean Z-scores with significance markers.
+
+    Parameters:
+    df : pd.DataFrame
+        The dataframe containing the features and group labels.
+    group_variable : str
+        The column name of the group variable (treatment group).
+    dest_path : str
+        The file path where the heatmap plot will be saved.
+
+    """
+    # group_label = _get_group_label(group_variable)
+
+    # Step 1: Apply Z-score normalization to each feature column (excluding the group variable)
+    feature_cols = df.columns.drop(
+        group_variable
+    )  # Exclude the group variable from the feature columns
+    df_zscore = df[feature_cols].apply(
+        zscore, axis=0
+    )  # Z-score normalization for features
+
+    # Step 2: Add the group variable column back to the dataframe
+    df_zscore[group_variable] = df[group_variable]
+
+    # Step 3: Calculate mean Z-scores for each group
+    df_mean_zscore = df_zscore.groupby(group_variable).mean()
+
+    # Step 4: Run ANOVA for each feature to find significant differences between groups
+    p_values = []
+    for feature in df_mean_zscore.columns:
+        groups = [
+            df_zscore[df_zscore[group_variable] == group][feature]
+            for group in df_zscore[group_variable].unique()
+        ]
+        stat, p = f_oneway(*groups)  # Perform ANOVA
+        p_values.append(p)
+
+    # Step 5: Adjust p-values using Bonferroni or FDR correction
+    p_adjusted = multipletests(p_values, method="bonferroni")[
+        1
+    ]  # Bonferroni correction (you can also use 'fdr_bh')
+
+    # Step 6: Create a significance marker array
+    significance_array = np.full(
+        df_mean_zscore.T.shape, "", dtype=object
+    )  # Empty array for significance markers
+
+    # Assign significance markers based on adjusted p-values
+    for i, p in enumerate(p_adjusted):
+        if p < 0.001:
+            significance_array[i] = "***"
+        elif p < 0.01:
+            significance_array[i] = "**"
+        elif p < 0.05:
+            significance_array[i] = "*"
+
+    # Step 7: Create a clustermap with significance markers on top (no need to transpose before this step)
+    g = sns.clustermap(
+        df_mean_zscore.T,
+        cmap="inferno",
+        center=0,
+        annot=significance_array,
+        fmt="",
+        cbar_kws={"label": "Mean Z-score"},
+        metric="euclidean",
+        method="ward",
+    )
+
+    # extract the order of the features after clustering
+    row_order = g.dendrogram_row.reordered_ind
+
+    # Step 8: Force all y-axis labels (feature names) to be displayed
+    g.ax_heatmap.set_yticks(
+        np.arange(df_mean_zscore.shape[1]) + 0.5
+    )  # Set y-ticks for every row
+    g.ax_heatmap.set_yticklabels(
+        df_mean_zscore.columns, rotation=0, fontsize=10
+    )  # Set y-labels for every feature
+
+    g.ax_heatmap.set_yticks(
+        np.arange(len(row_order)) + 0.5
+    )  # Set y-ticks for every row
+    g.ax_heatmap.set_yticklabels(
+        df_mean_zscore.columns[row_order], rotation=0, fontsize=10
+    )  # Apply reordered labels
+
+    # Step 9: Customize the title and display the plot
+    plt.title(
+        "Group-Level Mean Z-scores with Significance Markers and All Feature Labels"
+    )
+
+    # Step 10: Save the plot to the specified destination path
+    plt.savefig(dest_path, dpi=300, bbox_inches="tight")
+    plt.close()  # Close the plot to avoid display in environments that render plots automatically
+
+    return
