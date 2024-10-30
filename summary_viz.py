@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import cv2 as cv
 from enum import Enum
 from statsmodels.stats.multitest import multipletests
+from scipy.stats import zscore
 
 
 class GraphType(Enum):
@@ -301,18 +302,15 @@ def generate_heatmap_plot(df, group_variable: str, dest_path: str):
 
     # Step 8: Force all y-axis labels (feature names) to be displayed
     g.ax_heatmap.set_yticks(
-        np.arange(df_mean_zscore.shape[1]) + 0.5
-    )  # Set y-ticks for every row
-    g.ax_heatmap.set_yticklabels(
-        df_mean_zscore.columns, rotation=0, fontsize=10
-    )  # Set y-labels for every feature
-
-    g.ax_heatmap.set_yticks(
         np.arange(len(row_order)) + 0.5
     )  # Set y-ticks for every row
     g.ax_heatmap.set_yticklabels(
         df_mean_zscore.columns[row_order], rotation=0, fontsize=10
     )  # Apply reordered labels
+
+    g.ax_heatmap.set_xticklabels(
+        g.ax_heatmap.get_xmajorticklabels(), rotation=45, fontsize=10, ha="right"
+    )
 
     # Step 9: Customize the title and display the plot
     plt.title(
