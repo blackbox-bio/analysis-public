@@ -365,7 +365,7 @@ def plot_individual_heatmap_by_group(
 
     # Force all y-axis labels (feature names) to be displayed
     g_ind.ax_heatmap.set_yticks(
-        np.arange(len(row_order)) + 0.5
+        np.arange(len(ordered_features)) + 0.5
     )  # Set y-ticks for every row
     g_ind.ax_heatmap.set_yticklabels(
         ordered_features, rotation=0, fontsize=10
@@ -427,8 +427,9 @@ def plot_individual_heatmap_by_clustering(
 
     # Force all y-axis labels (feature names) to be displayed
     g_ind.ax_heatmap.set_yticks(
-        np.arange(len(row_order)) + 0.5
-    )  # Set y-ticks for every row
+        np.arange(len(ordered_features)) + 0.5
+    )
+    # Set y-ticks for every row
     g_ind.ax_heatmap.set_yticklabels(
         ordered_features, rotation=0, fontsize=10
     )  # Apply reordered labels
