@@ -179,6 +179,12 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
         rankle_rhpd5t_vec, lankle_lhpaw_vec
     )
 
+    # tracking likelihood for each paws
+    features["lhpaw_tracking_likelihood"] = label["lhpaw"]["likelihood"]
+    features["rhpaw_tracking_likelihood"] = label["rhpaw"]["likelihood"]
+    features["lfpaw_tracking_likelihood"] = label["lfpaw"]["likelihood"]
+    features["rfpaw_tracking_likelihood"] = label["rfpaw"]["likelihood"]
+
     ftir_video.release()
 
     # -------------------------------------------------------------
