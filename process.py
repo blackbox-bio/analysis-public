@@ -185,6 +185,11 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
     features["lfpaw_tracking_likelihood"] = label["lfpaw"]["likelihood"]
     features["rfpaw_tracking_likelihood"] = label["rfpaw"]["likelihood"]
 
+    # tracking likelihood for key central line body parts
+    # features["hip_tracking_likelihood"] = label["hip"]["likelihood"]
+    # features["tailbase_tracking_likelihood"] = label["tailbase"]["likelihood"]
+    # features["snout_tracking_likelihood"] = label["snout"]["likelihood"]
+
     ftir_video.release()
 
     # -------------------------------------------------------------
