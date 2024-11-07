@@ -509,12 +509,12 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
 
         # paws tracking quality control flag
         # 0: good, 1: bad
-        # hind paws tracking likelihood need to be higher than 0.9
+        # hind paws tracking likelihood need to be higher than 0.85
         # front paws tracking likelihood need to be higher than 0.6
         summary_features[video]["paws_tracking_quality_control_flag"] = 0
         if (
-                summary_features[video]["average_lhpaw_tracking_likelihood"] < 0.9
-                or summary_features[video]["average_rhpaw_tracking_likelihood"] < 0.9
+                summary_features[video]["average_lhpaw_tracking_likelihood"] < 0.85
+                or summary_features[video]["average_rhpaw_tracking_likelihood"] < 0.85
                 or summary_features[video]["average_lfpaw_tracking_likelihood"] < 0.6
                 or summary_features[video]["average_rfpaw_tracking_likelihood"] < 0.6
         ):
