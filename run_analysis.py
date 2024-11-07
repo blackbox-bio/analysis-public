@@ -63,7 +63,7 @@ def main():
 
 
     # generate summary csv from the processed videos
-    time_bins = ((0, -1), (0, 5))
+    time_bins = ((0, -1),)
     generate_summary_csv(analysis_folder, time_bins)
 
 
