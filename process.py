@@ -165,19 +165,19 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
     features["midline_hlpaw_angle"] = get_angle(midline_vector, lankle_lhpaw_vec)
     features["midline_hrpaw_angle"] = get_angle(rankle_rhpaw_vec, midline_vector)
 
-    # toe angles for both hind paws
-    features["lhpd1t_lankle_lhpaw_angle"] = get_angle(
-        lankle_lhpd1t_vec, lankle_lhpaw_vec
-    )
-    features["lhpd5t_lankle_lhpaw_angle"] = get_angle(
-        lankle_lhpaw_vec, lankle_lhpd5t_vec
-    )
-    features["rhpd1t_rankle_rhpaw_angle"] = get_angle(
-        rankle_rhpaw_vec, rankle_rhpd1t_vec
-    )
-    features["rhpd5t_rankle_rhpaw_angle"] = get_angle(
-        rankle_rhpd5t_vec, lankle_lhpaw_vec
-    )
+    # # toe angles for both hind paws
+    # features["lhpd1t_lankle_lhpaw_angle"] = get_angle(
+    #     lankle_lhpd1t_vec, lankle_lhpaw_vec
+    # )
+    # features["lhpd5t_lankle_lhpaw_angle"] = get_angle(
+    #     lankle_lhpaw_vec, lankle_lhpd5t_vec
+    # )
+    # features["rhpd1t_rankle_rhpaw_angle"] = get_angle(
+    #     rankle_rhpaw_vec, rankle_rhpd1t_vec
+    # )
+    # features["rhpd5t_rankle_rhpaw_angle"] = get_angle(
+    #     rankle_rhpd5t_vec, lankle_lhpaw_vec
+    # )
 
     # tracking likelihood for each paws
     features["lhpaw_tracking_likelihood"] = label["lhpaw"]["likelihood"]

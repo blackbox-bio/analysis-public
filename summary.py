@@ -1,6 +1,7 @@
 from typing import Dict, Any, List, Tuple
 
 from utils import *
+from cols_name_dicts import *
 
 
 def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
@@ -519,6 +520,9 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
                 or summary_features[video]["average_rfpaw_tracking_likelihood"] < 0.6
         ):
             summary_features[video]["paws_tracking_quality_control_flag"] = 1
+
+        # change column names for the summary to be more readable
+        summary_features[video] = {summary_col_name_dict[k]: v for k, v in summary_features[video].items()}
 
     df = pd.DataFrame.from_dict(summary_features, orient="index")
 
