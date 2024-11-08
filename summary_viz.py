@@ -190,15 +190,14 @@ def generate_bar_plots(df, group_variable: str, dest_path, sort_by_significance=
 
 
 def generate_PairGrid_plot(
-    df,
-    group_variable: str,
-    diag_kind: str,
-    upper_kind: str,
-    lower_kind: str,
-    dest_path: str,
-    sort_by_significance=False,
+        df,
+        group_variable: str,
+        diag_kind: str,
+        upper_kind: str,
+        lower_kind: str,
+        dest_path: str,
+        sort_by_significance=False,
 ):
-
     # Rank columns by significance
     if sort_by_significance:
         sorted_columns = rank_columns_by_significance(df, group_variable)
@@ -325,7 +324,7 @@ def generate_PairGrid_plot(
 
 
 def plot_individual_heatmap_by_group(
-    df_individual, group_variable, dest_path, group_colors, ordered_features, lut
+        df_individual, group_variable, dest_path, group_colors, ordered_features, lut
 ):
     """
     Plot individual heatmap, sorted by group without clustering.
@@ -392,7 +391,7 @@ def plot_individual_heatmap_by_group(
 
 # Helper function to plot individual heatmap by clustering
 def plot_individual_heatmap_by_clustering(
-    df_individual, group_variable, dest_path, group_colors, ordered_features, lut
+        df_individual, group_variable, dest_path, group_colors, ordered_features, lut
 ):
     """
     Plot individual heatmap, sorted by clustering.
@@ -454,11 +453,11 @@ def plot_individual_heatmap_by_clustering(
 
 # Master function to handle both group-level and individual-level plots
 def generate_heatmap_plots(
-    df,
-    group_variable: str,
-    dest_path_group: str,
-    dest_path_individual: str,
-    sort_by: str = "clustering",
+        df,
+        group_variable: str,
+        dest_path_group: str,
+        dest_path_individual: str,
+        sort_by: str = "clustering",
 ):
     """
     Master function to generate two heatmaps:
@@ -590,5 +589,123 @@ def generate_heatmap_plots(
             ordered_features,
             lut,
         )
+
+    return
+
+
+def generate_cluster_heatmap(
+        df,
+        group_variable: str,
+        dest_path: str,
+        grouping_mode: str = "group" # "individual"
+):
+    """
+    Generate a cluster-heatmap plot based on grouping mode.
+
+    Parameters:
+    df : pd.DataFrame
+        The dataframe containing the features and group labels.
+    group_variable : str
+        The column name of the group variable (e.g., treatment group).
+    dest_path : str
+        The file path to save the heatmap plot.
+    grouping_mode : str, optional
+        Plot type: "group" for group-level cluster-heatmap, "individual" for individual-level heatmap.
+    """
+    # Step 1: Apply Z-score normalization to each feature column (excluding the group variable)
+    feature_cols = df.columns.drop(group_variable)
+    df_zscore = df[feature_cols].apply(zscore, axis=0)
+    df_zscore[group_variable] = df[group_variable]  # Add back the group variable
+
+    # Step 2: If grouping_mode is "group", create a group-level cluster-heatmap
+    if grouping_mode == "group":
+        # Calculate mean Z-scores for each group
+        df_mean_zscore = df_zscore.groupby(group_variable).mean()
+
+        # Run ANOVA for significance and adjust p-values
+        p_values = [
+            f_oneway(
+                *[df_zscore[df_zscore[group_variable] == group][feature] for group in df_zscore[group_variable].unique()]
+            )[1]
+            for feature in df_mean_zscore.columns
+        ]
+        p_adjusted = multipletests(p_values, method="bonferroni")[1]
+
+        # Create a significance marker array
+        significance_array = np.full(df_mean_zscore.T.shape, "", dtype=object)
+        for i, p in enumerate(p_adjusted):
+            if p < 0.001:
+                significance_array[i] = "***"
+            elif p < 0.01:
+                significance_array[i] = "**"
+            elif p < 0.05:
+                significance_array[i] = "*"
+
+        # Create group-level heatmap
+        g = sns.clustermap(
+            df_mean_zscore.T,
+            cmap="inferno",
+            center=0,
+            annot=significance_array,
+            fmt="",
+            cbar_kws={"label": "Mean Z-score"},
+            metric="euclidean",
+            method="ward",
+        )
+
+        # Extract feature order for subsequent plotting
+        row_order = g.dendrogram_row.reordered_ind
+        ordered_features = df_mean_zscore.columns[row_order]
+
+        # Customize plot
+        g.ax_heatmap.set_yticks(np.arange(len(row_order)) + 0.5)
+        g.ax_heatmap.set_yticklabels(ordered_features, rotation=0, fontsize=10)
+        g.ax_heatmap.set_xticklabels(g.ax_heatmap.get_xmajorticklabels(), rotation=45, fontsize=10, ha="right")
+        plt.title("Group-Level Mean Z-scores with Significance Markers")
+        plt.savefig(dest_path, dpi=300, bbox_inches="tight")
+        plt.close(g.fig)
+
+    # Step 3: If grouping_mode is "individual", create an individual-level heatmap
+    elif grouping_mode == "individual":
+        # Generate group-level order of features for consistency
+        df_mean_zscore = df_zscore.groupby(group_variable).mean()
+        g = sns.clustermap(
+            df_mean_zscore.T,
+            cmap="inferno",
+            center=0,
+            metric="euclidean",
+            method="ward",
+        )
+        row_order = g.dendrogram_row.reordered_ind
+        ordered_features = df_mean_zscore.columns[row_order]
+
+        # Prepare the individual-level dataframe and color mapping
+        df_individual = df_zscore[ordered_features].copy()
+        df_individual[group_variable] = df_zscore[group_variable]
+        lut = dict(zip(df[group_variable].unique(), sns.color_palette("husl", len(df[group_variable].unique()))))
+        group_colors = df_individual[group_variable].map(lut)
+        df_individual.drop(columns=[group_variable], inplace=True)
+
+        # Create the individual-level heatmap with clustering
+        g_ind = sns.clustermap(
+            df_individual.T,
+            cmap="inferno",
+            center=0,
+            col_colors=group_colors,
+            metric="euclidean",
+            method="ward",
+        )
+        g_ind.ax_heatmap.set_yticks(np.arange(len(ordered_features)) + 0.5)
+        g_ind.ax_heatmap.set_yticklabels(ordered_features, rotation=0, fontsize=10)
+        g_ind.ax_heatmap.set_xticklabels(g_ind.ax_heatmap.get_xmajorticklabels(), rotation=45, fontsize=10, ha="right")
+
+        # Add legend for group colors
+        for label in df[group_variable].unique():
+            g_ind.ax_col_dendrogram.bar(0, 0, color=lut[label], label=label, linewidth=0)
+        g_ind.ax_col_dendrogram.legend(title=group_variable, loc="center", ncol=len(df[group_variable].unique()))
+
+        plt.title("Individual Z-scores (Sorted by Clustering)")
+        plt.savefig(dest_path, dpi=300, bbox_inches="tight")
+        plt.close(g_ind.fig)
 
     return
