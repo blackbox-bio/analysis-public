@@ -1,4 +1,5 @@
 from utils import *
+from featureClass import FeatureClass
 # from paw_luminance_rework import *
 
 # from paw_luminance_rework import *
@@ -18,6 +19,8 @@ def process_recording_wrapper(recording):
 def extract_features(name, ftir_path, tracking_path, dest_path):
     # create a dictionary to store the extracted features
     features = {}
+
+    featuresClass = FeatureClass(tracking_path, ftir_path)
 
     # read DLC tracking
     df = pd.read_hdf(tracking_path)

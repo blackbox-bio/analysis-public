@@ -16,3 +16,5 @@ __pycache__/
 /.direnv
 /.hack
 /.venv
+/.idea
+/C-TestData
