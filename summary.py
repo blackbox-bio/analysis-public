@@ -1,7 +1,7 @@
 from typing import Dict, Any, List, Tuple
 
 from utils import *
-from cols_name_dicts import *
+from cols_name_dicts import summary_col_name_dict
 
 
 def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
