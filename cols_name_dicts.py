@@ -14,8 +14,10 @@
 # (see ./name_dicts.json for all changes)
 
 import json
+from os import path
 
-_f = open('name_dicts.json')
+# read ./name_dicts.json
+_f = open(path.join(path.dirname(__file__), "name_dicts.json"), "r")
 _name_dicts = json.load(_f)
 
 # ---------- summary_col_name_dict ----------
