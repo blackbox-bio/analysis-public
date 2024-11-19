@@ -1,5 +1,5 @@
 from utils import *
-from featureClass import FeatureClass
+from featureClass import FeaturesContext, FeatureDef, PawFeaturesDef,AnimalDetectionDef, DistanceDeltaDef, BodyPartDistanceDef, BodyPartAngleDef, TrackingLikelyHoodDef
 # from paw_luminance_rework import *
 
 # from paw_luminance_rework import *
@@ -20,7 +20,21 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
     # create a dictionary to store the extracted features
     features = {}
 
-    featuresClass = FeatureClass(tracking_path, ftir_path)
+    ALL_FEATURES: list[FeatureDef] = [
+        PawFeaturesDef(),
+        DistanceDeltaDef(),
+        BodyPartDistanceDef(),
+        BodyPartAngleDef(),
+        TrackingLikelyHoodDef(),
+        AnimalDetectionDef()
+    ]
+
+    ctx = FeaturesContext(name,tracking_path, ftir_path)
+
+    for feature in ALL_FEATURES:
+        feature.compute(ctx)
+
+    ctx.to_hdf5(dest_path=f'C-TestData/hdf5-tests/n-{dest_path}')
 
     # read DLC tracking
     df = pd.read_hdf(tracking_path)
@@ -64,15 +78,15 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
      hind_right,
      front_left,
      front_right,) = legacy_paw_luminance
-
+    #
     fps = int(ftir_video.get(cv2.CAP_PROP_FPS))
     # recording_time = frame_count / fps
-
+    #
     # features["recording_time"] = np.array(recording_time)
     features["fps"] = np.array(fps)
     features["frame_count"] = np.array(frame_count)
     features["animal_detection"] = detect_animal_in_recording(label, fps)
-
+    #
     features["hind_left_luminance"] = hind_left
     features["hind_right_luminance"] = hind_right
     features["front_left_luminance"] = front_left
