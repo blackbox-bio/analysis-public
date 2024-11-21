@@ -15,16 +15,17 @@
 
 import json
 from os import path
+from typing import Dict
 
 # read ./name_dicts.json
 _f = open(path.join(path.dirname(__file__), "name_dicts.json"), "r")
 _name_dicts = json.load(_f)
 
 # ---------- summary_col_name_dict ----------
-summary_col_name_dict: dict[str, str] = _name_dicts["summary_col_name"]
+summary_col_name_dict: Dict[str, str] = _name_dicts["summary_col_name"]
 
 
 # ---------- features_col_name_dict ----------
-features_col_name_dict: dict[str, str] = _name_dicts["features_col_name"]
+features_col_name_dict: Dict[str, str] = _name_dicts["features_col_name"]
 
 _f.close()
