@@ -1,0 +1,33 @@
+body {
+    font-family: Arial, sans-serif;
+    padding: 20px;
+}
+
+.container {
+    max-width: 800px;
+    margin: auto;
+}
+
+button {
+    margin: 10px 5px;
+}
+
+#graphs-container {
+    margin-top: 20px;
+}
+
+.graph-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.graph {
+    flex: 1;
+}
+
+.feature-dropdown {
+    margin-right: 20px;
+    height: 100px; /* Adjust as needed */
+    width: 150px;
+}

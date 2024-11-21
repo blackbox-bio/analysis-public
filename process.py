@@ -1,6 +1,10 @@
 from utils import *
+# from paw_luminance_rework import *
+
+# from paw_luminance_rework import *
 
 dlc_postfix = "DLC_resnet50_arcteryx500Nov4shuffle1_350000"
+
 
 # Function to process a video with specified arguments
 def process_recording_wrapper(recording):
@@ -25,16 +29,38 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
 
     # ----calculate paw luminance, average paw luminance ratio, and paw luminance log-ratio----
     # read ftir video
+
     ftir_video = cv2.VideoCapture(ftir_path)
+
+    (paw_luminescence,
+     paw_print_size,
+     paw_luminance,
+     background_luminance,
+     frame_count,
+     legacy_paw_luminance) = cal_paw_luminance_rework(
+        label, ftir_video, size=22
+    )
+
+    paws = ["lhpaw", "rhpaw", "lfpaw", "rfpaw"]
+    for paw in paws:
+        features[f"{paw}_luminescence"] = paw_luminescence[paw]
+        features[f"{paw}_print_size"] = paw_print_size[paw]
+        features[f"{paw}_luminance_rework"] = paw_luminance[paw]
+
     # calculate paw luminance
-    (
-        hind_left,
-        hind_right,
-        front_left,
-        front_right,
-        background_luminance,
-        frame_count,
-    ) = cal_paw_luminance(label, ftir_video, size=22)
+    # (
+    #     hind_left,
+    #     hind_right,
+    #     front_left,
+    #     front_right,
+    #     background_luminance,
+    #     frame_count,
+    # ) = cal_paw_luminance(label, ftir_video, size=22)
+
+    (hind_left,
+     hind_right,
+     front_left,
+     front_right,) = legacy_paw_luminance
 
     fps = int(ftir_video.get(cv2.CAP_PROP_FPS))
     # recording_time = frame_count / fps
@@ -42,6 +68,7 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
     # features["recording_time"] = np.array(recording_time)
     features["fps"] = np.array(fps)
     features["frame_count"] = np.array(frame_count)
+    features["animal_detection"] = detect_animal_in_recording(label, fps)
 
     features["hind_left_luminance"] = hind_left
     features["hind_right_luminance"] = hind_right
@@ -63,7 +90,7 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
     # )
 
     # calculate when the animal is standing on two hind paws
-    features["both_front_paws_lifted"] = both_front_paws_lifted(front_left, front_right)
+    # features["both_front_paws_lifted"] = both_front_paws_lifted(front_left, front_right)
 
     # body parts distance
 
@@ -94,13 +121,28 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
     )
     features["neck_snout_distance"] = body_parts_distance(label, "neck", "snout")
 
+    # toe spread and paw length for both hind paws
+    features["hind_left_toes_spread"] = body_parts_distance(label, "lhpd1t", "lhpd5t")
+    features["hind_right_toes_spread"] = body_parts_distance(label, "rhpd1t", "rhpd5t")
+    features["hind_left_paw_length"] = body_parts_distance(label, "lankle", "lhpd3t")
+    features["hind_right_paw_length"] = body_parts_distance(label, "rankle", "rhpd3t")
+
     # body parts vectors
     sternumtail_sternumhead_vector = get_vector(label, "sternumtail", "sternumhead")
+    midline_vector = get_vector(label, "tailbase", "sternumtail")
     neck_snout_vector = get_vector(label, "neck", "snout")
     tailbase_hip_vector = get_vector(label, "tailbase", "hip")
     tailtip_tailbase_vector = get_vector(label, "tailtip", "tailbase")
     tailbase_hlpaw_vec = get_vector(label, "tailbase", "lhpaw")
     tailbase_hrpaw_vec = get_vector(label, "tailbase", "rhpaw")
+    lankle_lhpaw_vec = get_vector(label, "lankle", "lhpaw")
+    lankle_lhpd1t_vec = get_vector(label, "lankle", "lhpd1t")
+    # lankle_lhpd3t_vec = get_vector(label,"lankle","lhpd3t")
+    lankle_lhpd5t_vec = get_vector(label, "lankle", "lhpd5t")
+    rankle_rhpaw_vec = get_vector(label, "rankle", "rhpaw")
+    rankle_rhpd1t_vec = get_vector(label, "rankle", "rhpd1t")
+    # rankle_rhpd3t_vec = get_vector(label,"rankle","rhpd3t")
+    rankle_rhpd5t_vec = get_vector(label, "rankle", "rhpd5t")
 
     # body parts angles
     features["chest_head_angle"] = get_angle(
@@ -119,10 +161,43 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
     features["hip_tailbase_hrpaw_angle"] = get_angle(
         tailbase_hrpaw_vec, tailbase_hip_vector
     )
+    # paw angles with respect to the midline for both hind paws
+    features["midline_hlpaw_angle"] = get_angle(midline_vector, lankle_lhpaw_vec)
+    features["midline_hrpaw_angle"] = get_angle(rankle_rhpaw_vec, midline_vector)
+
+    # # toe angles for both hind paws
+    # features["lhpd1t_lankle_lhpaw_angle"] = get_angle(
+    #     lankle_lhpd1t_vec, lankle_lhpaw_vec
+    # )
+    # features["lhpd5t_lankle_lhpaw_angle"] = get_angle(
+    #     lankle_lhpaw_vec, lankle_lhpd5t_vec
+    # )
+    # features["rhpd1t_rankle_rhpaw_angle"] = get_angle(
+    #     rankle_rhpaw_vec, rankle_rhpd1t_vec
+    # )
+    # features["rhpd5t_rankle_rhpaw_angle"] = get_angle(
+    #     rankle_rhpd5t_vec, lankle_lhpaw_vec
+    # )
+
+    # tracking likelihood for each paws
+    features["lhpaw_tracking_likelihood"] = label["lhpaw"]["likelihood"]
+    features["rhpaw_tracking_likelihood"] = label["rhpaw"]["likelihood"]
+    features["lfpaw_tracking_likelihood"] = label["lfpaw"]["likelihood"]
+    features["rfpaw_tracking_likelihood"] = label["rfpaw"]["likelihood"]
+
+    # tracking likelihood for key central line body parts
+    # features["hip_tracking_likelihood"] = label["hip"]["likelihood"]
+    # features["tailbase_tracking_likelihood"] = label["tailbase"]["likelihood"]
+    # features["snout_tracking_likelihood"] = label["snout"]["likelihood"]
+
+    ftir_video.release()
 
     # -------------------------------------------------------------
 
     # save extracted features
+
+    # # debug
+    # print(f"Saving features to {dest_path}...")
     with h5py.File(dest_path, "w") as hdf:
         video_data = hdf.create_group(name)
         for key in features.keys():
@@ -130,7 +205,6 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
 
 
 def process_recording(recording):
-
     print(f"Processing {os.path.basename(recording)}...")
 
     recording_name = os.path.basename(recording)

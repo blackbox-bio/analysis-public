@@ -9,6 +9,7 @@ import h5py
 from collections import defaultdict
 import cv2
 from scipy.ndimage import gaussian_filter1d
+from scipy.ndimage import median_filter
 
 
 def select_folder():
@@ -26,6 +27,23 @@ def select_folder():
     )
 
     return folder
+
+
+def detect_animal_in_recording(label, fps, likelihood_threshold=0.5, temp_threshood=10):
+    """
+    :param label: DLC tracking file
+    :param fps: fps of the recording
+    :param likelihood_threshold
+    :param temp_threshood: use 10 seconds as the threshold for the mouse to be considered as detected
+    :return: a boolean mask for whether the mouse is detected in the recording for each frame
+    """
+    likelihood_columns = [col for col in label.columns if "likelihood" in col]
+    likelihood = label[likelihood_columns].values
+    likelihood = np.mean(likelihood, axis=1)
+    detection = likelihood > likelihood_threshold
+    detection = median_filter(detection, size=temp_threshood * fps + 1)
+
+    return detection
 
 
 def get_recording_list(directorys):
@@ -184,6 +202,7 @@ def cal_paw_luminance(label, cap, size=22):
     # https://stackoverflow.com/questions/31472155/python-opencv-cv2-cv-cv-cap-prop-frame-count-get-wrong-numbers
     # for i in tqdm(range(500)):
     i = 0
+    pbar = tqdm(total=None, dynamic_ncols=True,desc="legacy paw luminance calculation")
     while True:
         ret, frame = cap.read()  # Read the next frame
 
@@ -221,6 +240,10 @@ def cal_paw_luminance(label, cap, size=22):
         background_luminance.append(np.nanmean(frame))
 
         i += 1
+
+        pbar.update(1)
+
+    pbar.close()
 
     hind_right = np.array(hind_right)
     hind_left = np.array(hind_left)
@@ -275,3 +298,180 @@ def both_front_paws_lifted(front_left, front_right, threshold=1e-4):
     return a one-hot vector for when the animal is standing on two hind paws"""
 
     return ((front_left < threshold) * (front_right < threshold)) == 1
+
+
+# paw luminance rework ------
+def get_ftir_mask(ftir_frame_gray):
+    """
+    Get the paw print mask from the FTIR frame. The FTIR frame is first denoised by removing the background noise.
+    The paw print mask is then obtained by applying a threshold to the denoised FTIR frame.
+
+    return the denoised FTIR frame and the paw print mask.
+    """
+    background_threshold = (
+        17  # hard-coded the threshold, the same threshold used for the ftir heatmap
+    )
+    paw_print_threshold = 10
+
+    # blur ftir frame
+    ftir_frame_gray_blur = cv2.GaussianBlur(ftir_frame_gray, (3, 3), 0)
+
+    # remove background noise
+    mask = ftir_frame_gray_blur > background_threshold
+    mask = mask.astype(np.uint8) * 255
+    mask = cv2.erode(mask, np.ones((5, 5), np.uint8), iterations=1)
+    mask = cv2.dilate(mask, np.ones((9, 9), np.uint8), iterations=3)
+    # apply the mask to the blurred ftir frame
+    ftir_frame_gray_denoise = ftir_frame_gray_blur.copy()
+    mask = mask.astype(bool)
+    ftir_frame_gray_denoise[~mask] = 0
+
+    # apply the paw print threshold to get the paw print mask, boolean
+    paw_print = ftir_frame_gray_denoise > paw_print_threshold
+    # get the denoised ftir frame
+    ftir_frame_final = ftir_frame_gray.copy()
+    ftir_frame_final[~paw_print] = 0
+
+    # get the paw_print as a frame
+    ftir_mask = paw_print.astype(np.uint8) * 255
+
+    return ftir_frame_final, ftir_mask
+
+def get_individual_paw_luminance(ftir_frame, ftir_mask, x, y, size=22):
+    """
+    Get the paw luminescence, paw print size, and paw luminance.
+    paw luminescence is the sum of the pixel values in the paw print mask.
+    paw print size is the number of pixels in the paw print mask.
+    paw luminance is the paw luminescence divided by the paw print size.
+    :param ftir_frame: denoised FTIR frame
+    :param ftir_mask: ftir mask
+    :param x: x coordinate of the paw
+    :param y: y coordinate of the paw
+    :param size: size of the square region around the paw to calculate the paw luminance
+    :return: paw luminescence, paw print size, paw luminance
+    """
+    paw_luminescence = np.nansum(ftir_frame[y - size : y + size, x - size : x + size])
+    ftir_mask = ftir_mask.astype(bool)
+    paw_print_size = np.sum(ftir_mask[y - size : y + size, x - size : x + size])
+    paw_luminance = paw_luminescence / paw_print_size if paw_print_size > 0 else 0.0
+
+    return paw_luminescence, paw_print_size, paw_luminance
+
+
+def cal_paw_luminance_rework(label, cap, size=22):
+
+    # # debug
+    # print("calling cal_paw_luminance_rework")
+
+    paws = ["lhpaw", "rhpaw", "lfpaw", "rfpaw"]
+
+    paw_luminescence = {paw: [] for paw in paws}
+    paw_luminance = {paw: [] for paw in paws}
+    paw_print_size = {paw: [] for paw in paws}
+
+    background_luminance = []
+
+    # legacy paw luminance calculation
+    hind_right = []
+    hind_left = []
+    front_right = []
+    front_left = []
+    # legacy end----------------
+
+    i = 0
+    pbar = tqdm(total=None, dynamic_ncols=True,desc="paw luminance calculation")
+
+    while True:
+        ret, frame = cap.read()  # Read the next frame
+
+        if not ret:
+            break
+
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # Convert to grayscale
+        # calculate background luminance
+        background_luminance.append(np.mean(frame))
+
+        # legacy paw luminance calculation
+        x, y = (
+            int(label["rhpaw"][["x"]].values[i]),
+            int(label["rhpaw"][["y"]].values[i]),
+        )
+        hind_right.append(np.nanmean(frame[y - size: y + size, x - size: x + size]))
+
+        x, y = (
+            int(label["lhpaw"][["x"]].values[i]),
+            int(label["lhpaw"][["y"]].values[i]),
+        )
+        hind_left.append(np.nanmean(frame[y - size: y + size, x - size: x + size]))
+
+        x, y = (
+            int(label["rfpaw"][["x"]].values[i]),
+            int(label["rfpaw"][["y"]].values[i]),
+        )
+        front_right.append(np.nanmean(frame[y - size: y + size, x - size: x + size]))
+
+        x, y = (
+            int(label["lfpaw"][["x"]].values[i]),
+            int(label["lfpaw"][["y"]].values[i]),
+        )
+        front_left.append(np.nanmean(frame[y - size: y + size, x - size: x + size]))
+        # legacy paw luminance calculation end----------------
+
+        frame_denoise, paw_print = get_ftir_mask(frame)
+
+        # calculate the luminance of the four paws
+        for paw in paws:
+            x, y = (
+                int(label[paw][["x"]].values[i]),
+                int(label[paw][["y"]].values[i]),
+            )
+            luminescence, print_size, luminance = get_individual_paw_luminance(
+                frame_denoise, paw_print, x, y, size
+            )
+            paw_luminescence[paw].append(luminescence)
+            paw_print_size[paw].append(print_size)
+            paw_luminance[paw].append(luminance)
+
+        i += 1
+
+        pbar.update(1)
+
+    pbar.close()
+
+    background_luminance = np.array(background_luminance)
+    for dict_ in [paw_luminescence, paw_print_size, paw_luminance]:
+        for paw in paws:
+            dict_[paw] = np.array(dict_[paw])
+            mean = np.nanmean(dict_[paw])
+            dict_[paw] = np.nan_to_num(dict_[paw], nan=mean)
+
+    for paw in paws:
+        paw_luminance[paw] = denoise(paw_luminance[paw], background_luminance)
+
+    # legacy paw luminance calculation
+    hind_right = np.array(hind_right)
+    hind_left = np.array(hind_left)
+    front_right = np.array(front_right)
+    front_left = np.array(front_left)
+    hind_left_mean = np.nanmean(hind_left)
+    hind_right_mean = np.nanmean(hind_right)
+    front_left_mean = np.nanmean(front_left)
+    front_right_mean = np.nanmean(front_right)
+    hind_left = np.nan_to_num(hind_left, nan=hind_left_mean)
+    hind_right = np.nan_to_num(hind_right, nan=hind_right_mean)
+    front_left = np.nan_to_num(front_left, nan=front_left_mean)
+    front_right = np.nan_to_num(front_right, nan=front_right_mean)
+    hind_left = denoise(hind_left, background_luminance)
+    hind_right = denoise(hind_right, background_luminance)
+    front_left = denoise(front_left, background_luminance)
+    front_right = denoise(front_right, background_luminance)
+
+    legacy_paw_luminance = [
+        hind_left,
+        hind_right,
+        front_left,
+        front_right
+    ]
+    # legacy paw luminance calculation end----------------
+
+    return paw_luminescence, paw_print_size, paw_luminance, background_luminance, i, legacy_paw_luminance

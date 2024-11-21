@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            width: 90%;
+            max-width: 1400px;
+            height: 100vh;
+            position: relative;
+            margin: auto;
+        }
+
+        #video-container {
+            flex-grow: 1;
+            height: 90%;
+            position: relative;
+            display: flex;
+            flex-direction: column; /* Align everything in a vertical column */
+            align-items: center;
+            padding: 0;
+            margin: 0;
+        }
+
+        #controls-container {
+            width: 100%; /* Take full width of the video container */
+            display: flex;
+            flex-direction: column; /* Stack slider and plot vertically */
+            align-items: center;
+            margin-top: 10px; /* Add some space between the video and controls */
+        }
+
+        #video-frame {
+            width: 600px;
+            height: 600px;
+            object-fit: contain;
+            padding: 0;
+            margin: 0;
+            background-color: black;
+            position: relative;
+            z-index: 1;
+        }
+
+        #behavior-overlay{
+            position: absolute;
+            top: 10px; /* Adjust as necessary */
+            left: 10px; /* Adjust as necessary */
+            color: white;
+            font-size: 18px;
+            background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent background */
+            padding: 5px;
+            border-radius: 5px; /* Optional rounded corners */
+            z-index: 2;
+        }
+
+        #slider-container {
+            width: 600px; /* Width of the slider */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 0;
+        }
+
+        #plot-container {
+            width: 600px; /* Width of the plot */
+            margin-top: 10px; /* Space between slider and plot */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #score-plot {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .controls-left, .controls-right {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 180px;
+            height: 85%;
+            padding: 10px;
+        }
+
+        .controls-left {
+            justify-content: flex-start;
+        }
+
+        .controls-right {
+            justify-content: flex-start;
+            width: 180px;
+            height: 85%;
+            padding: 10px;
+        }
+
+        #frame-slider {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        #time-ticks {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            font-size: 12px;
+            color: #333;
+        }
+
+        #time-input-container {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        #time-input {
+            width: 100px;
+            margin-right: 10px;
+            padding: 5px;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        #jump-button {
+            padding: 5px 10px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #play-mode, #behavior-list {
+            background-color: lightgray;
+            padding: 15px;
+            text-align: left;
+            width: 100%;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 10px;
+        }
+
+        #behavior-list {
+            max-width: 180px;
+        }
+
+        #play-mode h3, #behavior-list h3 {
+            margin: 0 0 10px 0;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        .mode-option, .behavior-option {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .mode-option:last-child, .behavior-option:last-child {
+            margin-bottom: 0;
+        }
+
+        .mode-option .circle, .behavior-option .circle {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid gray;
+            margin-right: 10px;
+        }
+
+        .mode-option .circle.selected, .behavior-option .circle.selected {
+            background-color: green;
+            border-color: green;
+        }
+
+        #add-behavior, #remove-behavior {
+            cursor: pointer;
+            font-size: 14px;
+            padding: 5px 10px;
+            margin-top: 10px;
+            display: block;
+            text-align: center;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+
+        #labeling-mode {
+            background-color: lightgray;
+            padding: 15px;
+            text-align: left;
+            width: 100%;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 10px;
+        }
+
+        #labeling-mode h3 {
+            margin: 0 0 10px 0;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        .labeling-option {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .labeling-option:last-child {
+            margin-bottom: 0;
+        }
+
+        .labeling-option .circle {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid gray;
+            margin-right: 10px;
+        }
+
+        .labeling-option .circle.selected {
+            background-color: green;
+            border-color: green;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="controls-left">
+            <form method="POST" enctype="multipart/form-data" action="/upload">
+                <label for="video-file">Upload Video</label>
+                <input id="video-file" type="file" name="file" accept=".avi, .mp4" onchange="this.form.submit()">
+            </form>
+
+            <form method="POST" enctype="multipart/form-data" action="/upload_score_table">
+                <label for="score-table">Upload Behavior Score Table</label>
+                <input id="score-table" type="file" name="score_table" accept=".csv" onchange="this.form.submit()">
+            </form>
+
+            <form method="GET" action="/export_csv">
+                <button type="submit">Export Behavior Score Table as CSV</button>
+            </form>
+        </div>
+
+        <div id="video-container">
+            <img id="video-frame" src="data:image/gif;base64,R0lGODlhAQABAIAAAAUEBA==" alt="Video Stream">
+
+            <div id="behavior-overlay">
+            </div>
+            <div id="controls-container">
+                <div id="slider-container">
+                    <input type="range" id="frame-slider" min="0" max="100" value="0" step="1">
+                    <div id="time-ticks"></div>
+                    <div id="time-input-container">
+                        <input type="text" id="time-input" placeholder="00:00.00">
+                        <button id="jump-button">Go</button>
+                    </div>
+                </div>
+
+                </div>
+                    <img id="score-plot" src="/plot_score_table" alt="Behavior Score Plot">
+                </div>
+            </div>
+        </div>
+
+        <div class="controls-right">
+            <div id="play-mode">
+                <h3>Play Mode "f"</h3>
+                <div class="mode-option">
+                    <div class="circle" id="mode-1-frame"></div>
+                    <span>1-frame</span>
+                </div>
+                <div class="mode-option">
+                    <div class="circle" id="mode-2-frame"></div>
+                    <span>2-frame</span>
+                </div>
+                <div class="mode-option">
+                    <div class="circle" id="mode-4-frame"></div>
+                    <span>4-frame</span>
+                </div>
+<!--                <div class="mode-option">-->
+<!--                    <div class="circle" id="mode-15-frame"></div>-->
+<!--                    <span>15-frame</span>-->
+<!--                </div>-->
+<!--                <div class="mode-option">-->
+<!--                    <div class="circle" id="mode-20-frame"></div>-->
+<!--                    <span>20-frame</span>-->
+<!--                </div>-->
+<!--                <div class="mode-option">-->
+<!--                    <div class="circle" id="mode-25-frame"></div>-->
+<!--                    <span>25-frame</span>-->
+<!--                </div>-->
+            </div>
+
+            <div id="behavior-list">
+                <h3>Behaviors</h3>
+            </div>
+
+            <button id="add-behavior">Add Behavior</button>
+            <button id="remove-behavior">Remove Behavior</button>
+
+            <div id="labeling-mode">
+                <h3>Labeling Mode</h3>
+                <div class="labeling-option">
+                    <div class="circle" id="mode-viewing"></div>
+                    <span>Viewing</span>
+                </div>
+                <div class="labeling-option">
+                    <div class="circle" id="mode-tagging"></div>
+                    <span>Tagging "t"</span>
+                </div>
+                <div class="labeling-option">
+                    <div class="circle" id="mode-removing"></div>
+                    <span>Removing "r"</span>
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+
+    <script>
+        const slider = document.getElementById('frame-slider');
+        const videoFrame = document.getElementById('video-frame');
+        const timeTicks = document.getElementById('time-ticks');
+        const timeInput = document.getElementById('time-input');
+        const jumpButton = document.getElementById('jump-button');
+        let totalFrames = 100;
+        let fps = 45;  // You will get this value dynamically
+        let duration = 0;  // In seconds
+        let frameInterval;
+        let isKeyDown = false;
+        let playModes = [1, 2, 4];
+        let currentPlayModeIndex = 0;
+        let behaviors = [];
+        let currentBehaviorIndex = 0;
+        // let labelingModes = ['viewing', 'tagging', 'removing'];
+        let labelingMode = 'viewing';
+        let currentLabelingModeIndex = 0;
+
+        const circles = {
+            0: document.getElementById('mode-1-frame'),
+            1: document.getElementById('mode-2-frame'),
+            2: document.getElementById('mode-4-frame'),
+            // 3: document.getElementById('mode-15-frame'),
+            // 4: document.getElementById('mode-20-frame'),
+            // 5: document.getElementById('mode-25-frame')
+        };
+
+        const labelingCircles = {
+            0: document.getElementById('mode-viewing'),
+            1: document.getElementById('mode-tagging'),
+            2: document.getElementById('mode-removing')
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchBehaviors(); // Fetch and display behaviors when the page loads
+            updateCurrentBehavior(currentBehaviorIndex);
+            refreshScorePlot();
+            updatePlayModeDisplay();
+            updateLabelingModeDisplay();
+        });
+
+        function updateBehaviorOverlay() {
+                fetch('/get_behaviors_for_frame')
+                    .then(response => response.json())
+                    .then(data => {
+                        const behaviors = data.behaviors;
+                        const overlay = document.getElementById('behavior-overlay');
+
+                        if (behaviors.length > 0) {
+                            overlay.textContent = `Behaviors: ${behaviors.join(', ')}`;
+                        } else {
+                            overlay.textContent = ''; // Clear the overlay if no behaviors are active
+                        }
+                    })
+                    .catch(error => console.error('Error fetching behaviors:', error));
+            }
+
+        async function fetchBehaviors() {
+            try {
+                const response = await fetch('/get_behaviors');
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const data = await response.json();
+                behaviors = data.behaviors;
+                createBehaviorList(); // Populate the behaviors list after fetching
+                updateBehaviorDisplay();
+            } catch (error) {
+                console.error('Error fetching behaviors:', error);
+            }
+        }
+
+        function createBehaviorList() {
+            const behaviorListContainer = document.getElementById('behavior-list');
+            behaviorListContainer.innerHTML = '<h3>Behaviors</h3>'; // Reset the list
+
+            behaviors.forEach((behavior, index) => {
+                const behaviorOption = document.createElement('div');
+                behaviorOption.classList.add('behavior-option');
+
+                const circle = document.createElement('div');
+                circle.classList.add('circle');
+                circle.id = `behavior-${index + 1}`;
+                if (index === currentBehaviorIndex) {
+                    circle.classList.add('selected');
+                }
+
+                const behaviorLabel = document.createElement('span');
+                behaviorLabel.textContent = behavior;
+
+                behaviorOption.appendChild(circle);
+                behaviorOption.appendChild(behaviorLabel);
+                behaviorListContainer.appendChild(behaviorOption);
+            });
+        }
+
+        document.getElementById('add-behavior').addEventListener('click', async () => {
+            const newBehavior = prompt('Enter new behavior name:');
+            if (newBehavior) {
+                const response = await fetch('/add_behavior', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ behavior: newBehavior })
+                });
+                const data = await response.json();
+                behaviors = data.behaviors;
+                createBehaviorList();
+                updateBehaviorDisplay();
+                refreshScorePlot();
+
+            }
+        });
+
+        document.getElementById('remove-behavior').addEventListener('click', async () => {
+            if (behaviors.length > 0) {
+                const behaviorToRemove = behaviors[currentBehaviorIndex];
+                const response = await fetch('/remove_behavior', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ behavior: behaviorToRemove })
+                });
+                const data = await response.json();
+                behaviors = data.behaviors;
+                currentBehaviorIndex = Math.max(currentBehaviorIndex - 1, 0);
+                createBehaviorList();
+                updateBehaviorDisplay();
+                refreshScorePlot();
+            }
+        });
+
+        function formatSliderTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+
+        function formatTimeInput(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            const ms = Math.floor((seconds % 1) * 100);  // Include milliseconds
+            return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}.${ms < 10 ? '0' : ''}${ms}`;
+        }
+
+        function parseTime(timeStr) {
+            const [mins, secs] = timeStr.split(':').map(Number);
+            return mins * 60 + secs;
+        }
+
+        function generateTimeTicks() {
+            timeTicks.innerHTML = '';
+            const tickInterval = 30;  // Every 30 seconds
+            for (let i = 0; i <= duration; i += tickInterval) {
+                const tick = document.createElement('div');
+                tick.style.flex = '1';
+                tick.style.textAlign = i === 0 ? 'left' : (i === duration ? 'right' : 'center');
+                tick.innerText = formatSliderTime(i);
+                timeTicks.appendChild(tick);
+            }
+        }
+
+        function updateTimeInputDisplay(frameNumber) {
+            const currentTime = formatTimeInput(frameNumber / fps);
+            timeInput.value = currentTime;
+        }
+
+        fetch('/get_video_info')
+            .then(response => response.json())
+            .then(data => {
+                totalFrames = data.total_frames;
+                fps = data.fps;
+                duration = totalFrames / fps;
+                slider.max = totalFrames - 1;
+                updateFrame(0);  // Display the first frame immediately
+                generateTimeTicks();
+                updateTimeInputDisplay(0);
+                refreshScorePlot();
+            });
+
+        slider.oninput = function() {
+            const frameValue = parseInt(this.value);
+            updateFrame(frameValue);
+            updateTimeInputDisplay(frameValue);
+
+            // Update the current frame on the server
+            updateCurrentFrame(frameValue);
+
+            // Update the score plot
+            // document.getElementById("score-plot").src = `/plot_score_table?frame=${frameValue}`;
+            refreshScorePlot();
+        };
+
+        slider.addEventListener('keydown', function(event) {
+            if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+                event.preventDefault(); // Prevent the slider from using the arrow keys
+            }
+        });
+        async function updateCurrentFrame(frameNumber) {
+            try {
+                const response = await fetch('/update_frame_no_labeling', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ frame_number: frameNumber })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to update frame on server');
+                }
+            } catch (error) {
+                console.error('Error updating frame:', error);
+            }
+        }
+
+        function updateFrame(value) {
+            videoFrame.src = `/video_feed?frame=${value}&timestamp=${new Date().getTime()}`;
+            updateBehaviorOverlay();
+        }
+
+        function adjustFrame(value) {
+            let newValue = parseInt(slider.value) + value;
+            if (newValue < 0) newValue = 0;
+            if (newValue >= totalFrames) newValue = totalFrames - 1;
+            slider.value = newValue;
+            updateFrame(newValue);
+            updateTimeInputDisplay(newValue);
+
+            // Send the current frame to the server
+            updateCurrentFrame(newValue);
+
+            // Update the score plot
+            refreshScorePlot();
+
+            // Update the behavior overlay
+            updateBehaviorOverlay();
+        }
+
+        // Function to handle frame update with labeling
+        function updateFrameWithLabeling(direction, FramesToMove) {
+            fetch('/update_frame_with_labeling', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ direction: direction, FramesToMove: FramesToMove })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const frameValue = data.frame;
+                slider.value = frameValue;
+                updateFrame(frameValue);  // Update the video frame display
+                updateTimeInputDisplay(frameValue);  // Update the time input display
+                // refreshScorePlot();  // Refresh the plot
+                refreshScorePlotWithTimeout();  // Refresh the plot with a timeout
+            })
+            .catch(error => console.error('Error updating frame with labeling:', error));
+        }
+
+        function updatePlayModeDisplay() {
+            Object.values(circles).forEach(circle => circle.classList.remove('selected'));
+            circles[currentPlayModeIndex].classList.add('selected');
+        }
+
+        function updateBehaviorDisplay() {
+            const behaviorCircles = document.querySelectorAll('.behavior-option .circle');
+            behaviorCircles.forEach(circle => circle.classList.remove('selected'));
+            if (behaviorCircles[currentBehaviorIndex]) {
+                behaviorCircles[currentBehaviorIndex].classList.add('selected');
+            }
+        }
+
+        jumpButton.addEventListener('click', async function () {
+            const timeValue = parseTime(timeInput.value.split(' - ')[0]);
+            const frameNumber = Math.round(timeValue * fps);
+            if (frameNumber >= 0 && frameNumber < totalFrames) {
+                slider.value = frameNumber;
+                updateFrame(frameNumber);
+                updateTimeInputDisplay(frameNumber);
+
+                // Update the current frame on the server
+                await updateCurrentFrame(frameNumber);
+                refreshScorePlot();
+            } else {
+                alert('Invalid time input.');
+            }
+        });
+
+        document.addEventListener('keydown', function(event) {
+            if ((event.key === "ArrowRight" || event.key === "ArrowLeft") && !isKeyDown) {
+                isKeyDown = true;
+                event.preventDefault();
+                // const frameStep = event.key === "ArrowRight" ? playModes[currentPlayModeIndex] : -playModes[currentPlayModeIndex];
+
+                const FramesToMove = playModes[currentPlayModeIndex];
+                const direction = event.key === "ArrowRight" ? "right" : "left";
+
+                // Immediately update frame on initial key press
+                updateFrameWithLabeling(direction, FramesToMove);
+
+                // Set interval to update frame every 200ms
+                frameInterval = setInterval(() => {
+                    updateFrameWithLabeling(direction, FramesToMove);
+                }, 50);
+
+            }
+        });
+
+        document.addEventListener('keyup', function(event) {
+            if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+                clearInterval(frameInterval);
+                isKeyDown = false;
+            }
+        });
+
+        let lastScorePlotUpdateTimestamp = 0;
+        // Refresh the score plot based on the current frame and behavior
+        function refreshScorePlot() {
+                document.getElementById("score-plot").src = `/plot_score_table?timestamp=${new Date().getTime()}`;
+                const now = Date.now();
+                lastScorePlotUpdateTimestamp = now;
+        }
+
+        // A second refresh the score plot function that has a timeout
+        function refreshScorePlotWithTimeout() {
+            const now = Date.now();
+
+            if (now - lastScorePlotUpdateTimestamp >= 1000) {
+                refreshScorePlot();
+            }
+        }
+
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === "f") {
+                currentPlayModeIndex = (currentPlayModeIndex + 1) % playModes.length;
+                updatePlayModeDisplay();
+
+            }
+        });
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === "ArrowUp") {
+                currentBehaviorIndex = (currentBehaviorIndex - 1 + behaviors.length) % behaviors.length;
+                updateBehaviorDisplay();
+
+                //send the updated behavior to the server
+                updateCurrentBehavior(currentBehaviorIndex);
+
+                // Update the score plot
+                refreshScorePlot();
+            } else if (event.key === "ArrowDown") {
+                currentBehaviorIndex = (currentBehaviorIndex + 1) % behaviors.length;
+                updateBehaviorDisplay();
+
+                //send the updated behavior to the server
+                updateCurrentBehavior(currentBehaviorIndex);
+
+                // Update the score plot
+                refreshScorePlot();
+            }
+        });
+
+        async function updateCurrentBehavior(behaviorIndex) {
+            try {
+                const response = await fetch('/update_behavior', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ behavior_index: behaviorIndex })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to update behavior on server');
+                }
+            } catch (error) {
+                console.error('Error updating behavior:', error);
+            }
+        }
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === "t") {
+                toggleLabelingMode('tagging');
+            } else if (event.key === 'r') {
+                toggleLabelingMode('removing');
+            }
+
+        });
+
+        function updateLabelingModeDisplay() {
+            Object.values(labelingCircles).forEach(circle => circle.classList.remove('selected'));
+            labelingCircles[currentLabelingModeIndex].classList.add('selected');
+        }
+
+        function toggleLabelingMode(mode) {
+            fetch('/toggle_labeling_mode',{
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ mode: mode })
+            })
+            .then(response => response.json())
+            .then(data => {
+                labelingMode = data.labeling_mode;
+                // const labelingStatus = document.getElementById('labeling-status');
+                if (labelingMode === 'tagging'){
+                    // labelingStatus.textContent = 'Tagging';
+                    currentLabelingModeIndex = 1;
+                } else if (labelingMode === 'removing') {
+                    // labelingStatus.textContent = 'Removing';
+                    currentLabelingModeIndex = 2;
+                } else {
+                    // labelingStatus.textContent = 'Viewing';
+                    currentLabelingModeIndex = 0;
+                }
+
+                updateLabelingModeDisplay();
+            })
+            .catch(error => console.error('Error toggling labeling mode:', error));
+        }
+
+    </script>
+</body>
+</html>

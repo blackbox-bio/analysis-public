@@ -1,8 +1,11 @@
 import os
 import deeplabcut
 
-dlc_config_path = r"/Users/zihealexzhang/work_local/blackbox_data/arcteryx500-alex-2023-11-04/config.yaml"
-# dlc_config_path = r"D:\DLC\blackbox_dlc_deployment\config.yaml"
+if os.name == "nt":
+    dlc_config_path = r"D:\DLC\blackbox_dlc_deployment\config.yaml"
+if os.name == "posix":
+    dlc_config_path = r"/Users/zihealexzhang/work_local/blackbox_data/arcteryx500-alex-2023-11-04/config.yaml"
+
 
 selected_folders = []
 

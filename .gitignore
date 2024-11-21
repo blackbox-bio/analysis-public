@@ -8,6 +8,9 @@ documents/*
 __pycache__/
 *.py[cod]
 *$py.class
+*.avi
+*.mp4
+*.csv
 
 # nixos env stuff
 /.direnv
