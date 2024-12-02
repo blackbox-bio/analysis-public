@@ -613,6 +613,7 @@ def generate_cluster_heatmap(
         Plot type: "group" for group-level cluster-heatmap, "individual" for individual-level heatmap.
     """
     # Step 1: Apply Z-score normalization to each feature column (excluding the group variable)
+    df = df.dropna() # drop rows with missing values
     feature_cols = df.columns.drop(group_variable)
     df_zscore = df[feature_cols].apply(zscore, axis=0)
     df_zscore[group_variable] = df[group_variable]  # Add back the group variable
