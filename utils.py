@@ -118,55 +118,6 @@ def get_angle(v1, v2):
 #     return np.mean(np.vstack([place_holder[body] for body in bodyparts]).T, axis=1, keepdims=True)
 
 
-def four_point_transform(image, tx, ty, cx, cy, wid, length):
-    """
-    helper function for center and align a single video frame
-    input:
-        T, coord of tailbase, which is used to center the mouse
-        TN, vector from tailbase to centroid
-        wid, the width of the to-be-cropped portion
-        length, the length of the to-be-cropped portion
-
-    output:
-        warped: the cropped portion in the size of (wid, length),
-        mouse will be centered by tailbase,
-        aligned by the direction from tailbase to centroid
-
-    """
-    T = np.array([tx, ty])
-    N = np.array([cx, cy])
-    TN = N - T
-
-    uTN = TN / np.linalg.norm(TN)  # calculate the unit vector for TN
-
-    # calculate the unit vector perpendicular to uTN
-    uAB = np.zeros((1, 2), dtype="float32")
-    uAB[0][0] = uTN[1]
-    uAB[0][1] = -uTN[0]
-
-    # calculate four corners of the to-be-cropped portion of the image
-    #   use centroid to center the mouse
-    A = N + uAB * (wid / 2) + uTN * (length / 2)
-    B = N - uAB * (wid / 2) + uTN * (length / 2)
-    C = N - uAB * (wid / 2) - uTN * (length / 2)
-    D = N + uAB * (wid / 2) - uTN * (length / 2)
-
-    # concatenate four corners into a np.array
-    pts = np.concatenate((A, B, C, D))
-    pts = pts.astype("float32")
-
-    # generate the corresponding four corners in the cropped image
-    dst = np.float32([[0, 0], [wid, 0], [wid, length], [0, length]])
-
-    # generate transform matrix
-    M = cv2.getPerspectiveTransform(pts, dst)
-
-    # rotate and crop image
-    warped = cv2.warpPerspective(image, M, (wid, length))
-
-    return warped
-
-
 def denoise(luminance, noise):
     """Take a luminance signal and remove noise from it"""
     luminance = luminance - noise
@@ -475,3 +426,130 @@ def cal_paw_luminance_rework(label, cap, size=22):
     # legacy paw luminance calculation end----------------
 
     return paw_luminescence, paw_print_size, paw_luminance, background_luminance, i, legacy_paw_luminance
+
+
+def cal_orientation_vector(label, alpha = 2.0, beta = 1.0):
+    """
+    helper function for calculating the orientation vector of the mouse
+    input:
+        label: DLC tracking of the recording
+        alpha: primary vector weight
+        beta: secondary vector weight
+    output:
+        final_orientation_vector_normalized: the normalized orientation vector of the mouse
+    """
+
+    body_parts = [
+        "snout",
+        "neck",
+        "sternumhead",
+        "sternumtail",
+        "hip",
+        "tailbase",
+    ]
+
+    # primary orientation vector: tailbase to snout
+    # secondary orientation vectors: every segment to the next segment
+
+    # primary orientation vector
+    primary_vector = label["snout"][["x", "y"]].values - label["tailbase"][
+        ["x", "y"]
+    ].values
+    # add the average likelihood of the two points
+    primary_likelihood = (
+        label["snout"]["likelihood"].values + label["tailbase"]["likelihood"].values
+    ) / 2
+
+    secondary_vectors = []
+    secondary_likelihoods = []
+    for i in range(len(body_parts) - 1):
+        secondary_vector = label[body_parts[i + 1]][["x", "y"]].values - label[
+            body_parts[i]
+        ][["x", "y"]].values
+        secondary_vectors.append(secondary_vector)
+        secondary_likelihood = (
+            label[body_parts[i + 1]]["likelihood"].values
+            + label[body_parts[i]]["likelihood"].values
+        ) / 2
+        secondary_likelihoods.append(secondary_likelihood)
+    # make secondary vectors into a numpy array
+    secondary_vectors = np.array(secondary_vectors)
+    secondary_likelihoods = np.array(secondary_likelihoods)
+    secondary_likelihoods = secondary_likelihoods[:, :, np.newaxis]
+
+    # weight the primary vector
+    weighted_primary_vector = alpha * primary_vector * primary_likelihood[:, np.newaxis]
+
+    # weight the secondary vectors
+    weighted_secondary_vectors = (
+        beta * secondary_vectors * secondary_likelihoods / secondary_vectors.shape[0]
+    )
+
+    # sum the weighted vectors
+    weighted_secondary_sum = np.sum(weighted_secondary_vectors, axis=0)
+    final_orientation_vector = weighted_primary_vector + weighted_secondary_sum
+
+    # normalize the final orientation vector
+
+    # check for rows where all values are zero
+    is_zero_row = np.all(final_orientation_vector == 0, axis=1)
+    # get the last non-zero index
+    last_non_zero_index = np.where(~is_zero_row)[0][-1]
+    # slice the final orientation vector to the last non-zero index
+    final_orientation_vector_trimmed = final_orientation_vector[: last_non_zero_index + 1]
+    # normalize the final orientation vector
+    norms_trimmed = np.linalg.norm(final_orientation_vector_trimmed, axis=1, keepdims=True)
+    # avoid division by zero
+    norms_trimmed[norms_trimmed == 0] = 1e-10
+    final_orientation_vector_normalized = final_orientation_vector_trimmed / norms_trimmed
+
+    return final_orientation_vector_normalized
+
+
+def four_point_transform(image, tx, ty, cx, cy, wid, length):
+    """
+    helper function for center and align a single video frame
+    input:
+        T, coord of tailbase, which is used to center the mouse
+        TN, vector from tailbase to centroid
+        wid, the width of the to-be-cropped portion
+        length, the length of the to-be-cropped portion
+
+    output:
+        warped: the cropped portion in the size of (wid, length),
+        mouse will be centered by tailbase,
+        aligned by the direction from tailbase to centroid
+
+    """
+    T = np.array([tx, ty])
+    N = np.array([cx, cy])
+    TN = N - T
+
+    uTN = TN / np.linalg.norm(TN)  # calculate the unit vector for TN
+
+    # calculate the unit vector perpendicular to uTN
+    uAB = np.zeros((1, 2), dtype="float32")
+    uAB[0][0] = uTN[1]
+    uAB[0][1] = -uTN[0]
+
+    # calculate four corners of the to-be-cropped portion of the image
+    #   use centroid to center the mouse
+    A = N + uAB * (wid / 2) + uTN * (length / 2)
+    B = N - uAB * (wid / 2) + uTN * (length / 2)
+    C = N - uAB * (wid / 2) - uTN * (length / 2)
+    D = N + uAB * (wid / 2) - uTN * (length / 2)
+
+    # concatenate four corners into a np.array
+    pts = np.concatenate((A, B, C, D))
+    pts = pts.astype("float32")
+
+    # generate the corresponding four corners in the cropped image
+    dst = np.float32([[0, 0], [wid, 0], [wid, length], [0, length]])
+
+    # generate transform matrix
+    M = cv2.getPerspectiveTransform(pts, dst)
+
+    # rotate and crop image
+    warped = cv2.warpPerspective(image, M, (wid, length))
+
+    return warped
