@@ -245,8 +245,35 @@ def generate_cluster_heatmap(
     grouping_mode : str, optional
         Plot type: "group" for group-level cluster-heatmap, "individual" for individual-level heatmap.
     """
+    # check for feature columns that have missing values
+    missing_values = df.columns[df.isnull().any()]
+    if len(missing_values) > 0:
+        print(f"Warning: The following summary readouts have missing values: {missing_values}.")
+        print("These columns will be excluded from the cluster heatmap plot.")
+
+        df = df.drop(columns=missing_values)
+
+    # check for feature columns that have constant values
+    constant_values = df.columns[df.nunique() == 1]
+
+    # check if the group variable is in the constant values, if so, remove it from the list
+    if group_variable in constant_values:
+        constant_values = constant_values.drop(group_variable)
+
+        # change grouping mode to individual if there is only one group
+        if grouping_mode == "group":
+            grouping_mode = "individual"
+            print(f"Warning: The group variable {group_variable} contains only one group.")
+            print("The grouping mode will be changed to 'individual' for the cluster heatmap plot.")
+
+    if len(constant_values) > 0:
+        print(f"Warning: The following summary readouts have constant values: {constant_values}.")
+        print("These columns will be excluded from the cluster heatmap plot.")
+
+        df = df.drop(columns=constant_values)
+
+
     # Step 1: Apply Z-score normalization to each feature column (excluding the group variable)
-    df = df.dropna() # drop rows with missing values
     feature_cols = df.columns.drop(group_variable)
     df_zscore = df[feature_cols].apply(zscore, axis=0)
     df_zscore[group_variable] = df[group_variable]  # Add back the group variable
