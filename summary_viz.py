@@ -283,14 +283,43 @@ def generate_cluster_heatmap(
         # Calculate mean Z-scores for each group
         df_mean_zscore = df_zscore.groupby(group_variable).mean()
 
+        # Exclude groups with only one row
+        valid_groups = df[group_variable].value_counts()[lambda x: x > 1].index
+        if len(valid_groups) < len(df[group_variable].unique()):
+            print(f"Warning: Some groups have only one sample and will be excluded from ANOVA.")
+
+        df_zscore = df_zscore[df_zscore[group_variable].isin(valid_groups)]
+
+        # Check for constant features within valid groups
+        constant_within_groups = []
+        for feature in df_mean_zscore.columns:
+            if any(df_zscore[df_zscore[group_variable] == group][feature].nunique() <= 1 for group in valid_groups):
+                constant_within_groups.append(feature)
+        if constant_within_groups:
+            print(
+                f"Warning: The following features have constant values within at least one group and will be excluded from ANOVA: {constant_within_groups}")
+
+            df_mean_zscore = df_mean_zscore.drop(columns=constant_within_groups)
+
         # Run ANOVA for significance and adjust p-values
-        p_values = [
-            f_oneway(
-                *[df_zscore[df_zscore[group_variable] == group][feature] for group in df_zscore[group_variable].unique()]
-            )[1]
-            for feature in df_mean_zscore.columns
-        ]
-        p_adjusted = multipletests(p_values, method="bonferroni")[1]
+        p_values = []
+        for feature in df_mean_zscore.columns:
+            try:
+                p_value = f_oneway(
+                    *[df_zscore[df_zscore[group_variable] == group][feature] for group in valid_groups]
+                )[1]
+                p_values.append(p_value)
+            except Exception as e:
+                print(f"Warning: Skipping ANOVA for feature '{feature}' due to error: {e}")
+                p_values.append(np.nan)
+
+        # Adjust p-values
+        p_values = np.array(p_values, dtype=np.float64)
+        valid_p_mask = ~np.isnan(p_values)
+        p_adjusted = np.full_like(p_values, np.nan, dtype=np.float64)
+        p_adjusted[valid_p_mask] = multipletests(p_values[valid_p_mask], method="bonferroni")[1]
+
+        # Todo: test if the group mode is working with the fix
 
         # Create a significance marker array
         significance_array = np.full(df_mean_zscore.T.shape, "", dtype=object)
