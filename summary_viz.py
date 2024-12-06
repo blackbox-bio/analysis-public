@@ -258,6 +258,9 @@ def generate_cluster_heatmap(
 
         df = df.drop(columns=non_numerical_columns)
 
+    # check and drop 'total recording_time (min)' column if it exists
+    if "total recording_time (min)" in df.columns:
+        df = df.drop(columns="total recording_time (min)")
 
     # check for feature columns that have missing values
     missing_values = df.columns[df.isnull().any()]
