@@ -245,6 +245,20 @@ def generate_cluster_heatmap(
     grouping_mode : str, optional
         Plot type: "group" for group-level cluster-heatmap, "individual" for individual-level heatmap.
     """
+
+    # check for feature columns that have non-numerical values
+    non_numerical_columns = df.select_dtypes(exclude="number").columns
+    if len(non_numerical_columns) > 0:
+        print(f"Warning: The following summary readouts have non-numerical values: {non_numerical_columns}.")
+        print("These columns will be excluded from the cluster heatmap plot.")
+
+        # drop non-numerical columns except the group variable
+        if group_variable in non_numerical_columns:
+            non_numerical_columns = non_numerical_columns.drop(group_variable)
+
+        df = df.drop(columns=non_numerical_columns)
+
+
     # check for feature columns that have missing values
     missing_values = df.columns[df.isnull().any()]
     if len(missing_values) > 0:
@@ -271,7 +285,6 @@ def generate_cluster_heatmap(
         print("These columns will be excluded from the cluster heatmap plot.")
 
         df = df.drop(columns=constant_values)
-
 
     # Step 1: Apply Z-score normalization to each feature column (excluding the group variable)
     feature_cols = df.columns.drop(group_variable)
