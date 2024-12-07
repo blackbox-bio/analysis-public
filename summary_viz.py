@@ -248,13 +248,13 @@ def generate_cluster_heatmap(
 
     # check for feature columns that have non-numerical values
     non_numerical_columns = df.select_dtypes(exclude="number").columns
+    # drop non-numerical columns except the group variable
+    if group_variable in non_numerical_columns:
+        non_numerical_columns = non_numerical_columns.drop(group_variable)
+
     if len(non_numerical_columns) > 0:
         print(f"Warning: The following summary readouts have non-numerical values: {non_numerical_columns}.")
         print("These columns will be excluded from the cluster heatmap plot.")
-
-        # drop non-numerical columns except the group variable
-        if group_variable in non_numerical_columns:
-            non_numerical_columns = non_numerical_columns.drop(group_variable)
 
         df = df.drop(columns=non_numerical_columns)
 
@@ -335,8 +335,6 @@ def generate_cluster_heatmap(
         p_adjusted = np.full_like(p_values, np.nan, dtype=np.float64)
         p_adjusted[valid_p_mask] = multipletests(p_values[valid_p_mask], method="bonferroni")[1]
 
-        # Todo: test if the group mode is working with the fix
-
         # Create a significance marker array
         significance_array = np.full(df_mean_zscore.T.shape, "", dtype=object)
         for i, p in enumerate(p_adjusted):
@@ -348,6 +346,13 @@ def generate_cluster_heatmap(
                 significance_array[i] = "*"
 
         # Create group-level heatmap
+
+        # dynamically adjust the size of the heatmap based on the number of features
+        fig_size = (
+            max(10, len(df_mean_zscore.index) / 4),
+            max(10,len(df_mean_zscore.columns) / 5)
+        )
+
         g = sns.clustermap(
             df_mean_zscore.T,
             cmap="inferno",
@@ -355,8 +360,10 @@ def generate_cluster_heatmap(
             annot=significance_array,
             fmt="",
             cbar_kws={"label": "Mean Z-score"},
+            cbar_pos=(1.05, 0.2, 0.03, 0.6),
             metric="euclidean",
             method="ward",
+            figsize= fig_size,
         )
 
         # Extract feature order for subsequent plotting
@@ -367,7 +374,8 @@ def generate_cluster_heatmap(
         g.ax_heatmap.set_yticks(np.arange(len(row_order)) + 0.5)
         g.ax_heatmap.set_yticklabels(ordered_features, rotation=0, fontsize=10)
         g.ax_heatmap.set_xticklabels(g.ax_heatmap.get_xmajorticklabels(), rotation=45, fontsize=10, ha="right")
-        plt.title("Group-Level Mean Z-scores with Significance Markers")
+        # plt.title("Group-Level Mean Z-scores with Significance Markers")
+        # plt.tight_layout()
         plt.savefig(dest_path, dpi=300, bbox_inches="tight")
         plt.close(g.fig)
 
@@ -393,13 +401,22 @@ def generate_cluster_heatmap(
         df_individual.drop(columns=[group_variable], inplace=True)
 
         # Create the individual-level heatmap with clustering
+        # dynamically adjust the size of the heatmap based on the number of features
+        fig_size = (
+            max(10, len(ordered_features) / 4),
+            max(10, len(df_individual.columns) / 5)
+        )
+
         g_ind = sns.clustermap(
             df_individual.T,
             cmap="inferno",
             center=0,
+            cbar_kws={"label": "Z-score"},
+            cbar_pos=(1.05, 0.2, 0.03, 0.6),
             col_colors=group_colors,
             metric="euclidean",
             method="ward",
+            figsize=fig_size,
         )
         g_ind.ax_heatmap.set_yticks(np.arange(len(ordered_features)) + 0.5)
         g_ind.ax_heatmap.set_yticklabels(ordered_features, rotation=0, fontsize=10)
@@ -408,9 +425,15 @@ def generate_cluster_heatmap(
         # Add legend for group colors
         for label in df[group_variable].unique():
             g_ind.ax_col_dendrogram.bar(0, 0, color=lut[label], label=label, linewidth=0)
-        g_ind.ax_col_dendrogram.legend(title=group_variable, loc="center", ncol=len(df[group_variable].unique()))
+        g_ind.ax_col_dendrogram.legend(
+            title=group_variable,
+            bbox_to_anchor = (1.5,1),
+            loc="upper right",
+            # ncol=len(df[group_variable].unique())
+            ncol = 3
+        )
 
-        plt.title("Individual Z-scores (Sorted by Clustering)")
+        # plt.title("Individual Z-scores (Sorted by Clustering)")
         plt.savefig(dest_path, dpi=300, bbox_inches="tight")
         plt.close(g_ind.fig)
 
