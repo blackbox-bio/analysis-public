@@ -349,7 +349,7 @@ def generate_cluster_heatmap(
 
         # dynamically adjust the size of the heatmap based on the number of features
         fig_size = (
-            max(10, len(df_mean_zscore.index) / 4),
+            max(10, len(df_mean_zscore.index) / 2),
             max(10,len(df_mean_zscore.columns) / 5)
         )
 
@@ -403,7 +403,7 @@ def generate_cluster_heatmap(
         # Create the individual-level heatmap with clustering
         # dynamically adjust the size of the heatmap based on the number of features
         fig_size = (
-            max(10, len(ordered_features) / 4),
+            max(10, len(ordered_features) / 2),
             max(10, len(df_individual.columns) / 5)
         )
 
@@ -420,14 +420,21 @@ def generate_cluster_heatmap(
         )
         g_ind.ax_heatmap.set_yticks(np.arange(len(ordered_features)) + 0.5)
         g_ind.ax_heatmap.set_yticklabels(ordered_features, rotation=0, fontsize=10)
-        g_ind.ax_heatmap.set_xticklabels(g_ind.ax_heatmap.get_xmajorticklabels(), rotation=45, fontsize=10, ha="right")
+        # g_ind.ax_heatmap.set_xticklabels(g_ind.ax_heatmap.get_xmajorticklabels(), rotation=45, fontsize=10, ha="right")
+
+        # Align the x-axis labels
+        # Set ticks at the center of each column
+        g_ind.ax_heatmap.set_xticks(np.arange(len(df_individual)) + 0.5)
+        # Use the original index for labels
+        g_ind.ax_heatmap.set_xticklabels(df_individual.index, rotation=45, fontsize=10,
+                                         ha="right")
 
         # Add legend for group colors
         for label in df[group_variable].unique():
             g_ind.ax_col_dendrogram.bar(0, 0, color=lut[label], label=label, linewidth=0)
         g_ind.ax_col_dendrogram.legend(
             title=group_variable,
-            bbox_to_anchor = (1.5,1),
+            bbox_to_anchor = (1.3,1),
             loc="upper right",
             # ncol=len(df[group_variable].unique())
             ncol = 3
