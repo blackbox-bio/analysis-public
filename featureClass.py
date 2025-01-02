@@ -28,6 +28,87 @@ class FeaturesContext:
                 for key in self._data[featureSet]:
                     video_data.create_dataset(key, data=self._data[featureSet][key])
 
+    def FeatureClassTest(self, oldFeatureDict):
+        errorCount = 0
+        featureCount = 0
+        missing = oldFeatureDict.keys()
+        paw_features = self._data["paw_features"].columns.tolist()
+        for feature in paw_features:
+            if pd.Series(oldFeatureDict[feature]).equals(self._data["paw_features"][feature]):
+                print(f"PASS: {feature} was found equal in both dataframes")
+                missing = list(set(missing) - set(feature))
+                featureCount += 1
+            else:
+                print(f"ERROR: {feature} was found NOT equal in both dataframes")
+                errorCount += 1
+
+        bodyparts_distance_features = self._data["bodyparts_distance_features"].columns.tolist()
+        for feature in bodyparts_distance_features:
+            if oldFeatureDict[feature].equals(self._data["bodyparts_distance_features"][feature]):
+                print(f"PASS: {feature} was found equal in both dataframes")
+                missing = list(set(missing) - set(feature))
+                featureCount += 1
+            else:
+                print(f"ERROR: {feature} was found NOT equal in both dataframes")
+                errorCount += 1
+
+        animal_detection_features = self._data["animal_detection_features"].columns.tolist()
+        for feature in animal_detection_features:
+            if pd.Series(oldFeatureDict[feature]).equals(self._data["animal_detection_features"][feature]):
+                print(f"PASS: {feature} was found equal in both dataframes")
+                missing = list(set(missing) - set(feature))
+                featureCount += 1
+            else:
+                print(f"ERROR: {feature} was found NOT equal in both dataframes")
+                errorCount += 1
+
+        bodyparts_angle_features = self._data["bodyparts_angle_features"].columns.tolist()
+        for feature in bodyparts_angle_features:
+            if pd.Series(oldFeatureDict[feature]).equals(self._data["bodyparts_angle_features"][feature]):
+                print(f"PASS: {feature} was found equal in both dataframes")
+                missing = list(set(missing) - set(feature))
+                featureCount += 1
+            else:
+                print(f"ERROR: {feature} was found NOT equal in both dataframes")
+                errorCount += 1
+
+        tracking_likelyhood_features = self._data["tracking_likelyhood_features"].columns.tolist()
+        for feature in tracking_likelyhood_features:
+            if pd.Series(oldFeatureDict[feature]).equals(self._data["tracking_likelyhood_features"][feature]):
+                print(f"PASS: {feature} was found equal in both dataframes")
+                missing = list(set(missing) - set(feature))
+                featureCount += 1
+            else:
+                print(f"ERROR: {feature} was found NOT equal in both dataframes")
+                errorCount += 1
+
+        if pd.Series(oldFeatureDict["distance_delta"]).equals(self._data["distance_delta_features"]["distance_delta"]):
+            print(f"PASS: distance_delta was found equal in both dataframes")
+            featureCount += 1
+        else:
+            print(f"ERROR: distance_delta was found NOT equal in both dataframes")
+            errorCount += 1
+
+        if pd.Series(oldFeatureDict["fps"]).equals(self._data["singleFeatures"]["fps"]):
+            print(f"PASS: fps was found equal in both dataframes")
+            featureCount += 1
+        else:
+            print(f"ERROR: fps was found NOT equal in both dataframes")
+            errorCount += 1
+
+        if pd.Series(oldFeatureDict["frame_count"]).equals(self._data["singleFeatures"]["frame_count"]):
+            print(f"PASS: frame count was found equal in both dataframes")
+            featureCount += 1
+        else:
+            print(f"ERROR: frame count was found NOT equal in both dataframes")
+            errorCount += 1
+
+        print(f"{errorCount}/{featureCount} features had missing or incorrect data")
+        print(f"{featureCount}/{len(oldFeatureDict)} were migrated")
+
+
+
+
 
 class FeatureDef:
     def compute(self, ctx: FeaturesContext):
@@ -67,7 +148,7 @@ class PawFeaturesDef(FeatureDef):
 
         pawFeatures["rfpaw_luminescence"] = paw_luminescence['rfpaw']
         pawFeatures["rfpaw_print_size"] = paw_print_size['rfpaw']
-        pawFeatures["rfpaw_lumiance"]= paw_luminance['rfpaw']
+        pawFeatures["rfpaw_luminance_rework"]= paw_luminance['rfpaw']
         pawFeatures["front_right_luminance"] = front_right
 
         pawFeatures["rhpaw_luminescence"] = paw_luminescence['rhpaw']
@@ -75,9 +156,9 @@ class PawFeaturesDef(FeatureDef):
         pawFeatures["rhpaw_luminance_rework"] = paw_luminance['rhpaw']
         pawFeatures["hind_right_luminance"] = hind_right
 
-        pawFeatures["frame_count"] = frame_count
         pawFeatures["background_luminance"] = background_luminance
-
+        ctx._data["singleFeatures"] = pd.DataFrame()
+        ctx._data["singleFeatures"]["frame_count"] = np.array(frame_count)
         ctx._data["paw_features"] = pawFeatures
 
 class AnimalDetectionDef(FeatureDef):
@@ -86,9 +167,8 @@ class AnimalDetectionDef(FeatureDef):
 
     def compute(self, ctx: FeaturesContext):
         AnimalDetectionFeatures = pd.DataFrame()
-        ftir_video = ctx.ftir_video
-        _fps = int(ftir_video.get(cv2.CAP_PROP_FPS))
-        AnimalDetectionFeatures["fps"] = np.array(_fps)
+        _fps = int(ctx.ftir_video.get(cv2.CAP_PROP_FPS))
+        ctx._data["singleFeatures"]["fps"] = np.array(_fps)
         AnimalDetectionFeatures["animal_detection"] = detect_animal_in_recording(ctx.label, _fps)
         ctx._data["animal_detection_features"] = AnimalDetectionFeatures
 
