@@ -59,34 +59,34 @@ class MultiProgressState:
         }
 
 class PalmreaderProgress:
-    __multi = None
-    __single = None
+    _multi = None
+    _single = None
 
     @staticmethod
     def start_multi(total: int, message: str, autoincrement: bool = False):
-        PalmreaderProgress.__multi = MultiProgressState(total, message, autoincrement)
-        PalmreaderProgress.__send()
+        PalmreaderProgress._multi = MultiProgressState(total, message, autoincrement)
+        PalmreaderProgress._send()
 
     @staticmethod
-    def increment_multi(self):
-        if PalmreaderProgress.__multi is not None:
-            PalmreaderProgress.__multi.inc()
-            PalmreaderProgress.__send()
+    def increment_multi():
+        if PalmreaderProgress._multi is not None:
+            PalmreaderProgress._multi.inc()
+            PalmreaderProgress._send()
     
     @staticmethod
     def start_single(message: str):
-        PalmreaderProgress.__single = message
-        PalmreaderProgress.__send()
+        PalmreaderProgress._single = message
+        PalmreaderProgress._send()
     
     @staticmethod
-    def __send(progress: float = 0):
-        if PalmreaderProgress.__multi is not None:
-            Palmreader.__message(PalmreaderProgress.__multi.as_message(progress))
-        elif PalmreaderProgress.__single is not None:
-            Palmreader.__message({
+    def _send(progress: float = 0):
+        if PalmreaderProgress._multi is not None:
+            Palmreader._message(PalmreaderProgress._multi.as_message(progress))
+        elif PalmreaderProgress._single is not None:
+            Palmreader._message({
                 'tag': 'progress',
                 'progress': progress,
-                'message': PalmreaderProgress.__single
+                'message': PalmreaderProgress._single
             })
 
 class PalmreaderProgressHook(tqdm.tqdm):
@@ -97,16 +97,16 @@ class PalmreaderProgressHook(tqdm.tqdm):
 
         progress = self.n / self.total if self.total else 0
         if progress != self._last_progress:
-            PalmreaderProgress.__send(progress)
+            PalmreaderProgress._send(progress)
         
         return orig
 
-def __trange(*args, **kwargs):
+def _trange(*args, **kwargs):
     return PalmreaderProgressHook(range(*args), **kwargs)
 
 # Monkey-patch tqdm
 tqdm.tqdm = PalmreaderProgressHook
-tqdm.trange = __trange
+tqdm.trange = _trange
 
 MESSAGE = Union[Event, SingleProgress, MultiProgress]
 
@@ -123,7 +123,7 @@ class Palmreader:
     Methods do nothing unless `Palmreader.set_enabled` is called.
     """
 
-    __enabled = False
+    _enabled = False
     
     @staticmethod
     def set_enabled(enabled: bool = True):
@@ -131,22 +131,22 @@ class Palmreader:
         Set whether or not messages are actually emitted. They are disabled by
         default to maintain backwards compatibility.
         """
-        Palmreader.__enabled = enabled
+        Palmreader._enabled = enabled
 
     @staticmethod
-    def __message(message: MESSAGE):
-        if not Palmreader.__enabled:
+    def _message(message: MESSAGE):
+        if not Palmreader._enabled:
             return
         
         print(json.dumps(message))
 
     @staticmethod
-    def __event(kind: Literal["info", "warning", "error"], message: str, exception: Union[Exception, None] = None):
+    def _event(kind: Literal["info", "warning", "error"], message: str, exception: Union[Exception, None] = None):
         backtrace = None
         if exception is not None:
             backtrace = ''.join(traceback.format_exception(type(exception), exception, exception.__traceback__))
 
-        Palmreader.__message({
+        Palmreader._message({
             'tag': 'event',
             'type': kind,
             'message': message,
@@ -155,20 +155,20 @@ class Palmreader:
 
     @staticmethod
     def info(message: str):
-        Palmreader.__event("info", message)
+        Palmreader._event("info", message)
     
     @staticmethod
     def warning(message: str):
-        Palmreader.__event("warning", message)
+        Palmreader._event("warning", message)
     
     @staticmethod
     def error(message: str):
-        Palmreader.__event("error", message)
+        Palmreader._event("error", message)
     
     @staticmethod
     def exception(message: str, exception: Exception):
-        Palmreader.__event("error", message, exception)
+        Palmreader._event("error", message, exception)
     
     @staticmethod
     def nonfatal(message: str, exception: Exception):
-        Palmreader.__event("warning", message, exception)
+        Palmreader._event("warning", message, exception)
