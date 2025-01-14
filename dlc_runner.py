@@ -1,3 +1,4 @@
+from palmreader import PalmreaderProgress
 import os
 import deeplabcut
 
@@ -41,8 +42,15 @@ def get_recording_list(directorys):
 # THIS IS AN API ENTRYPOINT! If the signature is modified, ensure api.py matches!
 # The body of this function can change without affecting the API.
 def run_deeplabcut(dlc_config_path, body_videos, also_generate_skeleton=True):
+    PalmreaderProgress.start_multi(len(body_videos), "Analyzing videos", autoincrement=True)
+
     deeplabcut.analyze_videos(dlc_config_path, body_videos, videotype=".avi")
+
+    PalmreaderProgress.start_multi(len(body_videos), "Filtering predictions")
+
     for video in body_videos:
+        PalmreaderProgress.increment_multi()
+
         deeplabcut.filterpredictions(dlc_config_path, [video], save_as_csv=False)
         # deeplabcut.create_labeled_video(
         #     dlc_config_path, [video], videotype=".avi", filtered=True
@@ -58,6 +66,8 @@ def run_deeplabcut(dlc_config_path, body_videos, also_generate_skeleton=True):
 # THIS IS AN API ENTRYPOINT! If the signature is modified, ensure api.py matches!
 # The body of this function can change without affecting the API.
 def generate_skeleton(dlc_config_path, body_videos):
+    PalmreaderProgress.start_multi(len(body_videos), "Generating skeleton videos", autoincrement=True)
+
     deeplabcut.create_labeled_video(
         dlc_config_path,
         body_videos,
