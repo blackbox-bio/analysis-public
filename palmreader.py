@@ -15,7 +15,7 @@ import tqdm
 
 class Event(TypedDict):
     tag: Literal["event"]
-    type: Literal["info", "warning", "error"]
+    level: Literal["info", "warning", "error"]
     message: str
     backtrace: Union[str, None]
 
@@ -25,7 +25,7 @@ class SingleProgress(TypedDict):
     message: str
 
 class MultiProgress(TypedDict):
-    tag: Literal["multi"]
+    tag: Literal["multiprogress"]
     total: int
     current: int
     progress: float
@@ -51,7 +51,7 @@ class MultiProgressState:
             self.last_progress = progress
 
         return {
-            'tag': 'multi',
+            'tag': 'multiprogress',
             'total': self.total,
             'current': self.current,
             'progress': progress,
@@ -141,14 +141,14 @@ class Palmreader:
         print(json.dumps(message))
 
     @staticmethod
-    def _event(kind: Literal["info", "warning", "error"], message: str, exception: Union[Exception, None] = None):
+    def _event(level: Literal["info", "warning", "error"], message: str, exception: Union[Exception, None] = None):
         backtrace = None
         if exception is not None:
             backtrace = ''.join(traceback.format_exception(type(exception), exception, exception.__traceback__))
 
         Palmreader._message({
             'tag': 'event',
-            'type': kind,
+            'level': level,
             'message': message,
             'backtrace': backtrace
         })
