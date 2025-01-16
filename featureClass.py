@@ -1,13 +1,36 @@
 from pkg_resources import non_empty_lines
-
+from typing import Any, Literal, List
 from utils import *
-
+from enum import Enum
 
 
 
 
 class FeaturesContext:
     _data: dict[str, pd.DataFrame]
+    _cache: dict[str, Any]
+
+    @staticmethod
+    def get_all_features() -> List["FeatureDef"]:
+        features = []
+
+        # add paw-specific features
+        for paw in Paw:
+            # add reworked luminance-based measures
+            for kind in ["luminescence", "print_size", "luminance_rework"]:
+                features.append(PawFeatureDef(paw, kind))
+
+            # add legacy luminance measures
+            features.append(LegacyPawLuminanceDef(paw))
+
+        # add background luminance
+        features.append(BackgroundLuminanceDef())
+
+        # add single features
+        features.append(SingleFeaturesDef())
+
+        # TODO: add the rest of the features after porting them to the new system
+
     def __init__(self,name,tracking_path,ftir_path):
         # Context provided to feature calculation functions
         self.name = name
@@ -20,13 +43,26 @@ class FeaturesContext:
 
         # Data generated from feature calculation functions
         self._data = {}
+        self._cache = {}
 
     def to_hdf5(self, dest_path):
         with h5py.File(dest_path, "w") as hdf:
             video_data = hdf.create_group(self.name)
-            for featureSet in self._data:
-                for key in self._data[featureSet]:
-                    video_data.create_dataset(key, data=self._data[featureSet][key])
+            for key in self._data.keys():
+                video_data.create_dataset(key, data=self._data[key])
+
+    def FeatureClassTestNew(self, oldFeatureDict):
+        # the new implementations don't have the top level keys so we can just compare each key directly
+        errorCount = 0
+        passCount = 0
+
+        for key in oldFeatureDict:
+            if oldFeatureDict[key] == self._data[key]:
+                print(f"PASS: {key} was found equal in both dataframes")
+                passCount += 1
+            else:
+                print(f"ERROR: {key} was found NOT equal in both dataframes")
+                errorCount += 1
 
     def FeatureClassTest(self, oldFeatureDict):
         errorCount = 0
@@ -107,60 +143,108 @@ class FeaturesContext:
         print(f"{featureCount}/{len(oldFeatureDict)} were migrated")
 
 
-
-
-
 class FeatureDef:
     def compute(self, ctx: FeaturesContext):
         pass
 
+class Paw(Enum):
+    LEFT_FRONT = "lfpaw"
+    RIGHT_FRONT = "rfpaw"
+    LEFT_HIND = "lhpaw"
+    RIGHT_HIND = "rhpaw"
 
+    def old_name(self) -> str:
+        """
+        Legacy luminance measurements use a different paw naming scheme. This function provides those old names.
+        """
+        if self.value == "lfpaw":
+            return "front_left"
+        elif self.value == "rfpaw":
+            return "front_right"
+        elif self.value == "lhpaw":
+            return "hind_left"
+        elif self.value == "rhpaw":
+            return "hind_right"
 
-class PawFeaturesDef(FeatureDef):
-    def __init__(self):
-        pass
+class PawLuminanceComputation:
+    @staticmethod
+    def compute_paw_luminance(ctx: FeaturesContext):
+        """
+        Computes the paw luminance. If this computation has already been done, it is not repeated.
+        """
+        if ctx._cache['paw_luminance'] is None:
+            ctx._cache['paw_luminance'] = cal_paw_luminance_rework(
+                ctx.label, ctx.ftir_video, size=22
+            )
+        
+        return ctx._cache['paw_luminance']
 
-    def compute(self, ctx: FeaturesContext):
-        # Feature Extraction
+class PawFeatureDef(FeatureDef):
+    def __init__(self, paw: Paw, kind: Literal["luminescence", "print_size", "luminance_rework"]):
+        self.paw = paw
+        self.kind = kind
+
+    def compute(self, ctx):
         (paw_luminescence,
          paw_print_size,
-         paw_luminance,
-         background_luminance,
-         frame_count,
-         legacy_paw_luminance) = cal_paw_luminance_rework(
-            ctx.label, ctx.ftir_video, size=22
-        )
+         paw_luminance) = PawLuminanceComputation.compute_paw_luminance(ctx)
+        
+        # map the corresponding dictionaries to the provided `kind`
+        luminance_data = {
+            "luminescence": paw_luminescence,
+            "print_size": paw_print_size,
+            "luminance_rework": paw_luminance
+        }
+        
+        # add the paw feature to the dictionary
+        ctx._data[f"{self.paw.value}_{self.kind}"] = luminance_data[self.kind][self.paw.value]
+
+class LegacyPawLuminanceDef(FeatureDef):
+    def __init__(self, paw: Paw):
+       self.paw = paw
+    
+    def compute(self, ctx):
+        (_, _, _, _, _, legacy_paw_luminance) = PawLuminanceComputation.compute_paw_luminance(ctx)
+
         (hind_left,
          hind_right,
          front_left,
-         front_right,) = legacy_paw_luminance
-        #Paw Features
-        pawFeatures = pd.DataFrame()
-        pawFeatures["lhpaw_luminescence"] = paw_luminescence['lhpaw']
-        pawFeatures["lhpaw_print_size"] = paw_print_size['lhpaw']
-        pawFeatures["lhpaw_luminance_rework"] = paw_luminance['lhpaw']
-        pawFeatures["hind_left_luminance"] = hind_left
+         front_right) = legacy_paw_luminance
 
-        pawFeatures["lfpaw_luminescence"] = paw_luminescence['lfpaw']
-        pawFeatures["lfpaw_print_size"] = paw_print_size['lfpaw']
-        pawFeatures["lfpaw_luminance_rework"] = paw_luminance['lfpaw']
-        pawFeatures["front_left_luminance"] = front_left
+        # map the luminance data to the corresponding paw
+        luminance_data = {
+            Paw.LEFT_HIND: hind_left,
+            Paw.RIGHT_HIND: hind_right,
+            Paw.LEFT_FRONT: front_left,
+            Paw.RIGHT_FRONT: front_right
+        }
+        
+        # add the paw feature to the dictionary
+        ctx._data[f"{self.paw.old_name()}_luminance"] = luminance_data[self.paw]
 
-        pawFeatures["rfpaw_luminescence"] = paw_luminescence['rfpaw']
-        pawFeatures["rfpaw_print_size"] = paw_print_size['rfpaw']
-        pawFeatures["rfpaw_luminance_rework"]= paw_luminance['rfpaw']
-        pawFeatures["front_right_luminance"] = front_right
+class BackgroundLuminanceDef(FeatureDef):
+    def compute(self, ctx: FeaturesContext):
+        (_, _, _, background_luminance, _, _) = PawLuminanceComputation.compute_paw_luminance(ctx)
+        
+        # add the background luminance to the dictionary
+        ctx._data["background_luminance"] = background_luminance
 
-        pawFeatures["rhpaw_luminescence"] = paw_luminescence['rhpaw']
-        pawFeatures["rhpaw_print_size"] = paw_print_size['rhpaw']
-        pawFeatures["rhpaw_luminance_rework"] = paw_luminance['rhpaw']
-        pawFeatures["hind_right_luminance"] = hind_right
+class SingleFeaturesDef(FeatureDef):
+    """
+    This is a special feature definition that computes multiple columns. It is the only feature that does this. It does this because it provides scalar values that are not optional and are only used internally.
 
-        pawFeatures["background_luminance"] = background_luminance
-        ctx._data["singleFeatures"] = pd.DataFrame()
-        ctx._data["singleFeatures"]["frame_count"] = np.array(frame_count)
-        ctx._data["paw_features"] = pawFeatures
+    Palmreader users will never see these values directly.
+    """
+    def compute(self, ctx):
+        (_, _, _, _, frame_count, _) = PawLuminanceComputation.compute_paw_luminance(ctx)
+        fps = int(ctx.ftir_video.get(cv2.CAP_PROP_FPS))
 
+        # add the single features to the dictionary
+        ctx._data["fps"] = np.array(fps)
+        ctx._data["frame_count"] = np.array(frame_count)
+
+
+# TODO: port the following features to the new system
 class AnimalDetectionDef(FeatureDef):
     def __init__(self):
         pass
