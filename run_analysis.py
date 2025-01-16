@@ -47,7 +47,7 @@ def main():
     # # Get the number of available CPU cores
     # num_workers = os.cpu_count() - 2 if os.cpu_count() > 2 else 1
 
-    num_workers = 16 # set to work with 13900K CPU
+    num_workers = 16  # set to work with 13900K CPU
     # #
     # # # Use joblib for parallel processing
     # Parallel(n_jobs=num_workers)(
