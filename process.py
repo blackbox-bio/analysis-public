@@ -20,18 +20,9 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
     # create a dictionary to store the extracted features
     features = {}
 
-    ALL_FEATURES: list[FeatureDef] = [
-        PawFeaturesDef(),
-        DistanceDeltaDef(),
-        BodyPartDistanceDef(),
-        BodyPartAngleDef(),
-        TrackingLikelyHoodDef(),
-        AnimalDetectionDef()
-    ]
-
     ctx = FeaturesContext(name,tracking_path, ftir_path)
 
-    for feature in ALL_FEATURES:
+    for feature in FeaturesContext.get_all_features():
         feature.compute(ctx)
 
     ctx.to_hdf5(dest_path=f'C-TestData/hdf5-tests/n-{dest_path}')
@@ -211,7 +202,7 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
 
     ftir_video.release()
 
-    ctx.FeatureClassTest(features)
+    ctx.FeatureClassTestNew(features)
 
     # -------------------------------------------------------------
 
