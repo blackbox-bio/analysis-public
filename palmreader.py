@@ -16,7 +16,8 @@ import tqdm
 class Event(TypedDict):
     tag: Literal["event"]
     level: Literal["info", "warning", "error"]
-    message: str
+    title: str
+    message: Union[str, None]
     backtrace: Union[str, None]
 
 class SingleProgress(TypedDict):
@@ -138,10 +139,10 @@ class Palmreader:
         if not Palmreader._enabled:
             return
         
-        print(json.dumps(message))
+        print(json.dumps(message), flush=True)
 
     @staticmethod
-    def _event(level: Literal["info", "warning", "error"], message: str, exception: Union[Exception, None] = None):
+    def _event(level: Literal["info", "warning", "error"], title: str, message: Union[str, None] = None, exception: Union[Exception, None] = None):
         backtrace = None
         if exception is not None:
             backtrace = ''.join(traceback.format_exception(type(exception), exception, exception.__traceback__))
@@ -149,26 +150,27 @@ class Palmreader:
         Palmreader._message({
             'tag': 'event',
             'level': level,
+            'title': title,
             'message': message,
             'backtrace': backtrace
         })
 
     @staticmethod
-    def info(message: str):
-        Palmreader._event("info", message)
+    def info(title: str, message: Union[str, None] = None):
+        Palmreader._event("info", title, message)
     
     @staticmethod
-    def warning(message: str):
-        Palmreader._event("warning", message)
+    def warning(title: str, message: Union[str, None] = None):
+        Palmreader._event("warning", title, message)
     
     @staticmethod
-    def error(message: str):
-        Palmreader._event("error", message)
+    def error(title: str, message: Union[str, None] = None):
+        Palmreader._event("error", title, message)
     
     @staticmethod
-    def exception(message: str, exception: Exception):
-        Palmreader._event("error", message, exception)
+    def exception(title: str, exception: Exception):
+        Palmreader._event("error", title, str(exception), exception)
     
     @staticmethod
-    def nonfatal(message: str, exception: Exception):
-        Palmreader._event("warning", message, exception)
+    def nonfatal(title: str, exception: Exception):
+        Palmreader._event("warning", title, str(exception), exception)
