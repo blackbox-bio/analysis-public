@@ -388,4 +388,4 @@ def process_recording(recording):
     dest_path = os.path.join(recording, "features.h5")
 
     extract_features(recording_name, ftir_path, dlc_path, dest_path)
-    extract_posture_with_moving_background(recording_name, trans_path, ftir_path, dlc_path)
+    # extract_posture_with_moving_background(recording_name, trans_path, ftir_path, dlc_path)
