@@ -1,5 +1,5 @@
 from utils import *
-from featureClass import FeaturesContext, FeatureDef, PawFeaturesDef,AnimalDetectionDef, DistanceDeltaDef, BodyPartDistanceDef, BodyPartAngleDef, TrackingLikelyHoodDef
+from featureClass import FeaturesContext
 # from paw_luminance_rework import *
 
 # from paw_luminance_rework import *
@@ -20,10 +20,10 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
     # create a dictionary to store the extracted features
     features = {}
 
-    ctx = FeaturesContext(name,tracking_path, ftir_path)
+    ctx = FeaturesContext(name, tracking_path, ftir_path)
 
     for feature in FeaturesContext.get_all_features():
-        feature.compute(ctx)
+        feature.compute(ctx=ctx)
 
     ctx.to_hdf5(dest_path=f'C-TestData/hdf5-tests/n-{dest_path}')
 
@@ -203,6 +203,7 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
     ftir_video.release()
 
     ctx.FeatureClassTestNew(features)
+    ctx.to_hdf5(f"{dest_path}_test")
 
     # -------------------------------------------------------------
 

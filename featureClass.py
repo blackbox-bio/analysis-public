@@ -29,6 +29,55 @@ class FeaturesContext:
         # add single features
         features.append(SingleFeaturesDef())
 
+        # add distance delta feature
+        features.append(DistanceDeltaDef())
+
+        # Add Animal detection features
+        features.append(AnimalDetectionDef())
+
+        # Add body parts distance features
+        distanceWithParts = {
+            "hip_width": ["lhip", "rhip"],
+            "ankle_distance": ["lankle", "rankle"],
+            "hind_paws_distance": ["lhpaw", "rhpaw"],
+            "shoulder_width": ["lshoulder", "rshoulder"],
+            "front_paws_distance": ["lfpaw", "rfpaw"],
+            "cheek_distance": ["lcheek", "rcheek"],
+            "tailbase_tailtip_distance": ["tailbase", "tailtip"],
+            "hip_tailbase_distance": ["hip", "tailbase"],
+            "hip_sternumtail_distance": ["hip", "sternumtail"],
+            "sternumtail_sternumhead_distance": ["sternumtail", "sternumhead"],
+            "sternumhead_neck_distance": ["sternumhead", "neck"],
+            "neck_snout_distance": ["neck", "snout"],
+            "hind_left_toes_spread": ["lhpd1t", "lhpd5t"],
+            "hind_right_toes_spread": ["rhpd1t", "rhpd5t"],
+            "hind_left_paw_length": ["lankle", "lhpd3t"],
+            "hind_right_paw_length": ["rankle", "rhpd3t"]
+        }
+        for column in distanceWithParts.keys():
+            partInfo = distanceWithParts[column]
+            features.append(BodyPartDistanceDef(column,partInfo[0],partInfo[1]))
+
+
+        # Add body part angle features
+        anglesFromVectorsWithParts = {
+            "chest_head_angle" : [["neck","snout"],["sternumtail","sternumhead"],"positive"],
+            "hip_chest_angle" : [["sternumtail","sternumhead"],["tailbase","hip"],"positive"],
+            "tail_hip_angle" : [["tailbase","hip"],["tailtip","tailbase"],"negative"],
+            "hip_tailbase_hlpaw_angle" : [["tailbase","hip"],["tailbase","lhpaw"],"positive"],
+            "hip_tailbase_hrpaw_angle" : [["tailbase","rhpaw"],["tailbase","hip"],"positive"],
+            "midline_hlpaw_angle" : [["tailbase","sternumtail"],["lankle","lhpaw"],"positive"],
+            "midline_hrpaw_angle" : [["rankle","rhpaw"],["tailbase","sternumtail"],"positive"]
+        }
+        for column in anglesFromVectorsWithParts.keys():
+            angleInfo = anglesFromVectorsWithParts[column]
+            features.append(BodyPartAngleDef(column,angleInfo[0],angleInfo[1],angleInfo[2]))
+
+        for paw in Paw:
+            features.append(TrackingLikelyHoodDef(paw))
+
+        return features
+
         # TODO: add the rest of the features after porting them to the new system
 
     def __init__(self,name,tracking_path,ftir_path):
@@ -56,13 +105,17 @@ class FeaturesContext:
         errorCount = 0
         passCount = 0
 
+        # Cant directly compare every feature with just ==, so convert them to series for access to .equals
         for key in oldFeatureDict:
-            if oldFeatureDict[key] == self._data[key]:
+            if pd.Series(oldFeatureDict[key]).equals(pd.Series(self._data[key])):
                 print(f"PASS: {key} was found equal in both dataframes")
                 passCount += 1
             else:
                 print(f"ERROR: {key} was found NOT equal in both dataframes")
                 errorCount += 1
+
+        print(f"{errorCount}/{passCount} features had missing or incorrect data")
+        print(f"{passCount}/{len(oldFeatureDict)} were migrated")
 
     def FeatureClassTest(self, oldFeatureDict):
         errorCount = 0
@@ -172,7 +225,7 @@ class PawLuminanceComputation:
         """
         Computes the paw luminance. If this computation has already been done, it is not repeated.
         """
-        if ctx._cache['paw_luminance'] is None:
+        if 'paw_luminance' not in ctx._cache:
             ctx._cache['paw_luminance'] = cal_paw_luminance_rework(
                 ctx.label, ctx.ftir_video, size=22
             )
@@ -184,10 +237,8 @@ class PawFeatureDef(FeatureDef):
         self.paw = paw
         self.kind = kind
 
-    def compute(self, ctx):
-        (paw_luminescence,
-         paw_print_size,
-         paw_luminance) = PawLuminanceComputation.compute_paw_luminance(ctx)
+    def compute(self, ctx: FeaturesContext):
+        (paw_luminescence, paw_print_size, paw_luminance,_,_,_) = PawLuminanceComputation.compute_paw_luminance(ctx)
         
         # map the corresponding dictionaries to the provided `kind`
         luminance_data = {
@@ -203,7 +254,7 @@ class LegacyPawLuminanceDef(FeatureDef):
     def __init__(self, paw: Paw):
        self.paw = paw
     
-    def compute(self, ctx):
+    def compute(self, ctx: FeaturesContext):
         (_, _, _, _, _, legacy_paw_luminance) = PawLuminanceComputation.compute_paw_luminance(ctx)
 
         (hind_left,
@@ -235,7 +286,7 @@ class SingleFeaturesDef(FeatureDef):
 
     Palmreader users will never see these values directly.
     """
-    def compute(self, ctx):
+    def compute(self, ctx: FeaturesContext):
         (_, _, _, _, frame_count, _) = PawLuminanceComputation.compute_paw_luminance(ctx)
         fps = int(ctx.ftir_video.get(cv2.CAP_PROP_FPS))
 
@@ -250,12 +301,7 @@ class AnimalDetectionDef(FeatureDef):
         pass
 
     def compute(self, ctx: FeaturesContext):
-        AnimalDetectionFeatures = pd.DataFrame()
-        _fps = int(ctx.ftir_video.get(cv2.CAP_PROP_FPS))
-        ctx._data["singleFeatures"]["fps"] = np.array(_fps)
-        AnimalDetectionFeatures["animal_detection"] = detect_animal_in_recording(ctx.label, _fps)
-        ctx._data["animal_detection_features"] = AnimalDetectionFeatures
-
+        ctx._data["animal_detection"] = detect_animal_in_recording(ctx.label, ctx._data["fps"])
 
 
 class DistanceDeltaDef(FeatureDef):
@@ -263,111 +309,44 @@ class DistanceDeltaDef(FeatureDef):
         pass
 
     def compute(self, ctx: FeaturesContext):
-        DistanceDeltaFeatures = pd.DataFrame()
-        DistanceDeltaFeatures["distance_delta"] = cal_distance_(ctx.label).reshape(-1)
-        ctx._data["distance_delta_features"] = DistanceDeltaFeatures
+        ctx._data["distance_delta"] = cal_distance_(ctx.label).reshape(-1)
 
 class BodyPartDistanceDef(FeatureDef):
-    def __init__(self):
+    def __init__(self, dest:str, part1:str, part2:str):
+        self.dest = dest
+        self.part1 = part1
+        self.part2 = part2
         pass
 
     def compute(self, ctx: FeaturesContext):
-        bodyPartsDistanceFeatures = pd.DataFrame()
         label = ctx.label
-
-        bodyPartsDistanceFeatures["hip_width"] = body_parts_distance(label, "lhip", "rhip")
-        bodyPartsDistanceFeatures["ankle_distance"] = body_parts_distance(label, "lankle", "rankle")
-        bodyPartsDistanceFeatures["hind_paws_distance"] = body_parts_distance(label, "lhpaw", "rhpaw")
-        # upper body parts distance
-        bodyPartsDistanceFeatures["shoulder_width"] = body_parts_distance(label, "lshoulder", "rshoulder")
-        bodyPartsDistanceFeatures["front_paws_distance"] = body_parts_distance(label, "lfpaw", "rfpaw")
-        # face parts distance
-        bodyPartsDistanceFeatures["cheek_distance"] = body_parts_distance(label, "lcheek", "rcheek")
-
-        # midline body parts distance
-        bodyPartsDistanceFeatures["tailbase_tailtip_distance"] = body_parts_distance(
-            label, "tailbase", "tailtip"
-        )
-        bodyPartsDistanceFeatures["hip_tailbase_distance"] = body_parts_distance(label, "hip", "tailbase")
-        bodyPartsDistanceFeatures["hip_sternumtail_distance"] = body_parts_distance(
-            label, "hip", "sternumtail"
-        )
-        bodyPartsDistanceFeatures["sternumtail_sternumhead_distance"] = body_parts_distance(
-            label, "sternumtail", "sternumhead"
-        )
-        bodyPartsDistanceFeatures["sternumhead_neck_distance"] = body_parts_distance(
-            label, "sternumhead", "neck"
-        )
-        bodyPartsDistanceFeatures["neck_snout_distance"] = body_parts_distance(label, "neck", "snout")
-
-        # toe spread and paw length for both hind paws
-        bodyPartsDistanceFeatures["hind_left_toes_spread"] = body_parts_distance(label, "lhpd1t", "lhpd5t")
-        bodyPartsDistanceFeatures["hind_right_toes_spread"] = body_parts_distance(label, "rhpd1t", "rhpd5t")
-        bodyPartsDistanceFeatures["hind_left_paw_length"] = body_parts_distance(label, "lankle", "lhpd3t")
-        bodyPartsDistanceFeatures["hind_right_paw_length"] = body_parts_distance(label, "rankle", "rhpd3t")
-
-        ctx._data["bodyparts_distance_features"] = bodyPartsDistanceFeatures
+        ctx._data[self.dest] = body_parts_distance(label,self.part1,self.part2)
 
 
 class BodyPartAngleDef(FeatureDef):
-    def __init__(self):
+    def __init__(self,dest:str, vectorParts1:List, vectorParts2:List, sign=str):
+        self.dest = dest
+        self.vectorParts1 = vectorParts1
+        self.vectorParts2 = vectorParts2
+        self.sign = sign
         pass
 
     def compute(self, ctx: FeaturesContext):
-        bodyPartsAngleFeatures = pd.DataFrame()
         label = ctx.label
-
-        sternumtail_sternumhead_vector = get_vector(label, "sternumtail", "sternumhead")
-        midline_vector = get_vector(label, "tailbase", "sternumtail")
-        neck_snout_vector = get_vector(label, "neck", "snout")
-        tailbase_hip_vector = get_vector(label, "tailbase", "hip")
-        tailtip_tailbase_vector = get_vector(label, "tailtip", "tailbase")
-        tailbase_hlpaw_vec = get_vector(label, "tailbase", "lhpaw")
-        tailbase_hrpaw_vec = get_vector(label, "tailbase", "rhpaw")
-        lankle_lhpaw_vec = get_vector(label, "lankle", "lhpaw")
-        # lankle_lhpd1t_vec = get_vector(label, "lankle", "lhpd1t")
-        # lankle_lhpd3t_vec = get_vector(label,"lankle","lhpd3t")
-        # lankle_lhpd5t_vec = get_vector(label, "lankle", "lhpd5t")
-        rankle_rhpaw_vec = get_vector(label, "rankle", "rhpaw")
-        # rankle_rhpd1t_vec = get_vector(label, "rankle", "rhpd1t")
-        # rankle_rhpd3t_vec = get_vector(label,"rankle","rhpd3t")
-        # rankle_rhpd5t_vec = get_vector(label, "rankle", "rhpd5t")
-
-        # body parts angles
-        bodyPartsAngleFeatures["chest_head_angle"] = get_angle(
-            neck_snout_vector, sternumtail_sternumhead_vector
-        )
-        bodyPartsAngleFeatures["hip_chest_angle"] = get_angle(
-            sternumtail_sternumhead_vector, tailbase_hip_vector
-        )
-        # note the negative sign for the tail_hip_angle
-        bodyPartsAngleFeatures["tail_hip_angle"] = -get_angle(
-            tailbase_hip_vector, tailtip_tailbase_vector
-        )
-        bodyPartsAngleFeatures["hip_tailbase_hlpaw_angle"] = get_angle(
-            tailbase_hip_vector, tailbase_hlpaw_vec
-        )
-        bodyPartsAngleFeatures["hip_tailbase_hrpaw_angle"] = get_angle(
-            tailbase_hrpaw_vec, tailbase_hip_vector
-        )
-        # paw angles with respect to the midline for both hind paws
-        bodyPartsAngleFeatures["midline_hlpaw_angle"] = get_angle(midline_vector, lankle_lhpaw_vec)
-        bodyPartsAngleFeatures["midline_hrpaw_angle"] = get_angle(rankle_rhpaw_vec, midline_vector)
-
-        ctx._data["bodyparts_angle_features"] = bodyPartsAngleFeatures
+        vector1 = get_vector(label, self.vectorParts1[0], self.vectorParts1[1])
+        vector2 = get_vector(label, self.vectorParts2[0], self.vectorParts2[1])
+        if self.sign == "positive":
+            ctx._data[self.dest] = get_angle(vector1,vector2)
+        elif self.sign == "negative":
+            ctx._data[self.dest] = -get_angle(vector1,vector2)
 
 
 
 class TrackingLikelyHoodDef(FeatureDef):
-    def __init__(self):
+    def __init__(self, paw:Paw):
+        self.paw = paw
         pass
 
     def compute(self, ctx: FeaturesContext):
-        TrackingLikelyhoodFeatures = pd.DataFrame()
         label = ctx.label
-        TrackingLikelyhoodFeatures["lhpaw_tracking_likelihood"] = label["lhpaw"]["likelihood"]
-        TrackingLikelyhoodFeatures["rhpaw_tracking_likelihood"] = label["rhpaw"]["likelihood"]
-        TrackingLikelyhoodFeatures["lfpaw_tracking_likelihood"] = label["lfpaw"]["likelihood"]
-        TrackingLikelyhoodFeatures["rfpaw_tracking_likelihood"] = label["rfpaw"]["likelihood"]
-
-        ctx._data["tracking_likelyhood_features"] = TrackingLikelyhoodFeatures
+        ctx._data[f"{self.paw.value}_tracking_likelihood"] = label[self.paw.value]["likelihood"]
