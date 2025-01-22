@@ -66,7 +66,7 @@ def run_deeplabcut(dlc_config_path, body_videos, also_generate_skeleton=True):
 # THIS IS AN API ENTRYPOINT! If the signature is modified, ensure api.py matches!
 # The body of this function can change without affecting the API.
 def generate_skeleton(dlc_config_path, body_videos):
-    PalmreaderProgress.start_multi(len(body_videos), "Generating skeleton videos", autoincrement=True)
+    PalmreaderProgress.start_single("Generating skeleton videos", parallel=True)
 
     deeplabcut.create_labeled_video(
         dlc_config_path,

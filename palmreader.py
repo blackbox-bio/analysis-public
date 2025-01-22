@@ -63,9 +63,15 @@ class PalmreaderProgress:
     _multi = None
     _single = None
 
+    # used for managing parallel mode
+    _single_current_id = 0
+    _single_id = None
+    _single_parallel = False
+
     @staticmethod
     def start_multi(total: int, message: str, autoincrement: bool = False):
         PalmreaderProgress._multi = MultiProgressState(total, message, autoincrement)
+
         PalmreaderProgress._send()
 
     @staticmethod
@@ -75,10 +81,32 @@ class PalmreaderProgress:
             PalmreaderProgress._send()
     
     @staticmethod
-    def start_single(message: str):
+    def start_single(message: str, parallel: bool = False):
         PalmreaderProgress._single = message
+        PalmreaderProgress._single_parallel = parallel
+
         PalmreaderProgress._send()
     
+    @staticmethod
+    def _provision_id():
+        PalmreaderProgress._single_current_id += 1
+
+        return PalmreaderProgress._single_current_id
+
+    @staticmethod
+    def _should_report(hook_id: int):
+        if not PalmreaderProgress._single_parallel:
+            # if parallel mode is off, every bar should report progress
+            return True
+
+        # otherwise, we need to assign the task of reporting progress to a single bar to prevent weird behavior
+        if PalmreaderProgress._single_id is None:
+            # whoever calls this function first gets to report progress
+            PalmreaderProgress._single_id = hook_id
+            return True
+
+        return PalmreaderProgress._single_id == hook_id
+
     @staticmethod
     def _send(progress: float = 0):
         if PalmreaderProgress._multi is not None:
@@ -92,14 +120,22 @@ class PalmreaderProgress:
 
 class PalmreaderProgressHook(tqdm.tqdm):
     _last_progress = -1.0
+    _hook_id = None
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._hook_id = PalmreaderProgress._provision_id()
 
     def display(self, msg = None, pos = None):
         orig = super().display(msg, pos)
 
-        progress = self.n / self.total if self.total else 0
-        if progress != self._last_progress:
-            PalmreaderProgress._send(progress)
-        
+        if PalmreaderProgress._should_report(self._hook_id):
+            # if we're in a parallel context, only one bar will run this block
+            progress = self.n / self.total if self.total else 0
+            if progress != self._last_progress:
+                PalmreaderProgress._send(progress)
+
         return orig
 
 def _trange(*args, **kwargs):
