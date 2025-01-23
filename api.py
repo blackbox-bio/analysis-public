@@ -1,5 +1,6 @@
 # globally import things that all functions share
 # don't import anything not strictly required for the API itself. import API specific things in the functions themselves
+from palmreader import Palmreader, PalmreaderProgress
 import argparse
 from enum import Enum
 from typing import TypedDict, List, Tuple, Literal
@@ -33,7 +34,12 @@ def features(args: Extractions):
 
     extractions = args['extractions']
 
+    PalmreaderProgress.start_multi(len(extractions), "Extracting features")
+
     for extraction in extractions:
+        # increment before each iteration so it's not zero indexed
+        PalmreaderProgress.increment_multi()
+
         extract_features(
             extraction['name'],
             extraction['ftir_path'],
@@ -229,6 +235,17 @@ class ApiFunction(Enum):
     def __str__(self):
         return self.value
 
+def invoke_v2(func, args, task):
+    Palmreader.set_enabled(True)
+
+    try:
+        func(args)
+    except Exception as e:
+        Palmreader.exception(
+            f"An error occurred while {task}",
+            e
+        )
+
 def main():
     p = argparse.ArgumentParser()
 
@@ -239,29 +256,50 @@ def main():
     p.add_argument('--args', type=str, required=True, dest='args')
     # the version of the API to use. defaults to 1 for backwards compatibility
     p.add_argument('--api-version', type=int, default=1, dest='api_version')
+    # whether to enable API version 2. defaults to false for backwards compatibility
+    p.add_argument('--v2', action='store_true', dest='v2')
 
     args = p.parse_args()
 
     api_args = json.loads(args.args)
+    func = None
+    task = ""
+
     if args.function == ApiFunction.DEEPLABCUT:
-        deeplabcut(api_args)
+        func = deeplabcut
+        task = "running DeepLabCut"
     elif args.function == ApiFunction.FEATURES:
-        features(api_args)
+        func = features
+        task = "extracting features"
     elif args.function == ApiFunction.SUMMARY:
+        task = "generating summary"
+
         if args.api_version == 1:
-            summary_v1(api_args)
+            func = summary_v1
         elif args.api_version == 2:
-            summary_v2(api_args)
+            func = summary_v2
         else:
-            summary_v3(api_args)
+            func = summary_v3
     elif args.function == ApiFunction.SKELETON:
-        skeleton(api_args)
+        func = skeleton
+        task = "generating skeleton video"
     elif args.function == ApiFunction.PAIRGRID:
-        pair_grid(api_args)
+        func = pair_grid
+        task = "generating pair grid"
     elif args.function == ApiFunction.BAR_PLOTS:
-        bar_plots(api_args)
+        func = bar_plots
+        task = "generating bar plots"
     elif args.function == ApiFunction.CLUSTER_HEATMAP:
-        cluster_heatmap(api_args)
+        func = cluster_heatmap
+        task = "generating cluster heatmap"
+
+    if func is None:
+        raise ValueError("Invalid function")
+    
+    if args.v2:
+        invoke_v2(func, api_args, task)
+    else:
+        func(api_args)
 
 if __name__ == '__main__':
     main()

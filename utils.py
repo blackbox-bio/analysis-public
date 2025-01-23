@@ -328,8 +328,10 @@ def cal_paw_luminance_rework(label, cap, size=22):
     front_left = []
     # legacy end----------------
 
+    expected_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
     i = 0
-    pbar = tqdm(total=None, dynamic_ncols=True,desc="paw luminance calculation")
+    pbar = tqdm(total=expected_total,dynamic_ncols=True,desc="paw luminance calculation")
 
     while True:
         ret, frame = cap.read()  # Read the next frame
