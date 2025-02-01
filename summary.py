@@ -561,15 +561,19 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
         # )
 
         # average tracking likelihood for each paws
+        # PORTED
         summary_features[video]["average_lhpaw_tracking_likelihood"] = np.nanmean(
             features[video]["lhpaw_tracking_likelihood"]
         )
+        # PORTED
         summary_features[video]["average_rhpaw_tracking_likelihood"] = np.nanmean(
             features[video]["rhpaw_tracking_likelihood"]
         )
+        # PORTED
         summary_features[video]["average_lfpaw_tracking_likelihood"] = np.nanmean(
             features[video]["lfpaw_tracking_likelihood"]
         )
+        # PORTED
         summary_features[video]["average_rfpaw_tracking_likelihood"] = np.nanmean(
             features[video]["rfpaw_tracking_likelihood"]
         )

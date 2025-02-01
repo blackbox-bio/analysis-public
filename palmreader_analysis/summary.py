@@ -78,6 +78,9 @@ class SummaryContext:
                 BodyPartAngleDef(column, vector_parts_1, vector_parts_2, sign)
             )
 
+        for paw in Paw:
+            columns.append(TrackingLikelihoodColumn(paw))
+
         return columns
 
     @staticmethod
@@ -614,4 +617,14 @@ class LegacyBothFrontPawsLiftedColumn(SummaryColumn):
 
         ctx._data[f"legacy: both_front_paws_lifted (ratio of time)"] = np.nanmean(
             standing
+        )
+
+
+class TrackingLikelihoodColumn(SummaryColumn):
+    def __init__(self, paw: Paw):
+        self.paw = paw
+
+    def summarize(self, ctx):
+        ctx._data[f"average_{self.paw.value}_tracking_likelihood"] = np.nanmean(
+            ctx._features[f"{self.paw.value}_tracking_likelihood"]
         )
