@@ -11,7 +11,13 @@ from utils import both_front_paws_lifted
 class SummaryContext:
     @staticmethod
     def get_all_columns() -> List["SummaryColumn"]:
-        from .common import DistanceDeltaDef
+        from .common import (
+            DistanceDeltaDef,
+            BodyPartDistanceDef,
+            BodyPartAngleDef,
+            DISTANCE_FEATURES,
+            ANGLE_FEATURES,
+        )
 
         columns = []
 
@@ -55,6 +61,22 @@ class SummaryContext:
             )
 
         columns.append(LegacyFrontToHindRatioColumn())
+
+        for paw in Paw:
+            columns.append(LegacyPawLiftedTimeColumn(paw))
+
+        columns.append(LegacyBothFrontPawsLiftedColumn())
+
+        for column in DISTANCE_FEATURES.keys():
+            part1, part2 = DISTANCE_FEATURES[column]
+            columns.append(BodyPartDistanceDef(column, part1, part2))
+
+        # TODO: fix midline paw angles (output name is wrong)
+        for column in ANGLE_FEATURES.keys():
+            vector_parts_1, vector_parts_2, sign = ANGLE_FEATURES[column]
+            columns.append(
+                BodyPartAngleDef(column, vector_parts_1, vector_parts_2, sign)
+            )
 
         return columns
 
@@ -572,3 +594,24 @@ class LegacyFrontToHindRatioColumn(SummaryColumn):
         hind = left_hind + right_hind
 
         ctx._data[f"legacy: average_front_to_hind_paw_luminance_ratio"] = front / hind
+
+
+class LegacyPawLiftedTimeColumn(SummaryColumn):
+    def __init__(self, paw: Paw):
+        self.paw = paw
+
+    def summarize(self, ctx):
+        ctx._data[f"legacy: {self.paw.old_name()}_paw_lifted_time (seconds)"] = (
+            np.sum(ctx._features[f"{self.paw.old_name()}_luminance"] < 1e-4)
+            / ctx._features["fps"]
+        )
+
+
+class LegacyBothFrontPawsLiftedColumn(SummaryColumn):
+    def summarize(self, ctx):
+        standing = LegacyStandingMaskComputer().compute(ctx)
+        standing = standing.mask
+
+        ctx._data[f"legacy: both_front_paws_lifted (ratio of time)"] = np.nanmean(
+            standing
+        )

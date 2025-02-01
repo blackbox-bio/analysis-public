@@ -7,7 +7,13 @@ from utils import *
 class FeaturesContext:
     @staticmethod
     def get_all_features() -> List["Feature"]:
-        from .common import DistanceDeltaDef
+        from .common import (
+            DistanceDeltaDef,
+            BodyPartDistanceDef,
+            BodyPartAngleDef,
+            DISTANCE_FEATURES,
+            ANGLE_FEATURES,
+        )
 
         features = []
 
@@ -33,68 +39,13 @@ class FeaturesContext:
         features.append(AnimalDetectionDef())
 
         # Add body parts distance features
-        distance_features = {
-            "hip_width": ["lhip", "rhip"],
-            "ankle_distance": ["lankle", "rankle"],
-            "hind_paws_distance": ["lhpaw", "rhpaw"],
-            "shoulder_width": ["lshoulder", "rshoulder"],
-            "front_paws_distance": ["lfpaw", "rfpaw"],
-            "cheek_distance": ["lcheek", "rcheek"],
-            "tailbase_tailtip_distance": ["tailbase", "tailtip"],
-            "hip_tailbase_distance": ["hip", "tailbase"],
-            "hip_sternumtail_distance": ["hip", "sternumtail"],
-            "sternumtail_sternumhead_distance": ["sternumtail", "sternumhead"],
-            "sternumhead_neck_distance": ["sternumhead", "neck"],
-            "neck_snout_distance": ["neck", "snout"],
-            "hind_left_toes_spread": ["lhpd1t", "lhpd5t"],
-            "hind_right_toes_spread": ["rhpd1t", "rhpd5t"],
-            "hind_left_paw_length": ["lankle", "lhpd3t"],
-            "hind_right_paw_length": ["rankle", "rhpd3t"],
-        }
-        for column in distance_features.keys():
-            part1, part2 = distance_features[column]
+        for column in DISTANCE_FEATURES.keys():
+            part1, part2 = DISTANCE_FEATURES[column]
             features.append(BodyPartDistanceDef(column, part1, part2))
 
         # Add body part angle features
-        angle_features = {
-            "chest_head_angle": [
-                ["neck", "snout"],
-                ["sternumtail", "sternumhead"],
-                "positive",
-            ],
-            "hip_chest_angle": [
-                ["sternumtail", "sternumhead"],
-                ["tailbase", "hip"],
-                "positive",
-            ],
-            "tail_hip_angle": [
-                ["tailbase", "hip"],
-                ["tailtip", "tailbase"],
-                "negative",
-            ],
-            "hip_tailbase_hlpaw_angle": [
-                ["tailbase", "hip"],
-                ["tailbase", "lhpaw"],
-                "positive",
-            ],
-            "hip_tailbase_hrpaw_angle": [
-                ["tailbase", "rhpaw"],
-                ["tailbase", "hip"],
-                "positive",
-            ],
-            "midline_hlpaw_angle": [
-                ["tailbase", "sternumtail"],
-                ["lankle", "lhpaw"],
-                "positive",
-            ],
-            "midline_hrpaw_angle": [
-                ["rankle", "rhpaw"],
-                ["tailbase", "sternumtail"],
-                "positive",
-            ],
-        }
-        for column in angle_features.keys():
-            vector_parts_1, vector_parts_2, sign = angle_features[column]
+        for column in ANGLE_FEATURES.keys():
+            vector_parts_1, vector_parts_2, sign = ANGLE_FEATURES[column]
             features.append(
                 BodyPartAngleDef(column, vector_parts_1, vector_parts_2, sign)
             )
@@ -246,42 +197,6 @@ class AnimalDetectionDef(Feature):
         ctx._data["animal_detection"] = detect_animal_in_recording(
             ctx.label, ctx._data["fps"]
         )
-
-
-class BodyPartDistanceDef(Feature):
-    def __init__(self, dest: str, part1: str, part2: str):
-        self.dest = dest
-        self.part1 = part1
-        self.part2 = part2
-        pass
-
-    def extract(self, ctx: FeaturesContext):
-        label = ctx.label
-        ctx._data[self.dest] = body_parts_distance(label, self.part1, self.part2)
-
-
-class BodyPartAngleDef(Feature):
-    def __init__(
-        self,
-        dest: str,
-        vector_parts_1: List,
-        vector_parts_2: List,
-        sign: Literal["positive", "negative"],
-    ):
-        self.dest = dest
-        self.vector_parts_1 = vector_parts_1
-        self.vector_parts_2 = vector_parts_2
-        self.sign = sign
-        pass
-
-    def extract(self, ctx: FeaturesContext):
-        label = ctx.label
-        vector1 = get_vector(label, self.vector_parts_1[0], self.vector_parts_1[1])
-        vector2 = get_vector(label, self.vector_parts_2[0], self.vector_parts_2[1])
-        if self.sign == "positive":
-            ctx._data[self.dest] = get_angle(vector1, vector2)
-        elif self.sign == "negative":
-            ctx._data[self.dest] = -get_angle(vector1, vector2)
 
 
 class TrackingLikelihoodDef(Feature):

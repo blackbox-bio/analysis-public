@@ -370,6 +370,7 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
             summary_features[video]["legacy: average_hind_right_luminance"]
             / summary_features[video]["legacy: average_hind_left_luminance"]
         )
+        # PORTED
         summary_features[video]["legacy: average_front_to_hind_paw_luminance_ratio"] = (
             summary_features[video]["legacy: average_front_left_luminance"]
             + summary_features[video]["legacy: average_front_right_luminance"]
@@ -416,24 +417,29 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
         # )
 
         # 17-20 time spent paw lifted (not touching the ground)
+        # PORTED
         summary_features[video]["legacy: hind_left_paw_lifted_time (seconds)"] = (
             np.sum(features[video]["hind_left_luminance"] < 1e-4)
             / features[video]["fps"]
         )
+        # PORTED
         summary_features[video]["legacy: hind_right_paw_lifted_time (seconds)"] = (
             np.sum(features[video]["hind_right_luminance"] < 1e-4)
             / features[video]["fps"]
         )
+        # PORTED
         summary_features[video]["legacy: front_left_paw_lifted_time (seconds)"] = (
             np.sum(features[video]["front_left_luminance"] < 1e-4)
             / features[video]["fps"]
         )
+        # PORTED
         summary_features[video]["legacy: front_right_paw_lifted_time (seconds)"] = (
             np.sum(features[video]["front_right_luminance"] < 1e-4)
             / features[video]["fps"]
         )
         # 3. both_front_paws_lifted
 
+        # PORTED
         summary_features[video]["legacy: both_front_paws_lifted (ratio of time)"] = (
             np.nanmean(standing_ratio_legacy)
         )
@@ -441,73 +447,93 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
 
         # body parts distance
         # 21-26. lateral body parts distance
+        # PORTED
         summary_features[video]["hip_width (pixel)"] = np.nanmean(
             features[video]["hip_width"]
         )
+        # PORTED
         summary_features[video]["ankle_distance (pixel)"] = np.nanmean(
             features[video]["ankle_distance"]
         )
         summary_features[video]["hind_paws_distance (pixel)"] = np.nanmean(
             features[video]["hind_paws_distance"]
         )
+        # PORTED
         summary_features[video]["shoulder_width (pixel)"] = np.nanmean(
             features[video]["shoulder_width"]
         )
+        # PORTED
         summary_features[video]["front_paws_distance (pixel)"] = np.nanmean(
             features[video]["front_paws_distance"]
         )
+        # PORTED
         summary_features[video]["cheek_distance (pixel)"] = np.nanmean(
             features[video]["cheek_distance"]
         )
         # 27-32. midline body parts distance
+        # PORTED
         summary_features[video]["tailbase_tailtip_distance (pixel)"] = np.nanmean(
             features[video]["tailbase_tailtip_distance"]
         )
+        # PORTED
         summary_features[video]["hip_tailbase_distance (pixel)"] = np.nanmean(
             features[video]["hip_tailbase_distance"]
         )
+        # PORTED
         summary_features[video]["hip_sternumtail_distance (pixel)"] = np.nanmean(
             features[video]["hip_sternumtail_distance"]
         )
+        # PORTED
         summary_features[video]["sternumtail_sternumhead_distance (pixel)"] = (
             np.nanmean(features[video]["sternumtail_sternumhead_distance"])
         )
+        # PORTED
         summary_features[video]["sternumhead_neck_distance (pixel)"] = np.nanmean(
             features[video]["sternumhead_neck_distance"]
         )
+        # PORTED
         summary_features[video]["neck_snout_distance (pixel)"] = np.nanmean(
             features[video]["neck_snout_distance"]
         )
 
         # 33-35. midline body parts angles
+        # PORTED
         summary_features[video]["chest_head_angle (degree)"] = np.nanmean(
             features[video]["chest_head_angle"]
         )
+        # PORTED
         summary_features[video]["hip_chest_angle (degree)"] = np.nanmean(
             features[video]["hip_chest_angle"]
         )
+        # PORTED
         summary_features[video]["tail_hip_angle (degree)"] = np.nanmean(
             features[video]["tail_hip_angle"]
         )
 
         # 36-37. hind paw angles
+        # PORTED
         summary_features[video]["hip_tailbase_hlpaw_angle (degree)"] = np.nanmean(
             features[video]["hip_tailbase_hlpaw_angle"]
         )
+        # PORTED
         summary_features[video]["hip_tailbase_hrpaw_angle (degree)"] = np.nanmean(
             features[video]["hip_tailbase_hrpaw_angle"]
         )
 
         # new toe spread and paw length for both hind paws
+        # PORTED
         summary_features[video]["hind_left_toes_spread (pixel)"] = np.nanmean(
             features[video]["hind_left_toes_spread"]
         )
+        # PORTED
         summary_features[video]["hind_right_toes_spread (pixel)"] = np.nanmean(
             features[video]["hind_right_toes_spread"]
         )
+        # PORTED
         summary_features[video]["hind_left_paw_length (pixel)"] = np.nanmean(
             features[video]["hind_left_paw_length"]
         )
+        # PORTED
         summary_features[video]["hind_right_paw_length (pixel)"] = np.nanmean(
             features[video]["hind_right_paw_length"]
         )

@@ -4,14 +4,124 @@ Most features have a 1:1 relationship with some column in the summary CSV. In th
 Any features which do not have a single column in the summary are defined in the `features.py` file, and likely have one or more summary columns defined in `summary.py`. This separation is not visible to the user. To get all columns for either features or summary, use `FeaturesContext.get_all_features` or `SummaryContext.get_all_columns`.
 """
 
+from typing import List, Literal, Dict, Tuple
+import numpy as np
 from .features import FeaturesContext, Feature
-from .summary import NanSumColumn
-from utils import cal_distance_
+from .summary import SummaryColumn
+from utils import cal_distance_, body_parts_distance, get_vector, get_angle
 
 
-class DistanceDeltaDef(Feature, NanSumColumn):
-    def __init__(self):
-        NanSumColumn.__init__(self, "distance_delta", "distance_traveled (pixel)")
-
+class DistanceDeltaDef(Feature, SummaryColumn):
     def extract(self, ctx: FeaturesContext):
         ctx._data["distance_delta"] = cal_distance_(ctx.label).reshape(-1)
+
+    def summarize(self, ctx):
+        ctx._data["distance_traveled (pixel)"] = np.nansum(
+            ctx._features["distance_delta"]
+        )
+
+
+DISTANCE_FEATURES = {
+    "hip_width": ("lhip", "rhip"),
+    "ankle_distance": ("lankle", "rankle"),
+    "hind_paws_distance": ("lhpaw", "rhpaw"),
+    "shoulder_width": ("lshoulder", "rshoulder"),
+    "front_paws_distance": ("lfpaw", "rfpaw"),
+    "cheek_distance": ("lcheek", "rcheek"),
+    "tailbase_tailtip_distance": ("tailbase", "tailtip"),
+    "hip_tailbase_distance": ("hip", "tailbase"),
+    "hip_sternumtail_distance": ("hip", "sternumtail"),
+    "sternumtail_sternumhead_distance": ("sternumtail", "sternumhead"),
+    "sternumhead_neck_distance": ("sternumhead", "neck"),
+    "neck_snout_distance": ("neck", "snout"),
+    "hind_left_toes_spread": ("lhpd1t", "lhpd5t"),
+    "hind_right_toes_spread": ("rhpd1t", "rhpd5t"),
+    "hind_left_paw_length": ("lankle", "lhpd3t"),
+    "hind_right_paw_length": ("rankle", "rhpd3t"),
+}
+
+
+class BodyPartDistanceDef(Feature, SummaryColumn):
+    def __init__(self, dest: str, part1: str, part2: str):
+        self.dest = dest
+        self.part1 = part1
+        self.part2 = part2
+
+    def extract(self, ctx: FeaturesContext):
+        label = ctx.label
+        ctx._data[self.dest] = body_parts_distance(label, self.part1, self.part2)
+
+    def summarize(self, ctx):
+        ctx._data[f"{self.dest} (pixel)"] = np.nanmean(ctx._features[self.dest])
+
+
+VectorParts = Tuple[str, str]
+AngleSign = Literal["positive", "negative"]
+
+ANGLE_FEATURES: Dict[str, Tuple[VectorParts, VectorParts, AngleSign]] = {
+    "chest_head_angle": (
+        ("neck", "snout"),
+        ("sternumtail", "sternumhead"),
+        "positive",
+    ),
+    "hip_chest_angle": (
+        ("sternumtail", "sternumhead"),
+        ("tailbase", "hip"),
+        "positive",
+    ),
+    "tail_hip_angle": (
+        ("tailbase", "hip"),
+        ("tailtip", "tailbase"),
+        "negative",
+    ),
+    "hip_tailbase_hlpaw_angle": (
+        ("tailbase", "hip"),
+        ("tailbase", "lhpaw"),
+        "positive",
+    ),
+    "hip_tailbase_hrpaw_angle": (
+        ("tailbase", "rhpaw"),
+        ("tailbase", "hip"),
+        "positive",
+    ),
+    "midline_hlpaw_angle": (
+        ("tailbase", "sternumtail"),
+        ("lankle", "lhpaw"),
+        "positive",
+    ),
+    "midline_hrpaw_angle": (
+        ("rankle", "rhpaw"),
+        ("tailbase", "sternumtail"),
+        "positive",
+    ),
+}
+
+
+class BodyPartAngleDef(Feature, SummaryColumn):
+    vector_parts_1: VectorParts
+    vector_parts_2: VectorParts
+    sign: AngleSign
+
+    def __init__(
+        self,
+        dest: str,
+        vector_parts_1: VectorParts,
+        vector_parts_2: VectorParts,
+        sign: AngleSign,
+    ):
+        self.dest = dest
+        self.vector_parts_1 = vector_parts_1
+        self.vector_parts_2 = vector_parts_2
+        self.sign = sign
+
+    def extract(self, ctx: FeaturesContext):
+        label = ctx.label
+        vector1 = get_vector(label, self.vector_parts_1[0], self.vector_parts_1[1])
+        vector2 = get_vector(label, self.vector_parts_2[0], self.vector_parts_2[1])
+        if self.sign == "positive":
+            ctx._data[self.dest] = get_angle(vector1, vector2)
+        elif self.sign == "negative":
+            ctx._data[self.dest] = -get_angle(vector1, vector2)
+
+    def summarize(self, ctx):
+        ctx._data[f"{self.dest} (degree)"] = np.nanmean(ctx._features[self.dest])
