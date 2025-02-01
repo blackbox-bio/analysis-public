@@ -1,4 +1,4 @@
-from typing import Any, List, Union, Dict, Tuple
+from typing import Any, List, Union, Dict, Tuple, Iterable
 import pandas as pd
 import numpy as np
 from collections import defaultdict
@@ -28,7 +28,7 @@ class SummaryContext:
         return columns
 
     @staticmethod
-    def merge_to_df(contexts: List["SummaryContext"]) -> pd.DataFrame:
+    def merge_to_df(contexts: Iterable["SummaryContext"]) -> pd.DataFrame:
         summary_features = {}
 
         for context in contexts:
