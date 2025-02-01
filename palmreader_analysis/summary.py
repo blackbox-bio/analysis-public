@@ -11,6 +11,7 @@ from utils import both_front_paws_lifted
 class SummaryContext:
     @staticmethod
     def get_all_columns() -> List["SummaryColumn"]:
+        # we have to import these here otherwise we get a circular import. same thing with the FeaturesContext
         from .common import (
             DistanceDeltaDef,
             BodyPartDistanceDef,

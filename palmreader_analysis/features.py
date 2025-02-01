@@ -6,6 +6,7 @@ from utils import *
 class FeaturesContext:
     @staticmethod
     def get_all_features() -> List["Feature"]:
+        # we have to import these here otherwise we get a circular import. same thing with the SummaryContext
         from .common import (
             DistanceDeltaDef,
             BodyPartDistanceDef,
