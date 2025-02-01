@@ -48,6 +48,14 @@ class SummaryContext:
         for paw in Paw:
             columns.append(LegacyRelativePawLuminanceColumn(paw))
 
+        for ratio_order in RatioOrder:
+            columns.append(LegacyHindPawRatioColumn(ratio_order))
+            columns.append(
+                LegacyHindPawRatioColumn(ratio_order, LegacyStandingMaskComputer())
+            )
+
+        columns.append(LegacyFrontToHindRatioColumn())
+
         return columns
 
     @staticmethod
@@ -521,3 +529,46 @@ class LegacyRelativePawLuminanceColumn(SummaryColumn):
         ctx._data[f"legacy: relative_{self.paw.old_name()}_luminance"] = (
             paw_luminance.get_value(self.paw) / paw_luminance.get_sum()
         )
+
+
+class LegacyHindPawRatioColumn(SummaryColumn):
+    ratio_order: RatioOrder
+
+    def __init__(
+        self,
+        ratio_order: RatioOrder,
+        mask: MaskComputer = MaskComputer.NONE,
+    ):
+        self.ratio_order = ratio_order
+        self.mask = mask
+
+    def summarize(self, ctx):
+        mask = self.mask.compute(ctx)
+
+        paw_luminance = LegacyPawLuminanceComputation.compute_paw_luminance_average(
+            ctx, mask
+        )
+
+        left = paw_luminance.get_value(Paw.LEFT_HIND)
+        right = paw_luminance.get_value(Paw.RIGHT_HIND)
+
+        ratio = self.ratio_order.divide(left=left, right=right)
+
+        ctx._data[
+            f"legacy: average{mask.column_infix()}_hind_paw_luminance_ratio ({self.ratio_order.displayname()})"
+        ] = ratio
+
+
+class LegacyFrontToHindRatioColumn(SummaryColumn):
+    def summarize(self, ctx):
+        paw_luminance = LegacyPawLuminanceComputation.compute_paw_luminance_average(ctx)
+
+        left_front = paw_luminance.get_value(Paw.LEFT_FRONT)
+        right_front = paw_luminance.get_value(Paw.RIGHT_FRONT)
+        left_hind = paw_luminance.get_value(Paw.LEFT_HIND)
+        right_hind = paw_luminance.get_value(Paw.RIGHT_HIND)
+
+        front = left_front + right_front
+        hind = left_hind + right_hind
+
+        ctx._data[f"legacy: average_front_to_hind_paw_luminance_ratio"] = front / hind
