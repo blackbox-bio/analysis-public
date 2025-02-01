@@ -215,6 +215,7 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
         ) / (lh_luminescence + rh_luminescence)
 
         # calculate a boolean array for standing (both front paws lifted)
+        # PORTED
         standing = both_front_paws_lifted(
             features[video]["lfpaw_luminance_rework"],
             features[video]["rfpaw_luminance_rework"],
@@ -233,61 +234,76 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
             features[video]["lhpaw_luminescence"][standing]
         )
 
+        # PORTED
         summary_features[video]["average_hind_paw_print_size_ratio (l/r)"] = (
             lh_print / rh_print
         )
+        # PORTED
         summary_features[video]["average_hind_paw_print_size_ratio (r/l)"] = (
             rh_print / lh_print
         )
+        # PORTED
         summary_features[video]["average_front_to_hind_paw_print_size_ratio"] = (
             lf_print + rf_print
         ) / (lh_print + rh_print)
 
+        # PORTED
         summary_features[video]["average_standing_hind_paw_print_size_ratio (l/r)"] = (
             np.nanmean(features[video]["lhpaw_print_size"][standing])
             / np.nanmean(features[video]["rhpaw_print_size"][standing])
         )
+        # PORTED
         summary_features[video]["average_standing_hind_paw_print_size_ratio (r/l)"] = (
             np.nanmean(features[video]["rhpaw_print_size"][standing])
             / np.nanmean(features[video]["lhpaw_print_size"][standing])
         )
 
+        # PORTED
         summary_features[video]["average_hind_paw_luminance_ratio (l/r)"] = (
             lh_luminance / rh_luminance
         )
+        # PORTED
         summary_features[video]["average_hind_paw_luminance_ratio (r/l)"] = (
             rh_luminance / lh_luminance
         )
+        # PORTED
         summary_features[video]["average_front_to_hind_paw_luminance_ratio"] = (
             lf_luminance + rf_luminance
         ) / (lh_luminance + rh_luminance)
 
+        # PORTED
         summary_features[video]["average_standing_hind_paw_luminance_ratio (l/r)"] = (
             np.nanmean(features[video]["lhpaw_luminance_rework"][standing])
             / np.nanmean(features[video]["rhpaw_luminance_rework"][standing])
         )
+        # PORTED
         summary_features[video]["average_standing_hind_paw_luminance_ratio (r/l)"] = (
             np.nanmean(features[video]["rhpaw_luminance_rework"][standing])
             / np.nanmean(features[video]["lhpaw_luminance_rework"][standing])
         )
 
         # 17-20 time spent paw lifted (not touching the ground)
+        # PORTED
         summary_features[video]["hind_left_paw_lifted_time (seconds)"] = (
             np.sum(features[video]["lhpaw_luminance_rework"] < 1e-4)
             / features[video]["fps"]
         )
+        # PORTED
         summary_features[video]["hind_right_paw_lifted_time (seconds)"] = (
             np.sum(features[video]["rhpaw_luminance_rework"] < 1e-4)
             / features[video]["fps"]
         )
+        # PORTED
         summary_features[video]["front_left_paw_lifted_time (seconds)"] = (
             np.sum(features[video]["lfpaw_luminance_rework"] < 1e-4)
             / features[video]["fps"]
         )
+        # PORTED
         summary_features[video]["front_right_paw_lifted_time (seconds)"] = (
             np.sum(features[video]["rfpaw_luminance_rework"] < 1e-4)
             / features[video]["fps"]
         )
+        # PORTED
         summary_features[video]["both_front_paws_lifted (seconds)"] = (
             np.sum(standing) / features[video]["fps"]
         )

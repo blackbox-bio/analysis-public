@@ -33,6 +33,11 @@ class SummaryContext:
                 )
             columns.append(FrontToHindPawRatioColumn(measure))
 
+        for paw in Paw:
+            columns.append(PawLiftedTimeColumn(paw))
+
+        columns.append(BothFrontPawsLiftedColumn())
+
         return columns
 
     @staticmethod
@@ -341,7 +346,6 @@ class StandingMaskComputer(MaskComputer):
         return ctx._cache["standing_mask"]
 
 
-# TODO: see if we can combine the ratio columns somehow
 class HindPawRatioColumn(SummaryColumn):
     ratio_order: RatioOrder
 
@@ -389,4 +393,30 @@ class FrontToHindPawRatioColumn(SummaryColumn):
 
         ctx._data[f"average_front_to_hind_paw_{self.measure.value}_ratio"] = (
             front / hind
+        )
+
+
+class PawLiftedTimeColumn(SummaryColumn):
+    def __init__(self, paw: Paw):
+        self.paw = paw
+
+    def summarize(self, ctx):
+        ctx._data[f"{self.paw.old_name()}_paw_lifted_time (seconds)"] = (
+            np.sum(
+                ctx._features[
+                    f"{self.paw.value}_{LuminanceMeasure.LUMINANCE.feature_name()}"
+                ]
+                < 1e-4
+            )
+            / ctx._features["fps"]
+        )
+
+
+class BothFrontPawsLiftedColumn(SummaryColumn):
+    def summarize(self, ctx):
+        standing = StandingMaskComputer().compute(ctx)
+        standing = standing.mask
+
+        ctx._data[f"both_front_paws_lifted (seconds)"] = (
+            np.sum(standing) / ctx._features["fps"]
         )
