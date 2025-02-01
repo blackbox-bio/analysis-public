@@ -15,6 +15,8 @@ class SummaryContext:
 
         columns = []
 
+        # TODO: determine desired ordering of columns, maybe deduplicate some of these loops
+
         columns.append(TimeInformationColumns())
 
         columns.append(DistanceDeltaDef())
@@ -42,6 +44,9 @@ class SummaryContext:
             columns.append(LegacyPawLuminanceColumn(paw))
 
         columns.append(LegacyAllPawsLuminanceColumn())
+
+        for paw in Paw:
+            columns.append(LegacyRelativePawLuminanceColumn(paw))
 
         return columns
 
@@ -504,3 +509,15 @@ class LegacyAllPawsLuminanceColumn(SummaryColumn):
         paw_luminance = LegacyPawLuminanceComputation.compute_paw_luminance_average(ctx)
 
         ctx._data[f"legacy: average_all_paws_sum_luminance"] = paw_luminance.get_sum()
+
+
+class LegacyRelativePawLuminanceColumn(SummaryColumn):
+    def __init__(self, paw: Paw):
+        self.paw = paw
+
+    def summarize(self, ctx):
+        paw_luminance = LegacyPawLuminanceComputation.compute_paw_luminance_average(ctx)
+
+        ctx._data[f"legacy: relative_{self.paw.old_name()}_luminance"] = (
+            paw_luminance.get_value(self.paw) / paw_luminance.get_sum()
+        )
