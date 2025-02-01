@@ -71,15 +71,18 @@ class SummaryContext:
             part1, part2 = DISTANCE_FEATURES[column]
             columns.append(BodyPartDistanceDef(column, part1, part2))
 
-        # TODO: fix midline paw angles (output name is wrong)
         for column in ANGLE_FEATURES.keys():
-            vector_parts_1, vector_parts_2, sign = ANGLE_FEATURES[column]
+            vector_parts_1, vector_parts_2, sign, dest = ANGLE_FEATURES[column]
             columns.append(
-                BodyPartAngleDef(column, vector_parts_1, vector_parts_2, sign)
+                BodyPartAngleDef(column, vector_parts_1, vector_parts_2, sign, dest)
             )
 
         for paw in Paw:
             columns.append(TrackingLikelihoodColumn(paw))
+
+        # this column must be computed after the tracking likelihood columns
+        # TODO: use a computation class for the likelihood?
+        columns.append(QualityControlFlagColumn())
 
         return columns
 
@@ -628,3 +631,22 @@ class TrackingLikelihoodColumn(SummaryColumn):
         ctx._data[f"average_{self.paw.value}_tracking_likelihood"] = np.nanmean(
             ctx._features[f"{self.paw.value}_tracking_likelihood"]
         )
+
+
+class QualityControlFlagColumn(SummaryColumn):
+    """
+    **This column must be computed after the tracking likelihood columns. This will likely be changed in the future.**
+    """
+
+    def summarize(self, ctx):
+        col_name = "paws_tracking_quality_control_flag"
+
+        ctx._data[col_name] = 0
+
+        if (
+            ctx._data[f"average_{Paw.LEFT_HIND.value}_tracking_likelihood"] < 0.85
+            or ctx._data[f"average_{Paw.RIGHT_HIND.value}_tracking_likelihood"] < 0.85
+            or ctx._data[f"average_{Paw.LEFT_FRONT.value}_tracking_likelihood"] < 0.6
+            or ctx._data[f"average_{Paw.RIGHT_FRONT.value}_tracking_likelihood"] < 0.6
+        ):
+            ctx._data[col_name] = 1

@@ -4,7 +4,7 @@ Most features have a 1:1 relationship with some column in the summary CSV. In th
 Any features which do not have a single column in the summary are defined in the `features.py` file, and likely have one or more summary columns defined in `summary.py`. This separation is not visible to the user. To get all columns for either features or summary, use `FeaturesContext.get_all_features` or `SummaryContext.get_all_columns`.
 """
 
-from typing import List, Literal, Dict, Tuple
+from typing import List, Literal, Dict, Tuple, Union
 import numpy as np
 from .features import FeaturesContext, Feature
 from .summary import SummaryColumn
@@ -58,41 +58,50 @@ class BodyPartDistanceDef(Feature, SummaryColumn):
 VectorParts = Tuple[str, str]
 AngleSign = Literal["positive", "negative"]
 
-ANGLE_FEATURES: Dict[str, Tuple[VectorParts, VectorParts, AngleSign]] = {
+ANGLE_FEATURES: Dict[
+    str, Tuple[VectorParts, VectorParts, AngleSign, Union[str, None]]
+] = {
     "chest_head_angle": (
         ("neck", "snout"),
         ("sternumtail", "sternumhead"),
         "positive",
+        None,
     ),
     "hip_chest_angle": (
         ("sternumtail", "sternumhead"),
         ("tailbase", "hip"),
         "positive",
+        None,
     ),
     "tail_hip_angle": (
         ("tailbase", "hip"),
         ("tailtip", "tailbase"),
         "negative",
+        None,
     ),
     "hip_tailbase_hlpaw_angle": (
         ("tailbase", "hip"),
         ("tailbase", "lhpaw"),
         "positive",
+        None,
     ),
     "hip_tailbase_hrpaw_angle": (
         ("tailbase", "rhpaw"),
         ("tailbase", "hip"),
         "positive",
+        None,
     ),
     "midline_hlpaw_angle": (
         ("tailbase", "sternumtail"),
         ("lankle", "lhpaw"),
         "positive",
+        "hind_left_paw_angle",
     ),
     "midline_hrpaw_angle": (
         ("rankle", "rhpaw"),
         ("tailbase", "sternumtail"),
         "positive",
+        "hind_right_paw_angle",
     ),
 }
 
@@ -101,6 +110,7 @@ class BodyPartAngleDef(Feature, SummaryColumn):
     vector_parts_1: VectorParts
     vector_parts_2: VectorParts
     sign: AngleSign
+    summary_dest: Union[str, None]
 
     def __init__(
         self,
@@ -108,11 +118,13 @@ class BodyPartAngleDef(Feature, SummaryColumn):
         vector_parts_1: VectorParts,
         vector_parts_2: VectorParts,
         sign: AngleSign,
+        summary_dest: Union[str, None] = None,
     ):
         self.dest = dest
         self.vector_parts_1 = vector_parts_1
         self.vector_parts_2 = vector_parts_2
         self.sign = sign
+        self.summary_dest = summary_dest
 
     def extract(self, ctx: FeaturesContext):
         label = ctx.label
@@ -124,4 +136,6 @@ class BodyPartAngleDef(Feature, SummaryColumn):
             ctx._data[self.dest] = -get_angle(vector1, vector2)
 
     def summarize(self, ctx):
-        ctx._data[f"{self.dest} (degree)"] = np.nanmean(ctx._features[self.dest])
+        dest = self.summary_dest if self.summary_dest is not None else self.dest
+
+        ctx._data[f"{dest} (degree)"] = np.nanmean(ctx._features[self.dest])

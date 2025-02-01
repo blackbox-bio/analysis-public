@@ -539,9 +539,11 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
         )
 
         # new paw angles with respect to midline for both hind paws
+        # PORTED
         summary_features[video]["hind_left_paw_angle (degree)"] = np.nanmean(
             features[video]["midline_hlpaw_angle"]
         )
+        # PORTED
         summary_features[video]["hind_right_paw_angle (degree)"] = np.nanmean(
             features[video]["midline_hrpaw_angle"]
         )
@@ -593,6 +595,7 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
         # 0: good, 1: bad
         # hind paws tracking likelihood need to be higher than 0.85
         # front paws tracking likelihood need to be higher than 0.6
+        # PORTED
         summary_features[video]["paws_tracking_quality_control_flag"] = 0
         if (
             summary_features[video]["average_lhpaw_tracking_likelihood"] < 0.85
