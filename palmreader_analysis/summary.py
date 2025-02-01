@@ -38,6 +38,11 @@ class SummaryContext:
 
         columns.append(BothFrontPawsLiftedColumn())
 
+        for paw in Paw:
+            columns.append(LegacyPawLuminanceColumn(paw))
+
+        columns.append(LegacyAllPawsLuminanceColumn())
+
         return columns
 
     @staticmethod
@@ -420,3 +425,82 @@ class BothFrontPawsLiftedColumn(SummaryColumn):
         ctx._data[f"both_front_paws_lifted (seconds)"] = (
             np.sum(standing) / ctx._features["fps"]
         )
+
+
+class LegacyPawLuminanceDataHolder:
+    _data: Dict[Paw, float]
+    _sum: float
+
+    def __init__(self):
+        self._data = defaultdict(float)
+
+    def set_value(self, paw: Paw, value: float):
+        self._data[paw] = value
+
+    def get_value(self, paw: Paw) -> float:
+        return self._data[paw]
+
+    def set_sum(self, value: float):
+        self._sum = value
+
+    def get_sum(self) -> float:
+        return self._sum
+
+
+class LegacyStandingMaskComputer(MaskComputer):
+    def compute(self, ctx: SummaryContext) -> Mask:
+        if "legacy_standing_mask" not in ctx._cache:
+            standing_mask = both_front_paws_lifted(
+                ctx._features[f"{Paw.LEFT_FRONT.old_name()}_luminance"],
+                ctx._features[f"{Paw.RIGHT_FRONT.old_name()}_luminance"],
+            )
+            ctx._cache["legacy_standing_mask"] = Mask("standing", standing_mask)
+
+        return ctx._cache["legacy_standing_mask"]
+
+
+class LegacyPawLuminanceComputation:
+    @staticmethod
+    def compute_paw_luminance_average(
+        ctx: SummaryContext, mask: Mask = Mask.NONE
+    ) -> LegacyPawLuminanceDataHolder:
+        key = mask.cache_key("legacy_paw_luminance")
+
+        if key not in ctx._cache:
+            paw_luminance = LegacyPawLuminanceDataHolder()
+
+            luminance_sum = 0
+
+            for paw in Paw:
+                value = np.nanmean(
+                    mask.apply(ctx._features[f"{paw.old_name()}_luminance"])
+                )
+
+                paw_luminance.set_value(paw, value)
+
+                luminance_sum += value
+
+            paw_luminance.set_sum(luminance_sum)
+
+            ctx._cache[key] = paw_luminance
+
+        return ctx._cache[key]
+
+
+class LegacyPawLuminanceColumn(SummaryColumn):
+    def __init__(self, paw: Paw):
+        self.paw = paw
+
+    def summarize(self, ctx):
+        paw_luminance = LegacyPawLuminanceComputation.compute_paw_luminance_average(ctx)
+
+        ctx._data[f"legacy: average_{self.paw.old_name()}_luminance"] = (
+            paw_luminance.get_value(self.paw)
+        )
+
+
+class LegacyAllPawsLuminanceColumn(SummaryColumn):
+    def summarize(self, ctx):
+        paw_luminance = LegacyPawLuminanceComputation.compute_paw_luminance_average(ctx)
+
+        ctx._data[f"legacy: average_all_paws_sum_luminance"] = paw_luminance.get_sum()
