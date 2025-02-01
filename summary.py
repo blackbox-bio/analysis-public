@@ -2,13 +2,18 @@ from typing import Dict, Any, List, Tuple
 
 from utils import *
 from cols_name_dicts import *
+from palmreader_analysis.summary import SummaryContext
 
 
 def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
     features = defaultdict(dict)
 
+    # temp: summary contexts
+    summary_contexts = []
+
     # read features from h5 files
     for file in features_files:
+        summary_contexts.append(SummaryContext(file))
         with h5py.File(file, "r") as hdf:
             for key in hdf.keys():
                 for subkey in hdf[key].keys():
@@ -525,6 +530,14 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
         summary_features[video] = {summary_col_name_dict[k]: v for k, v in summary_features[video].items()}
 
     df = pd.DataFrame.from_dict(summary_features, orient="index")
+
+    for context in summary_contexts:
+        columns = SummaryContext.get_all_columns()
+
+        for column in columns:
+            column.summarize(context)
+    
+    SummaryContext.compare_summary_columns(summary_contexts, df)
 
     # # Save DataFrame to CSV with specified precision
     # df.to_csv(summary_dest, float_format="%.2f")

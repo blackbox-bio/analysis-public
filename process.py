@@ -1,8 +1,5 @@
 from utils import *
-from featureClass import FeaturesContext
-# from paw_luminance_rework import *
-
-# from paw_luminance_rework import *
+from palmreader_analysis.features import FeaturesContext
 
 dlc_postfix = "DLC_resnet50_arcteryx500Nov4shuffle1_350000"
 
@@ -20,13 +17,6 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
     # create a dictionary to store the extracted features
     features = {}
 
-    ctx = FeaturesContext(name, tracking_path, ftir_path)
-
-    for feature in FeaturesContext.get_all_features():
-        feature.compute(ctx=ctx)
-
-    ctx.to_hdf5(dest_path=f'C-TestData/hdf5-tests/n-{dest_path}')
-
     # read DLC tracking
     df = pd.read_hdf(tracking_path)
     model_id = df.columns[0][0]
@@ -40,14 +30,14 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
 
     ftir_video = cv2.VideoCapture(ftir_path)
 
-    (paw_luminescence,
-     paw_print_size,
-     paw_luminance,
-     background_luminance,
-     frame_count,
-     legacy_paw_luminance) = cal_paw_luminance_rework(
-        label, ftir_video, size=22
-    )
+    (
+        paw_luminescence,
+        paw_print_size,
+        paw_luminance,
+        background_luminance,
+        frame_count,
+        legacy_paw_luminance,
+    ) = cal_paw_luminance_rework(label, ftir_video, size=22)
 
     paws = ["lhpaw", "rhpaw", "lfpaw", "rfpaw"]
     for paw in paws:
@@ -65,10 +55,12 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
     #     frame_count,
     # ) = cal_paw_luminance(label, ftir_video, size=22)
 
-    (hind_left,
-     hind_right,
-     front_left,
-     front_right,) = legacy_paw_luminance
+    (
+        hind_left,
+        hind_right,
+        front_left,
+        front_right,
+    ) = legacy_paw_luminance
     #
     fps = int(ftir_video.get(cv2.CAP_PROP_FPS))
 
@@ -202,7 +194,14 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
 
     ftir_video.release()
 
-    ctx.FeatureClassTestNew(features)
+    # temp: OOP computation + comparison to legacy implementation; will replace
+    # legacy
+    ctx = FeaturesContext(name, tracking_path, ftir_path)
+
+    for feature in FeaturesContext.get_all_features():
+        feature.extract(ctx=ctx)
+
+    ctx.compare_feature_tables(features)
     ctx.to_hdf5(f"{dest_path}_test")
 
     # -------------------------------------------------------------
