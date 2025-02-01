@@ -238,7 +238,6 @@ class SingleFeaturesDef(Feature):
         ctx._data["frame_count"] = np.array(frame_count)
 
 
-# TODO: port the following features to the new system
 class AnimalDetectionDef(Feature):
     def __init__(self):
         pass
