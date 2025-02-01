@@ -1,5 +1,4 @@
-from pkg_resources import non_empty_lines
-from typing import Any, Literal, List
+from typing import Any, List
 from .variants import Paw, LuminanceMeasure
 from utils import *
 
