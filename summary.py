@@ -102,7 +102,7 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
     for video in features.keys():
 
         summary_features[video] = {}
-        # 1. recording time
+        # 1. recording time (PORTED)
         summary_features[video]["total recording_time (min)"] = (
             features[video]["frame_count"] / features[video]["fps"] / 60
         )
@@ -114,7 +114,7 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
             features[video]["end_time"] - features[video]["start_time"]
         )
 
-        # 2. distance traveled
+        # 2. distance traveled (PORTED)
         summary_features[video]["distance_traveled (pixel)"] = np.nansum(
             features[video]["distance_delta"]
         )
@@ -149,26 +149,32 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
         rf_luminance = np.nanmean(features[video]["rfpaw_luminance_rework"])
 
         quant = "print_size"
+        # PORTED
         summary_features[video]["average_overall_print_size (pixel area)"] = (
             lf_print + rf_print + lh_print + rh_print
         )
         for paw in paws:
+            # PORTED
             summary_features[video][
                 f"average_{paws_dict[paw]}_{quant} (pixel area)"
             ] = np.nanmean(features[video][f"{paw}_{quant}"])
+            # PORTED
             summary_features[video][f"relative_{paws_dict[paw]}_{quant} (ratio)"] = (
                 np.nanmean(features[video][f"{paw}_{quant}"])
                 / summary_features[video]["average_overall_print_size (pixel area)"]
             )
 
         quant = "luminescence"
+        # PORTED
         summary_features[video]["average_overall_luminescence (pixel intensity)"] = (
             lf_luminescence + rf_luminescence + lh_luminescence + rh_luminescence
         )
         for paw in paws:
+            # PORTED
             summary_features[video][
                 f"average_{paws_dict[paw]}_{quant} (pixel intensity)"
             ] = np.nanmean(features[video][f"{paw}_{quant}"])
+            # PORTED
             summary_features[video][f"relative_{paws_dict[paw]}_{quant} (ratio)"] = (
                 np.nanmean(features[video][f"{paw}_{quant}"])
                 / summary_features[video][
@@ -177,13 +183,16 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
             )
 
         quant = "luminance_rework"
+        # PORTED
         summary_features[video]["average_overall_luminance (pixel intensity/area)"] = (
             lf_luminance + rf_luminance + lh_luminance + rh_luminance
         )
         for paw in paws:
+            # PORTED
             summary_features[video][
                 f"average_{paws_dict[paw]}_luminance (pixel intensity/area)"
             ] = np.nanmean(features[video][f"{paw}_{quant}"])
+            # PORTED
             summary_features[video][f"relative_{paws_dict[paw]}_luminance (ratio)"] = (
                 np.nanmean(features[video][f"{paw}_{quant}"])
                 / summary_features[video][
@@ -192,12 +201,15 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
             )
 
         # 8-12. paw luminescence/print/luminance ratios
+        # PORTED
         summary_features[video]["average_hind_paw_luminescence_ratio (l/r)"] = (
             lh_luminescence / rh_luminescence
         )
+        # PORTED
         summary_features[video]["average_hind_paw_luminescence_ratio (r/l)"] = (
             rh_luminescence / lh_luminescence
         )
+        # PORTED
         summary_features[video]["average_front_to_hind_paw_luminescence_ratio"] = (
             lf_luminescence + rf_luminescence
         ) / (lh_luminescence + rh_luminescence)
@@ -208,16 +220,17 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
             features[video]["rfpaw_luminance_rework"],
         )
 
+        # PORTED
         summary_features[video][
             "average_standing_hind_paw_luminescence_ratio (l/r)"
-        ] = np.nanmean(
-            features[video]["lhpaw_luminance_rework"][standing]
-        ) / np.nanmean(
-            features[video]["rhpaw_luminance_rework"][standing]
+        ] = np.nanmean(features[video]["lhpaw_luminescence"][standing]) / np.nanmean(
+            features[video]["rhpaw_luminescence"][standing]
         )
-        summary_features[video]["average_standing_hind_paw_luminance_ratio (r/l)"] = (
-            np.nanmean(features[video]["rhpaw_luminance_rework"][standing])
-            / np.nanmean(features[video]["lhpaw_luminance_rework"][standing])
+        # PORTED
+        summary_features[video][
+            "average_standing_hind_paw_luminescence_ratio (r/l)"
+        ] = np.nanmean(features[video]["rhpaw_luminescence"][standing]) / np.nanmean(
+            features[video]["lhpaw_luminescence"][standing]
         )
 
         summary_features[video]["average_hind_paw_print_size_ratio (l/r)"] = (
@@ -528,19 +541,17 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
         ):
             summary_features[video]["paws_tracking_quality_control_flag"] = 1
 
-        # change column names for the summary to be more readable
-        summary_features[video] = {
-            summary_col_name_dict[k]: v for k, v in summary_features[video].items()
-        }
-
         context = summary_contexts[video]
 
         for column in SummaryContext.get_all_columns():
             column.summarize(context)
 
-        context.finish()
-
         context.compare_summary_columns(summary_features[video])
+
+        # change column names for the summary to be more readable
+        summary_features[video] = {
+            summary_col_name_dict[k]: v for k, v in summary_features[video].items()
+        }
 
     df = pd.DataFrame.from_dict(summary_features, orient="index")
 

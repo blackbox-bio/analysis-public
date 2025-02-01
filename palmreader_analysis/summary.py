@@ -1,10 +1,11 @@
-from typing import Any, List, Union, Dict, Tuple, Iterable
+from typing import Any, List, Union, Dict, Tuple, Iterable, Literal
 import pandas as pd
 import numpy as np
 from collections import defaultdict
 import h5py
-from .variants import Paw, LuminanceMeasure
+from .variants import Paw, LuminanceMeasure, RatioOrder
 from cols_name_dicts import summary_col_name_dict
+from utils import both_front_paws_lifted
 
 
 class SummaryContext:
@@ -24,6 +25,13 @@ class SummaryContext:
             for paw in Paw:
                 columns.append(AveragePawLuminanceColumn(paw, measure))
                 columns.append(RelativePawLuminanceColumn(paw, measure))
+
+            for ratio_order in RatioOrder:
+                columns.append(HindPawRatioColumn(measure, ratio_order))
+                columns.append(
+                    HindPawRatioColumn(measure, ratio_order, StandingMaskComputer())
+                )
+            columns.append(FrontToHindPawRatioColumn(measure))
 
         return columns
 
@@ -192,10 +200,10 @@ class PawLuminanceMeanDataHolder:
     def __init__(self):
         self._data = defaultdict(dict)
 
-    def set_value(self, paw: Paw, measure: LuminanceMeasure, value: np.ndarray):
+    def set_value(self, paw: Paw, measure: LuminanceMeasure, value: float):
         self._data[paw][measure] = value
 
-    def get_value(self, paw: Paw, measure: LuminanceMeasure) -> np.ndarray:
+    def get_value(self, paw: Paw, measure: LuminanceMeasure) -> float:
         return self._data[paw][measure]
 
     def get_sum(self, measure: LuminanceMeasure) -> float:
@@ -207,12 +215,47 @@ class PawLuminanceMeanDataHolder:
         return measure_sum
 
 
+class Mask:
+    NONE: "Mask"
+
+    def __init__(self, name: str, mask: np.ndarray):
+        self.name = name
+        self.mask = mask
+
+    def column_infix(self) -> str:
+        if self.name == "":
+            return ""
+        else:
+            return f"_{self.name}"
+
+    def cache_key(self, original: str) -> str:
+        if self.name == "":
+            return original
+        else:
+            return f"{original}_{self.name}"
+
+    def apply(self, original: Any) -> Any:
+        """
+        Original must be mask-able using `[]` indexing.
+        """
+        # if we don't have a name, we must be the NONE mask
+        if self.name == "":
+            return original
+        else:
+            return original[self.mask]
+
+
+Mask.NONE = Mask("", np.array([]))
+
+
 class PawLuminanceMeanComputation:
     @staticmethod
     def compute_paw_luminance_average(
-        ctx: SummaryContext,
+        ctx: SummaryContext, mask: Mask = Mask.NONE
     ) -> PawLuminanceMeanDataHolder:
-        if "paw_luminance" not in ctx._cache:
+        key = mask.cache_key("paw_luminance")
+
+        if key not in ctx._cache:
             paw_luminance = PawLuminanceMeanDataHolder()
 
             for paw in Paw:
@@ -221,13 +264,15 @@ class PawLuminanceMeanComputation:
                         paw,
                         measure,
                         np.nanmean(
-                            ctx._features[f"{paw.value}_{measure.feature_name()}"]
+                            mask.apply(
+                                ctx._features[f"{paw.value}_{measure.feature_name()}"]
+                            )
                         ),
                     )
 
-            ctx._cache["paw_luminance"] = paw_luminance
+            ctx._cache[key] = paw_luminance
 
-        return ctx._cache["paw_luminance"]
+        return ctx._cache[key]
 
 
 class AverageOverallLuminanceColumn(SummaryColumn):
@@ -266,4 +311,82 @@ class RelativePawLuminanceColumn(SummaryColumn):
         ctx._data[f"relative_{self.paw.old_name()}_{self.measure.value} (ratio)"] = (
             paw_luminance.get_value(self.paw, self.measure)
             / paw_luminance.get_sum(self.measure)
+        )
+
+
+class MaskComputer:
+    NONE: "MaskComputer"
+
+    def compute(self, ctx: SummaryContext) -> Mask:
+        raise NotImplementedError
+
+
+class NoneMaskComputer(MaskComputer):
+    def compute(self, ctx: SummaryContext) -> Mask:
+        return Mask.NONE
+
+
+MaskComputer.NONE = NoneMaskComputer()
+
+
+class StandingMaskComputer(MaskComputer):
+    def compute(self, ctx: SummaryContext) -> Mask:
+        if "standing_mask" not in ctx._cache:
+            standing_mask = both_front_paws_lifted(
+                ctx._features[f"{Paw.LEFT_FRONT.value}_luminance_rework"],
+                ctx._features[f"{Paw.RIGHT_FRONT.value}_luminance_rework"],
+            )
+            ctx._cache["standing_mask"] = Mask("standing", standing_mask)
+
+        return ctx._cache["standing_mask"]
+
+
+# TODO: see if we can combine the ratio columns somehow
+class HindPawRatioColumn(SummaryColumn):
+    ratio_order: RatioOrder
+
+    def __init__(
+        self,
+        measure: LuminanceMeasure,
+        ratio_order: RatioOrder,
+        mask: MaskComputer = MaskComputer.NONE,
+    ):
+        self.measure = measure
+        self.ratio_order = ratio_order
+        self.mask = mask
+
+    def summarize(self, ctx):
+        mask = self.mask.compute(ctx)
+
+        paw_luminance = PawLuminanceMeanComputation.compute_paw_luminance_average(
+            ctx, mask
+        )
+
+        left = paw_luminance.get_value(Paw.LEFT_HIND, self.measure)
+        right = paw_luminance.get_value(Paw.RIGHT_HIND, self.measure)
+
+        ratio = self.ratio_order.divide(left=left, right=right)
+
+        ctx._data[
+            f"average{mask.column_infix()}_hind_paw_{self.measure.value}_ratio ({self.ratio_order.displayname()})"
+        ] = ratio
+
+
+class FrontToHindPawRatioColumn(SummaryColumn):
+    def __init__(self, measure: LuminanceMeasure):
+        self.measure = measure
+
+    def summarize(self, ctx):
+        paw_luminance = PawLuminanceMeanComputation.compute_paw_luminance_average(ctx)
+
+        left_front = paw_luminance.get_value(Paw.LEFT_FRONT, self.measure)
+        right_front = paw_luminance.get_value(Paw.RIGHT_FRONT, self.measure)
+        left_hind = paw_luminance.get_value(Paw.LEFT_HIND, self.measure)
+        right_hind = paw_luminance.get_value(Paw.RIGHT_HIND, self.measure)
+
+        front = left_front + right_front
+        hind = left_hind + right_hind
+
+        ctx._data[f"average_front_to_hind_paw_{self.measure.value}_ratio"] = (
+            front / hind
         )

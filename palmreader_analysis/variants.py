@@ -40,3 +40,24 @@ class LuminanceMeasure(Enum):
             return "luminance_rework"
         else:
             return self.value
+
+
+class RatioOrder(Enum):
+    RIGHT_OVER_LEFT = "right_over_left"
+    LEFT_OVER_RIGHT = "left_over_right"
+
+    def displayname(self) -> str:
+        if self == RatioOrder.RIGHT_OVER_LEFT:
+            return "r/l"
+        elif self == RatioOrder.LEFT_OVER_RIGHT:
+            return "l/r"
+        else:
+            raise ValueError(f"Invalid direction: {self}")
+
+    def divide(self, left, right):
+        if self == RatioOrder.RIGHT_OVER_LEFT:
+            return right / left
+        elif self == RatioOrder.LEFT_OVER_RIGHT:
+            return left / right
+        else:
+            raise ValueError(f"Invalid direction: {self}")
