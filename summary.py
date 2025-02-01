@@ -311,21 +311,27 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
         # ------------legacy --------
 
         # 4-7. paw luminance
+        # PORTED
         summary_features[video]["legacy: average_hind_left_luminance"] = np.nanmean(
             features[video]["hind_left_luminance"]
         )
+        # PORTED
         summary_features[video]["legacy: average_hind_right_luminance"] = np.nanmean(
             features[video]["hind_right_luminance"]
         )
+        # PORTED
         summary_features[video]["legacy: average_hind_right_luminance"] = np.nanmean(
             features[video]["hind_right_luminance"]
         )
+        # PORTED
         summary_features[video]["legacy: average_front_left_luminance"] = np.nanmean(
             features[video]["front_left_luminance"]
         )
+        # PORTED
         summary_features[video]["legacy: average_front_right_luminance"] = np.nanmean(
             features[video]["front_right_luminance"]
         )
+        # PORTED
         summary_features[video]["legacy: average_all_paws_sum_luminance"] = (
             np.nanmean(features[video]["hind_left_luminance"])
             + np.nanmean(features[video]["hind_right_luminance"])
@@ -333,27 +339,33 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
             + np.nanmean(features[video]["front_right_luminance"])
         )
         # paw luminance normalized by sum of paw luminance
+        # PORTED
         summary_features[video]["legacy: relative_hind_left_luminance"] = (
             summary_features[video]["legacy: average_hind_left_luminance"]
             / summary_features[video]["legacy: average_all_paws_sum_luminance"]
         )
+        # PORTED
         summary_features[video]["legacy: relative_hind_right_luminance"] = (
             summary_features[video]["legacy: average_hind_right_luminance"]
             / summary_features[video]["legacy: average_all_paws_sum_luminance"]
         )
+        # PORTED
         summary_features[video]["legacy: relative_front_left_luminance"] = (
             summary_features[video]["legacy: average_front_left_luminance"]
             / summary_features[video]["legacy: average_all_paws_sum_luminance"]
         )
+        # PORTED
         summary_features[video]["legacy: relative_front_right_luminance"] = (
             summary_features[video]["legacy: average_front_right_luminance"]
             / summary_features[video]["legacy: average_all_paws_sum_luminance"]
         )
         # 8-12. paw luminance ratios
+        # PORTED
         summary_features[video]["legacy: average_hind_paw_luminance_ratio (l/r)"] = (
             summary_features[video]["legacy: average_hind_left_luminance"]
             / summary_features[video]["legacy: average_hind_right_luminance"]
         )
+        # PORTED
         summary_features[video]["legacy: average_hind_paw_luminance_ratio (r/l)"] = (
             summary_features[video]["legacy: average_hind_right_luminance"]
             / summary_features[video]["legacy: average_hind_left_luminance"]
@@ -366,11 +378,13 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
             + summary_features[video]["legacy: average_hind_right_luminance"]
         )
 
+        # PORTED
         standing_ratio_legacy = both_front_paws_lifted(
             features[video]["front_left_luminance"],
             features[video]["front_right_luminance"],
         )
 
+        # PORTED
         summary_features[video][
             "legacy: average_standing_hind_paw_luminance_ratio (l/r)"
         ] = np.nanmean(
@@ -378,6 +392,7 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
         ) / np.nanmean(
             features[video]["hind_right_luminance"][standing_ratio_legacy]
         )
+        # PORTED
         summary_features[video][
             "legacy: average_standing_hind_paw_luminance_ratio (r/l)"
         ] = np.nanmean(
