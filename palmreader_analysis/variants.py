@@ -160,6 +160,7 @@ def all_paws_tags() -> List[TagType]:
 
 
 class ColumnMetadata(TypedDict):
+    column: str
     category: ColumnCategory
     tags: List[TagType]
     displayname: str
@@ -168,8 +169,9 @@ class ColumnMetadata(TypedDict):
     legacy: bool
 
     @staticmethod
-    def make_hidden(category: ColumnCategory) -> "ColumnMetadata":
+    def make_hidden(column: str, category: ColumnCategory) -> "ColumnMetadata":
         return ColumnMetadata(
+            column=column,
             category=category,
             tags=[],
             displayname="",
@@ -180,6 +182,7 @@ class ColumnMetadata(TypedDict):
 
     @staticmethod
     def make(
+        column: str,
         category: ColumnCategory,
         tags: List[TagType],
         displayname: str,
@@ -187,10 +190,11 @@ class ColumnMetadata(TypedDict):
         legacy: bool = False,
     ) -> "ColumnMetadata":
         return ColumnMetadata(
+            column=column,
             category=category,
             tags=tags,
             displayname=displayname,
             description=description,
             hidden=False,
-            legacy=False,
+            legacy=legacy,
         )

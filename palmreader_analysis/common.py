@@ -14,21 +14,26 @@ from .variants import ColumnMetadata, ColumnCategory
 
 
 class DistanceDeltaDef(Feature, SummaryColumn):
+    COLUMN_NAME = "distance_traveled (pixel)"
+
     def extract(self, ctx: FeaturesContext):
         ctx._data["distance_delta"] = cal_distance_(ctx.label).reshape(-1)
 
     def summarize(self, ctx):
-        ctx._data["distance_traveled (pixel)"] = np.nansum(
+        ctx._data[DistanceDeltaDef.COLUMN_NAME] = np.nansum(
             ctx._features["distance_delta"]
         )
 
     def metadata(self):
-        return ColumnMetadata.make(
-            category=ColumnCategory.TEMPORAL,
-            tags=[],
-            displayname="Distance traveled",
-            description="Measures the distance traveled by the animal",
-        )
+        return [
+            ColumnMetadata.make(
+                column=DistanceDeltaDef.COLUMN_NAME,
+                category=ColumnCategory.TEMPORAL,
+                tags=[],
+                displayname="Distance traveled",
+                description="Measures the distance traveled by the animal",
+            )
+        ]
 
 
 DISTANCE_FEATURES = {
@@ -69,16 +74,22 @@ class BodyPartDistanceDef(Feature, SummaryColumn):
         label = ctx.label
         ctx._data[self.dest] = body_parts_distance(label, self.part1, self.part2)
 
+    def _get_column_name(self) -> str:
+        return f"{self.dest} (pixel)"
+
     def summarize(self, ctx):
-        ctx._data[f"{self.dest} (pixel)"] = np.nanmean(ctx._features[self.dest])
+        ctx._data[self._get_column_name()] = np.nanmean(ctx._features[self.dest])
 
     def metadata(self):
-        return ColumnMetadata.make(
-            category=ColumnCategory.POSTURAL,
-            tags=[],
-            displayname=BodyPartDistanceDef._dest_to_displayname(self.dest),
-            description=f"Measures the average distance between {self.part1} and {self.part2}",
-        )
+        return [
+            ColumnMetadata.make(
+                column=self._get_column_name(),
+                category=ColumnCategory.POSTURAL,
+                tags=[],
+                displayname=BodyPartDistanceDef._dest_to_displayname(self.dest),
+                description=f"Measures the average distance between {self.part1} and {self.part2}",
+            )
+        ]
 
 
 VectorParts = Tuple[str, str]
@@ -133,13 +144,6 @@ ANGLE_FEATURES: Dict[
 
 
 class BodyPartAngleDef(Feature, SummaryColumn):
-    @staticmethod
-    def _dest_to_displayname(dest: str) -> str:
-        # chop off the "_angle" part, every dest has it
-        slice_end = len("_angle")
-
-        return dest[:-slice_end].replace("_", " ").capitalize()
-
     dest: str
     vector_parts_1: VectorParts
     vector_parts_2: VectorParts
@@ -169,17 +173,29 @@ class BodyPartAngleDef(Feature, SummaryColumn):
         elif self.sign == "negative":
             ctx._data[self.dest] = -get_angle(vector1, vector2)
 
-    def summarize(self, ctx):
+    def _get_column_name(self) -> str:
         dest = self.summary_dest if self.summary_dest is not None else self.dest
 
-        ctx._data[f"{dest} (degree)"] = np.nanmean(ctx._features[self.dest])
+        return f"{dest} (degree)"
+
+    def _get_displayname(self) -> str:
+        dest = self.summary_dest if self.summary_dest is not None else self.dest
+
+        # chop off the "_angle" part, every dest has it
+        slice_end = len("_angle")
+
+        return dest[:-slice_end].replace("_", " ").capitalize()
+
+    def summarize(self, ctx):
+        ctx._data[self._get_column_name()] = np.nanmean(ctx._features[self.dest])
 
     def metadata(self):
-        dest = self.summary_dest if self.summary_dest is not None else self.dest
-
-        return ColumnMetadata.make(
-            category=ColumnCategory.POSTURAL,
-            tags=[],
-            displayname=BodyPartAngleDef._dest_to_displayname(dest),
-            description=f"Measures the angle between {self.vector_parts_1} and {self.vector_parts_2}",
-        )
+        return [
+            ColumnMetadata.make(
+                column=self._get_column_name(),
+                category=ColumnCategory.POSTURAL,
+                tags=[],
+                displayname=self._get_displayname(),
+                description=f"Measures the angle between {self.vector_parts_1} and {self.vector_parts_2}",
+            )
+        ]

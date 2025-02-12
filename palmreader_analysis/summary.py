@@ -229,7 +229,7 @@ class SummaryColumn:
     def summarize(self, ctx: SummaryContext):
         raise NotImplementedError
 
-    def metadata(self) -> ColumnMetadata:
+    def metadata(self) -> List[ColumnMetadata]:
         raise NotImplementedError
 
 
@@ -238,17 +238,31 @@ class TimeInformationColumns(SummaryColumn):
     This is a special column definition that computes multiple columns. It is the only column that does this. It does this because it provides binning-related information that is not strictly scientific and will be produced in every summary CSV.
     """
 
+    TOTAL_RECORDING_TIME = "total recording_time (min)"
+    BIN_START_END = "PV: bin start-end (min)"
+    BIN_DURATION = "bin duration (min)"
+
     def summarize(self, ctx):
-        ctx._data["total recording_time (min)"] = (
+        ctx._data[TimeInformationColumns.TOTAL_RECORDING_TIME] = (
             ctx._features["frame_count"] / ctx._features["fps"] / 60
         )
-        ctx._data["PV: bin start-end (min)"] = (
+        ctx._data[TimeInformationColumns.BIN_START_END] = (
             f"{ctx._start_time:.2f} - {ctx._end_time:.2f}"
         )
-        ctx._data["bin duration (min)"] = ctx._end_time - ctx._start_time
+        ctx._data[TimeInformationColumns.BIN_DURATION] = ctx._end_time - ctx._start_time
 
     def metadata(self):
-        return ColumnMetadata.make_hidden(ColumnCategory.TEMPORAL)
+        return [
+            ColumnMetadata.make_hidden(
+                TimeInformationColumns.TOTAL_RECORDING_TIME, ColumnCategory.TEMPORAL
+            ),
+            ColumnMetadata.make_hidden(
+                TimeInformationColumns.BIN_START_END, ColumnCategory.TEMPORAL
+            ),
+            ColumnMetadata.make_hidden(
+                TimeInformationColumns.BIN_DURATION, ColumnCategory.TEMPORAL
+            ),
+        ]
 
 
 class PawLuminanceMeanDataHolder:
@@ -323,20 +337,24 @@ class AverageOverallLuminanceColumn(SummaryColumn):
     def __init__(self, measure: LuminanceMeasure):
         self.measure = measure
 
+    def _get_column_name(self) -> str:
+        return f"average_overall_{self.measure.value} ({self.measure.units()})"
+
     def summarize(self, ctx):
         paw_luminance = PawLuminanceMeanComputation.compute_paw_luminance_average(ctx)
 
-        ctx._data[f"average_overall_{self.measure.value} ({self.measure.units()})"] = (
-            paw_luminance.get_sum(self.measure)
-        )
+        ctx._data[self._get_column_name()] = paw_luminance.get_sum(self.measure)
 
     def metadata(self):
-        return ColumnMetadata.make(
-            category=ColumnCategory.LUMINANCE_BASED,
-            tags=all_paws_tags(),
-            displayname=f"Average Overall {self.measure.displayname()}",
-            description=f"The sum of the average {self.measure.displayname()} of all paws",
-        )
+        return [
+            ColumnMetadata.make(
+                column=self._get_column_name(),
+                category=ColumnCategory.LUMINANCE_BASED,
+                tags=all_paws_tags(),
+                displayname=f"Average Overall {self.measure.displayname()}",
+                description=f"The sum of the average {self.measure.displayname()} of all paws",
+            )
+        ]
 
 
 class AveragePawLuminanceColumn(SummaryColumn):
@@ -344,20 +362,26 @@ class AveragePawLuminanceColumn(SummaryColumn):
         self.paw = paw
         self.measure = measure
 
+    def _get_column_name(self) -> str:
+        return f"average_{self.paw.old_name()}_{self.measure.value} ({self.measure.units()})"
+
     def summarize(self, ctx):
         paw_luminance = PawLuminanceMeanComputation.compute_paw_luminance_average(ctx)
 
-        ctx._data[
-            f"average_{self.paw.old_name()}_{self.measure.value} ({self.measure.units()})"
-        ] = paw_luminance.get_value(self.paw, self.measure)
+        ctx._data[self._get_column_name()] = paw_luminance.get_value(
+            self.paw, self.measure
+        )
 
     def metadata(self):
-        return ColumnMetadata.make(
-            category=ColumnCategory.LUMINANCE_BASED,
-            tags=[self.paw.as_tag()],
-            displayname=f"Average {self.paw.displayname()} {self.measure.displayname()}",
-            description=f"The average {self.measure.displayname()} of the {self.paw.displayname()}",
-        )
+        return [
+            ColumnMetadata.make(
+                column=self._get_column_name(),
+                category=ColumnCategory.LUMINANCE_BASED,
+                tags=[self.paw.as_tag()],
+                displayname=f"Average {self.paw.displayname()} {self.measure.displayname()}",
+                description=f"The average {self.measure.displayname()} of the {self.paw.displayname()}",
+            )
+        ]
 
 
 class RelativePawLuminanceColumn(SummaryColumn):
@@ -365,21 +389,26 @@ class RelativePawLuminanceColumn(SummaryColumn):
         self.paw = paw
         self.measure = measure
 
+    def _get_column_name(self) -> str:
+        return f"relative_{self.paw.old_name()}_{self.measure.value} (ratio)"
+
     def summarize(self, ctx):
         paw_luminance = PawLuminanceMeanComputation.compute_paw_luminance_average(ctx)
 
-        ctx._data[f"relative_{self.paw.old_name()}_{self.measure.value} (ratio)"] = (
-            paw_luminance.get_value(self.paw, self.measure)
-            / paw_luminance.get_sum(self.measure)
-        )
+        ctx._data[self._get_column_name()] = paw_luminance.get_value(
+            self.paw, self.measure
+        ) / paw_luminance.get_sum(self.measure)
 
     def metadata(self):
-        return ColumnMetadata.make(
-            category=ColumnCategory.LUMINANCE_BASED,
-            tags=[self.paw.as_tag()],
-            displayname=f"Relative {self.paw.displayname()} {self.measure.displayname()}",
-            description=f"The ratio of the average {self.measure.displayname()} of the {self.paw.displayname()} to the sum of the average {self.measure.displayname()} of all paws",
-        )
+        return [
+            ColumnMetadata.make(
+                column=self._get_column_name(),
+                category=ColumnCategory.LUMINANCE_BASED,
+                tags=[self.paw.as_tag()],
+                displayname=f"Relative {self.paw.displayname()} {self.measure.displayname()}",
+                description=f"The ratio of the average {self.measure.displayname()} of the {self.paw.displayname()} to the sum of the average {self.measure.displayname()} of all paws",
+            )
+        ]
 
 
 class MaskComputer:
@@ -453,6 +482,9 @@ class HindPawRatioColumn(SummaryColumn):
         self.ratio_order = ratio_order
         self.mask = mask
 
+    def _get_column_name(self) -> str:
+        return f"average{self.mask.column_infix()}_hind_paw_{self.measure.value}_ratio ({self.ratio_order.summary_display()})"
+
     def summarize(self, ctx):
         mask = self.mask.compute(ctx)
 
@@ -465,22 +497,26 @@ class HindPawRatioColumn(SummaryColumn):
 
         ratio = self.ratio_order.divide(left=left, right=right)
 
-        ctx._data[
-            f"average{self.mask.column_infix()}_hind_paw_{self.measure.value}_ratio ({self.ratio_order.summary_display()})"
-        ] = ratio
+        ctx._data[self._get_column_name()] = ratio
 
     def metadata(self):
-        return ColumnMetadata.make(
-            category=ColumnCategory.LUMINANCE_BASED,
-            tags=[Paw.LEFT_HIND.as_tag(), Paw.RIGHT_HIND.as_tag()],
-            displayname=f"Average{self.mask.displayname()} {self.ratio_order.displayname()} Hind Paw {self.measure.displayname()} ratio",
-            description=f"The average ratio of {self.measure.displayname()}{self.mask.description_infix()} of the left and right hind paws, divided {self.ratio_order.displayname()}",
-        )
+        return [
+            ColumnMetadata.make(
+                column=self._get_column_name(),
+                category=ColumnCategory.LUMINANCE_BASED,
+                tags=[Paw.LEFT_HIND.as_tag(), Paw.RIGHT_HIND.as_tag()],
+                displayname=f"Average{self.mask.displayname()} {self.ratio_order.displayname()} Hind Paw {self.measure.displayname()} ratio",
+                description=f"The average ratio of {self.measure.displayname()}{self.mask.description_infix()} of the left and right hind paws, divided {self.ratio_order.displayname()}",
+            )
+        ]
 
 
 class FrontToHindPawRatioColumn(SummaryColumn):
     def __init__(self, measure: LuminanceMeasure):
         self.measure = measure
+
+    def _get_column_name(self) -> str:
+        return f"average_front_to_hind_paw_{self.measure.value}_ratio"
 
     def summarize(self, ctx):
         paw_luminance = PawLuminanceMeanComputation.compute_paw_luminance_average(ctx)
@@ -493,25 +529,29 @@ class FrontToHindPawRatioColumn(SummaryColumn):
         front = left_front + right_front
         hind = left_hind + right_hind
 
-        ctx._data[f"average_front_to_hind_paw_{self.measure.value}_ratio"] = (
-            front / hind
-        )
+        ctx._data[self._get_column_name()] = front / hind
 
     def metadata(self):
-        return ColumnMetadata.make(
-            category=ColumnCategory.LUMINANCE_BASED,
-            tags=all_paws_tags(),
-            displayname=f"Average Front to Hind Paw {self.measure.displayname()} ratio",
-            description=f"The average ratio of {self.measure.displayname()} of the front paws to the hind paws",
-        )
+        return [
+            ColumnMetadata.make(
+                column=self._get_column_name(),
+                category=ColumnCategory.LUMINANCE_BASED,
+                tags=all_paws_tags(),
+                displayname=f"Average Front to Hind Paw {self.measure.displayname()} ratio",
+                description=f"The average ratio of {self.measure.displayname()} of the front paws to the hind paws",
+            )
+        ]
 
 
 class PawLiftedTimeColumn(SummaryColumn):
     def __init__(self, paw: Paw):
         self.paw = paw
 
+    def _get_column_name(self) -> str:
+        return f"{self.paw.old_name()}_paw_lifted_time (seconds)"
+
     def summarize(self, ctx):
-        ctx._data[f"{self.paw.old_name()}_paw_lifted_time (seconds)"] = (
+        ctx._data[self._get_column_name()] = (
             np.sum(
                 ctx._features[
                     f"{self.paw.value}_{LuminanceMeasure.LUMINANCE.feature_name()}"
@@ -522,33 +562,41 @@ class PawLiftedTimeColumn(SummaryColumn):
         )
 
     def metadata(self):
-        return ColumnMetadata.make(
-            category=ColumnCategory.TEMPORAL,
-            tags=[self.paw.as_tag()],
-            displayname=f"{self.paw.displayname()} Paw Lifted Time",
-            description=f"The amount of time the {self.paw.displayname()} paw was lifted (in seconds)",
-        )
+        return [
+            ColumnMetadata.make(
+                column=self._get_column_name(),
+                category=ColumnCategory.TEMPORAL,
+                tags=[self.paw.as_tag()],
+                displayname=f"{self.paw.displayname()} Paw Lifted Time",
+                description=f"The amount of time the {self.paw.displayname()} paw was lifted (in seconds)",
+            )
+        ]
 
 
 class BothFrontPawsLiftedColumn(SummaryColumn):
+    COLUMN_NAME = "both_front_paws_lifted (seconds)"
+
     def summarize(self, ctx):
         standing = StandingMaskComputer().compute(ctx)
         standing = standing.mask
 
-        ctx._data[f"both_front_paws_lifted (seconds)"] = (
+        ctx._data[BothFrontPawsLiftedColumn.COLUMN_NAME] = (
             np.sum(standing) / ctx._features["fps"]
         )
 
     def metadata(self):
-        return ColumnMetadata.make(
-            category=ColumnCategory.TEMPORAL,
-            tags=[
-                Paw.LEFT_FRONT.as_tag(),
-                Paw.RIGHT_FRONT.as_tag(),
-            ],
-            displayname=f"Both Front Paws Lifted Time",
-            description=f"The amount of time both front paws were lifted (in seconds)",
-        )
+        return [
+            ColumnMetadata.make(
+                column=BothFrontPawsLiftedColumn.COLUMN_NAME,
+                category=ColumnCategory.TEMPORAL,
+                tags=[
+                    Paw.LEFT_FRONT.as_tag(),
+                    Paw.RIGHT_FRONT.as_tag(),
+                ],
+                displayname=f"Both Front Paws Lifted Time",
+                description=f"The amount of time both front paws were lifted (in seconds)",
+            )
+        ]
 
 
 class LegacyPawLuminanceDataHolder:
@@ -618,58 +666,73 @@ class LegacyPawLuminanceColumn(SummaryColumn):
     def __init__(self, paw: Paw):
         self.paw = paw
 
+    def _get_column_name(self) -> str:
+        return f"legacy: average_{self.paw.old_name()}_luminance"
+
     def summarize(self, ctx):
         paw_luminance = LegacyPawLuminanceComputation.compute_paw_luminance_average(ctx)
 
-        ctx._data[f"legacy: average_{self.paw.old_name()}_luminance"] = (
-            paw_luminance.get_value(self.paw)
-        )
+        ctx._data[self._get_column_name()] = paw_luminance.get_value(self.paw)
 
     def metadata(self):
-        return ColumnMetadata.make(
-            category=ColumnCategory.LUMINANCE_BASED,
-            tags=[self.paw.as_tag()],
-            displayname=f"Legacy Average {self.paw.displayname()} Luminance",
-            description=f"The average luminance of the {self.paw.displayname()}",
-            legacy=True,
-        )
+        return [
+            ColumnMetadata.make(
+                column=self._get_column_name(),
+                category=ColumnCategory.LUMINANCE_BASED,
+                tags=[self.paw.as_tag()],
+                displayname=f"Legacy Average {self.paw.displayname()} Luminance",
+                description=f"The average luminance of the {self.paw.displayname()}",
+                legacy=True,
+            )
+        ]
 
 
 class LegacyAllPawsLuminanceColumn(SummaryColumn):
+    COLUMN_NAME = "legacy: average_all_paws_sum_luminance"
+
     def summarize(self, ctx):
         paw_luminance = LegacyPawLuminanceComputation.compute_paw_luminance_average(ctx)
 
-        ctx._data[f"legacy: average_all_paws_sum_luminance"] = paw_luminance.get_sum()
+        ctx._data[LegacyAllPawsLuminanceColumn.COLUMN_NAME] = paw_luminance.get_sum()
 
     def metadata(self):
-        return ColumnMetadata.make(
-            category=ColumnCategory.LUMINANCE_BASED,
-            tags=all_paws_tags(),
-            displayname=f"Legacy Average All Paws Sum Luminance",
-            description=f"The sum of the average luminance of all paws",
-            legacy=True,
-        )
+        return [
+            ColumnMetadata.make(
+                column=LegacyAllPawsLuminanceColumn.COLUMN_NAME,
+                category=ColumnCategory.LUMINANCE_BASED,
+                tags=all_paws_tags(),
+                displayname=f"Legacy Average All Paws Sum Luminance",
+                description=f"The sum of the average luminance of all paws",
+                legacy=True,
+            )
+        ]
 
 
 class LegacyRelativePawLuminanceColumn(SummaryColumn):
     def __init__(self, paw: Paw):
         self.paw = paw
 
+    def _get_column_name(self) -> str:
+        return f"legacy: relative_{self.paw.old_name()}_luminance"
+
     def summarize(self, ctx):
         paw_luminance = LegacyPawLuminanceComputation.compute_paw_luminance_average(ctx)
 
-        ctx._data[f"legacy: relative_{self.paw.old_name()}_luminance"] = (
+        ctx._data[self._get_column_name()] = (
             paw_luminance.get_value(self.paw) / paw_luminance.get_sum()
         )
 
     def metadata(self):
-        return ColumnMetadata.make(
-            category=ColumnCategory.LUMINANCE_BASED,
-            tags=[self.paw.as_tag()],
-            displayname=f"Legacy Relative {self.paw.displayname()} Luminance",
-            description=f"The ratio of the average luminance of the {self.paw.displayname()} to the sum of the average luminance of all paws",
-            legacy=True,
-        )
+        return [
+            ColumnMetadata.make(
+                column=self._get_column_name(),
+                category=ColumnCategory.LUMINANCE_BASED,
+                tags=[self.paw.as_tag()],
+                displayname=f"Legacy Relative {self.paw.displayname()} Luminance",
+                description=f"The ratio of the average luminance of the {self.paw.displayname()} to the sum of the average luminance of all paws",
+                legacy=True,
+            )
+        ]
 
 
 class LegacyHindPawRatioColumn(SummaryColumn):
@@ -683,6 +746,9 @@ class LegacyHindPawRatioColumn(SummaryColumn):
         self.ratio_order = ratio_order
         self.mask = mask
 
+    def _get_column_name(self) -> str:
+        return f"legacy: average{self.mask.column_infix()}_hind_paw_luminance_ratio ({self.ratio_order.summary_display()})"
+
     def summarize(self, ctx):
         mask = self.mask.compute(ctx)
 
@@ -695,21 +761,24 @@ class LegacyHindPawRatioColumn(SummaryColumn):
 
         ratio = self.ratio_order.divide(left=left, right=right)
 
-        ctx._data[
-            f"legacy: average{self.mask.column_infix()}_hind_paw_luminance_ratio ({self.ratio_order.summary_display()})"
-        ] = ratio
+        ctx._data[self._get_column_name()] = ratio
 
     def metadata(self):
-        return ColumnMetadata.make(
-            category=ColumnCategory.LUMINANCE_BASED,
-            tags=[Paw.LEFT_HIND.as_tag(), Paw.RIGHT_HIND.as_tag()],
-            displayname=f"Legacy Average{self.mask.displayname()} {self.ratio_order.displayname()} Hind Paw Luminance ratio",
-            description=f"The average ratio of luminance{self.mask.description_infix()} of the left and right hind paws, divided {self.ratio_order.displayname()}",
-            legacy=True,
-        )
+        return [
+            ColumnMetadata.make(
+                column=self._get_column_name(),
+                category=ColumnCategory.LUMINANCE_BASED,
+                tags=[Paw.LEFT_HIND.as_tag(), Paw.RIGHT_HIND.as_tag()],
+                displayname=f"Legacy Average{self.mask.displayname()} {self.ratio_order.displayname()} Hind Paw Luminance ratio",
+                description=f"The average ratio of luminance{self.mask.description_infix()} of the left and right hind paws, divided {self.ratio_order.displayname()}",
+                legacy=True,
+            )
+        ]
 
 
 class LegacyFrontToHindRatioColumn(SummaryColumn):
+    COLUMN_NAME = "legacy: average_front_to_hind_paw_luminance_ratio"
+
     def summarize(self, ctx):
         paw_luminance = LegacyPawLuminanceComputation.compute_paw_luminance_average(ctx)
 
@@ -721,72 +790,89 @@ class LegacyFrontToHindRatioColumn(SummaryColumn):
         front = left_front + right_front
         hind = left_hind + right_hind
 
-        ctx._data[f"legacy: average_front_to_hind_paw_luminance_ratio"] = front / hind
+        ctx._data[LegacyFrontToHindRatioColumn.COLUMN_NAME] = front / hind
 
     def metadata(self):
-        return ColumnMetadata.make(
-            category=ColumnCategory.LUMINANCE_BASED,
-            tags=all_paws_tags(),
-            displayname=f"Legacy Average Front to Hind Paw Luminance ratio",
-            description=f"The average ratio of luminance of the front paws to the hind paws",
-            legacy=True,
-        )
+        return [
+            ColumnMetadata.make(
+                column=LegacyFrontToHindRatioColumn.COLUMN_NAME,
+                category=ColumnCategory.LUMINANCE_BASED,
+                tags=all_paws_tags(),
+                displayname=f"Legacy Average Front to Hind Paw Luminance ratio",
+                description=f"The average ratio of luminance of the front paws to the hind paws",
+                legacy=True,
+            )
+        ]
 
 
 class LegacyPawLiftedTimeColumn(SummaryColumn):
     def __init__(self, paw: Paw):
         self.paw = paw
 
+    def _get_column_name(self) -> str:
+        return f"legacy: {self.paw.old_name()}_paw_lifted_time (seconds)"
+
     def summarize(self, ctx):
-        ctx._data[f"legacy: {self.paw.old_name()}_paw_lifted_time (seconds)"] = (
+        ctx._data[self._get_column_name()] = (
             np.sum(ctx._features[f"{self.paw.old_name()}_luminance"] < 1e-4)
             / ctx._features["fps"]
         )
 
     def metadata(self):
-        return ColumnMetadata.make(
-            category=ColumnCategory.TEMPORAL,
-            tags=[self.paw.as_tag()],
-            displayname=f"Legacy {self.paw.displayname()} Paw Lifted Time",
-            description=f"The amount of time the {self.paw.displayname()} paw was lifted (in seconds)",
-            legacy=True,
-        )
+        return [
+            ColumnMetadata.make(
+                column=self._get_column_name(),
+                category=ColumnCategory.TEMPORAL,
+                tags=[self.paw.as_tag()],
+                displayname=f"Legacy {self.paw.displayname()} Paw Lifted Time",
+                description=f"The amount of time the {self.paw.displayname()} paw was lifted (in seconds)",
+                legacy=True,
+            )
+        ]
 
 
 class LegacyBothFrontPawsLiftedColumn(SummaryColumn):
+    COLUMN_NAME = "legacy: both_front_paws_lifted (ratio of time)"
+
     def summarize(self, ctx):
         standing = LegacyStandingMaskComputer().compute(ctx)
         standing = standing.mask
 
-        ctx._data[f"legacy: both_front_paws_lifted (ratio of time)"] = np.nanmean(
-            standing
-        )
+        ctx._data[LegacyBothFrontPawsLiftedColumn.COLUMN_NAME] = np.nanmean(standing)
 
     def metadata(self):
-        return ColumnMetadata.make(
-            category=ColumnCategory.TEMPORAL,
-            tags=[
-                Paw.LEFT_FRONT.as_tag(),
-                Paw.RIGHT_FRONT.as_tag(),
-            ],
-            displayname=f"Legacy Both Front Paws Lifted Time",
-            description=f"The ratio of time both front paws were lifted",
-            legacy=True,
-        )
+        return [
+            ColumnMetadata.make(
+                column=LegacyBothFrontPawsLiftedColumn.COLUMN_NAME,
+                category=ColumnCategory.TEMPORAL,
+                tags=[
+                    Paw.LEFT_FRONT.as_tag(),
+                    Paw.RIGHT_FRONT.as_tag(),
+                ],
+                displayname=f"Legacy Both Front Paws Lifted Time",
+                description=f"The ratio of time both front paws were lifted",
+                legacy=True,
+            )
+        ]
 
 
 class TrackingLikelihoodColumn(SummaryColumn):
     def __init__(self, paw: Paw):
         self.paw = paw
 
+    def _get_column_name(self) -> str:
+        return f"average_{self.paw.value}_tracking_likelihood"
+
     def summarize(self, ctx):
-        ctx._data[f"average_{self.paw.value}_tracking_likelihood"] = np.nanmean(
+        ctx._data[self._get_column_name()] = np.nanmean(
             ctx._features[f"{self.paw.value}_tracking_likelihood"]
         )
 
     def metadata(self):
         # todo: consider adding another category e.g. misc? not really temporal
-        return ColumnMetadata.make_hidden(ColumnCategory.TEMPORAL)
+        return [
+            ColumnMetadata.make_hidden(self._get_column_name(), ColumnCategory.TEMPORAL)
+        ]
 
 
 class QualityControlFlagColumn(SummaryColumn):
@@ -794,10 +880,11 @@ class QualityControlFlagColumn(SummaryColumn):
     **This column must be computed after the tracking likelihood columns.**
     """
 
-    def summarize(self, ctx):
-        col_name = "paws_tracking_quality_control_flag"
+    COLUMN_NAME = "paws_tracking_quality_control_flag"
 
-        ctx._data[col_name] = 0
+    def summarize(self, ctx):
+
+        ctx._data[QualityControlFlagColumn.COLUMN_NAME] = 0
 
         if (
             ctx._data[f"average_{Paw.LEFT_HIND.value}_tracking_likelihood"] < 0.85
@@ -805,7 +892,11 @@ class QualityControlFlagColumn(SummaryColumn):
             or ctx._data[f"average_{Paw.LEFT_FRONT.value}_tracking_likelihood"] < 0.6
             or ctx._data[f"average_{Paw.RIGHT_FRONT.value}_tracking_likelihood"] < 0.6
         ):
-            ctx._data[col_name] = 1
+            ctx._data[QualityControlFlagColumn.COLUMN_NAME] = 1
 
     def metadata(self):
-        return ColumnMetadata.make_hidden(ColumnCategory.TEMPORAL)
+        return [
+            ColumnMetadata.make_hidden(
+                QualityControlFlagColumn.COLUMN_NAME, ColumnCategory.TEMPORAL
+            )
+        ]
