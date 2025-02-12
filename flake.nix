@@ -11,7 +11,7 @@
       let
         pkgs = import nixpkgs {
           inherit system;
-          config = { allowUnfree = true; };
+          config = { allowUnfree = true; allowBroken = true; };
         };
         tensorrt = (pkgs.cudaPackages_11.tensorrt_8_6.overrideAttrs (prev: next: {
           dontCheckForBrokenSymlinks = true;
