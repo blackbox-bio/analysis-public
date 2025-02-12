@@ -59,7 +59,7 @@ DISTANCE_FEATURES = {
 class BodyPartDistanceDef(Feature, SummaryColumn):
     @staticmethod
     def _dest_to_displayname(dest: str) -> str:
-        dest.replace("_", " ").capitalize()
+        return dest.replace("_", " ").capitalize()
 
     dest: str
     part1: str
