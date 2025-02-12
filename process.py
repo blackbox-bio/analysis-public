@@ -1,5 +1,5 @@
 from utils import *
-from palmreader_analysis.features import FeaturesContext
+from palmreader_analysis import FeaturesContext
 
 
 # Function to process a video with specified arguments

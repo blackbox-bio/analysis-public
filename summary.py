@@ -1,7 +1,7 @@
 from typing import Dict, Any, List, Tuple
 
 from utils import *
-from palmreader_analysis.summary import SummaryContext
+from palmreader_analysis import SummaryContext
 from cols_name_dicts import summary_col_name_dict
 
 
