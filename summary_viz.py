@@ -7,7 +7,7 @@ import cv2 as cv
 from enum import Enum
 from statsmodels.stats.multitest import multipletests
 from scipy.stats import zscore
-
+from palmreader import Palmreader
 
 class GraphType(Enum):
     KDE = "kde"
@@ -225,6 +225,8 @@ def generate_PairGrid_plot(
 
     g.savefig(dest_path, dpi=300)
 
+def _listify(iterable):
+    return "- " + '\n- '.join(map(str, iterable))
 
 def generate_cluster_heatmap(
         df,
@@ -253,6 +255,7 @@ def generate_cluster_heatmap(
         non_numerical_columns = non_numerical_columns.drop(group_variable)
 
     if len(non_numerical_columns) > 0:
+        Palmreader.warning("Some readouts have non-numerical values and have been omitted.", f"The following columns have been ommitted:\n{_listify(non_numerical_columns)}")
         print(f"Warning: The following summary readouts have non-numerical values: {non_numerical_columns}.")
         print("These columns will be excluded from the cluster heatmap plot.")
 
@@ -265,6 +268,7 @@ def generate_cluster_heatmap(
     # check for feature columns that have missing values
     missing_values = df.columns[df.isnull().any()]
     if len(missing_values) > 0:
+        Palmreader.warning(f"Some readouts have missing values and have been omitted.", f"The following columns have been ommitted:\n{_listify(missing_values)}")
         print(f"Warning: The following summary readouts have missing values: {missing_values}.")
         print("These columns will be excluded from the cluster heatmap plot.")
 
@@ -280,10 +284,12 @@ def generate_cluster_heatmap(
         # change grouping mode to individual if there is only one group
         if grouping_mode == "group":
             grouping_mode = "individual"
+            Palmreader.warning(f"The group variable {group_variable} contains only one group. The grouping mode will be changed to 'individual' for the cluster heatmap plot.")
             print(f"Warning: The group variable {group_variable} contains only one group.")
             print("The grouping mode will be changed to 'individual' for the cluster heatmap plot.")
 
     if len(constant_values) > 0:
+        Palmreader.warning(f"Some readouts have constant values and have been omitted.", f"The following columns have been ommitted:\n{_listify(constant_values)}")
         print(f"Warning: The following summary readouts have constant values: {constant_values}.")
         print("These columns will be excluded from the cluster heatmap plot.")
 
@@ -302,6 +308,7 @@ def generate_cluster_heatmap(
         # Exclude groups with only one row
         valid_groups = df[group_variable].value_counts()[lambda x: x > 1].index
         if len(valid_groups) < len(df[group_variable].unique()):
+            Palmreader.warning(f"Some groups have only one sample and will be excluded from ANOVA.", f"The following groups have been omitted:\n{_listify(set(df[group_variable].unique()) - set(valid_groups))}")
             print(f"Warning: Some groups have only one sample and will be excluded from ANOVA.")
 
         df_zscore = df_zscore[df_zscore[group_variable].isin(valid_groups)]
@@ -312,6 +319,7 @@ def generate_cluster_heatmap(
             if any(df_zscore[df_zscore[group_variable] == group][feature].nunique() <= 1 for group in valid_groups):
                 constant_within_groups.append(feature)
         if constant_within_groups:
+            Palmreader.warning("Some features have constant values within at least one group and will be excluded from ANOVA.", f"The following features have been omitted:\n{_listify(constant_within_groups)}")
             print(
                 f"Warning: The following features have constant values within at least one group and will be excluded from ANOVA: {constant_within_groups}")
 
@@ -319,6 +327,7 @@ def generate_cluster_heatmap(
 
         # Run ANOVA for significance and adjust p-values
         p_values = []
+        bad_features = []
         for feature in df_mean_zscore.columns:
             try:
                 p_value = f_oneway(
@@ -327,13 +336,23 @@ def generate_cluster_heatmap(
                 p_values.append(p_value)
             except Exception as e:
                 print(f"Warning: Skipping ANOVA for feature '{feature}' due to error: {e}")
+                bad_features.append(feature)
                 p_values.append(np.nan)
+
+        if len(bad_features) > 0:
+            Palmreader.warning("AOVA failed for some features", f"ANOVA failed for the following features:\n{_listify(bad_features)}")
 
         # Adjust p-values
         p_values = np.array(p_values, dtype=np.float64)
         valid_p_mask = ~np.isnan(p_values)
-        p_adjusted = np.full_like(p_values, np.nan, dtype=np.float64)
-        p_adjusted[valid_p_mask] = multipletests(p_values[valid_p_mask], method="bonferroni")[1]
+
+        if valid_p_mask.sum() == 0:
+            Palmreader.warning(f"No valid p-values were calculated. The heatmap will not include significance markers.")
+            print(f"Warning: No valid p-values were calculated. The heatmap will not include significance markers.")
+            p_adjusted = np.full_like(p_values, np.nan, dtype=np.float64)
+        else:
+            p_adjusted = np.full_like(p_values, np.nan, dtype=np.float64)
+            p_adjusted[valid_p_mask] = multipletests(p_values[valid_p_mask], method="bonferroni")[1]
 
         # Create a significance marker array
         significance_array = np.full(df_mean_zscore.T.shape, "", dtype=object)
