@@ -6,8 +6,14 @@ import h5py
 from cols_name_dicts import summary_col_name_dict
 from utils import both_front_paws_lifted
 
-from .variants import Paw, LuminanceMeasure, RatioOrder
-from .metadata import ColumnMetadata, ColumnCategory, all_paws_tags
+from .variants import (
+    Paw,
+    LuminanceMeasure,
+    RatioOrder,
+    ColumnMetadata,
+    ColumnCategory,
+    all_paws_tags,
+)
 
 
 class SummaryContext:
@@ -419,7 +425,10 @@ class NoneMaskComputer(MaskComputer):
 MaskComputer.NONE = NoneMaskComputer("")
 
 
-class StandingMaskComputer(MaskComputer("standing")):
+class StandingMaskComputer(MaskComputer):
+    def __init__(self):
+        super().__init__("standing")
+
     def compute(self, ctx: SummaryContext) -> Mask:
         if "standing_mask" not in ctx._cache:
             standing_mask = both_front_paws_lifted(
@@ -562,7 +571,10 @@ class LegacyPawLuminanceDataHolder:
         return self._sum
 
 
-class LegacyStandingMaskComputer(MaskComputer("standing")):
+class LegacyStandingMaskComputer(MaskComputer):
+    def __init__(self):
+        super().__init__("standing")
+
     def compute(self, ctx: SummaryContext) -> Mask:
         if "legacy_standing_mask" not in ctx._cache:
             standing_mask = both_front_paws_lifted(

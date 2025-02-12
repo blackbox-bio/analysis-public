@@ -6,9 +6,11 @@ Any features which do not have a single column in the summary are defined in the
 
 from typing import Literal, Dict, Tuple, Union
 import numpy as np
+from utils import cal_distance_, body_parts_distance, get_vector, get_angle
+
 from .features import FeaturesContext, Feature
 from .summary import SummaryColumn
-from utils import cal_distance_, body_parts_distance, get_vector, get_angle
+from .variants import ColumnMetadata, ColumnCategory
 
 
 class DistanceDeltaDef(Feature, SummaryColumn):
@@ -42,6 +44,14 @@ DISTANCE_FEATURES = {
 
 
 class BodyPartDistanceDef(Feature, SummaryColumn):
+    @staticmethod
+    def _dest_to_displayname(dest: str) -> str:
+        dest.replace("_", " ").capitalize()
+
+    dest: str
+    part1: str
+    part2: str
+
     def __init__(self, dest: str, part1: str, part2: str):
         self.dest = dest
         self.part1 = part1
@@ -53,6 +63,14 @@ class BodyPartDistanceDef(Feature, SummaryColumn):
 
     def summarize(self, ctx):
         ctx._data[f"{self.dest} (pixel)"] = np.nanmean(ctx._features[self.dest])
+
+    def metadata(self):
+        return ColumnMetadata.make(
+            category=ColumnCategory.POSTURAL,
+            tags=[],
+            displayname=BodyPartDistanceDef._dest_to_displayname(self.dest),
+            description=f"Measures the average distance between {self.part1} and {self.part2}",
+        )
 
 
 VectorParts = Tuple[str, str]
@@ -107,6 +125,14 @@ ANGLE_FEATURES: Dict[
 
 
 class BodyPartAngleDef(Feature, SummaryColumn):
+    @staticmethod
+    def _dest_to_displayname(dest: str) -> str:
+        # chop off the "_angle" part, every dest has it
+        slice_end = len("_angle")
+
+        return dest[:-slice_end].replace("_", " ").capitalize()
+
+    dest: str
     vector_parts_1: VectorParts
     vector_parts_2: VectorParts
     sign: AngleSign
@@ -139,3 +165,13 @@ class BodyPartAngleDef(Feature, SummaryColumn):
         dest = self.summary_dest if self.summary_dest is not None else self.dest
 
         ctx._data[f"{dest} (degree)"] = np.nanmean(ctx._features[self.dest])
+
+    def metadata(self):
+        dest = self.summary_dest if self.summary_dest is not None else self.dest
+
+        return ColumnMetadata.make(
+            category=ColumnCategory.POSTURAL,
+            tags=[],
+            displayname=BodyPartAngleDef._dest_to_displayname(dest),
+            description=f"Measures the angle between {self.vector_parts_1} and {self.vector_parts_2}",
+        )
