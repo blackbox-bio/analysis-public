@@ -247,7 +247,7 @@ class TimeInformationColumns(SummaryColumn):
         )
         ctx._data["bin duration (min)"] = ctx._end_time - ctx._start_time
 
-    def metadata(self) -> ColumnMetadata:
+    def metadata(self):
         return ColumnMetadata.make_hidden(ColumnCategory.TEMPORAL)
 
 

@@ -22,6 +22,14 @@ class DistanceDeltaDef(Feature, SummaryColumn):
             ctx._features["distance_delta"]
         )
 
+    def metadata(self):
+        return ColumnMetadata.make(
+            category=ColumnCategory.TEMPORAL,
+            tags=[],
+            displayname="Distance traveled",
+            description="Measures the distance traveled by the animal",
+        )
+
 
 DISTANCE_FEATURES = {
     "hip_width": ("lhip", "rhip"),
