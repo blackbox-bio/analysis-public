@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any, List, Dict
 from .variants import Paw, LuminanceMeasure
 from utils import *
 
@@ -55,8 +55,8 @@ class FeaturesContext:
 
         return features
 
-    _data: dict[str, pd.DataFrame]
-    _cache: dict[str, Any]
+    _data: Dict[str, pd.DataFrame]
+    _cache: Dict[str, Any]
 
     def __init__(self, name, tracking_path, ftir_path):
         # Context provided to feature calculation functions

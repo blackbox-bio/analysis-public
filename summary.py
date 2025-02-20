@@ -109,7 +109,7 @@ def generate_summary_generic_old(features_files: List[str], time_bin=(0, -1)):
         features[video]["end_time"] = end_frame / fps / 60
 
     # save summary features
-    summary_features: dict[Any, dict[Any, Any]] = {}
+    summary_features: Dict[Any, Dict[Any, Any]] = {}
     for video in features.keys():
 
         summary_features[video] = {}
