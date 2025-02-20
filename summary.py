@@ -6,17 +6,28 @@ from cols_name_dicts import summary_col_name_dict
 
 
 def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
-    features = defaultdict(dict)
+    contexts: List[SummaryContext] = []
 
-    # temp: summary contexts
-    summary_contexts: Dict[str, SummaryContext] = {}
+    for file in features_files:
+        contexts.append(SummaryContext(file, time_bin))
+
+    for context in contexts:
+        for column in SummaryContext.get_all_columns():
+            column.summarize(context)
+
+        # TODO: remove this once the name map is done at the computation level
+        context.finish()
+
+    return SummaryContext.merge_to_df(contexts)
+
+
+def generate_summary_generic_old(features_files: List[str], time_bin=(0, -1)):
+    features = defaultdict(dict)
 
     # read features from h5 files
     for file in features_files:
         with h5py.File(file, "r") as hdf:
             for key in hdf.keys():
-                # note: this does not do what is expected when there are multiple recordings in the h5 file. Palmreader does not do that.
-                summary_contexts[key] = SummaryContext(file, time_bin)
                 for subkey in hdf[key].keys():
                     features[key][subkey] = np.array(hdf[key][subkey])
 
@@ -604,13 +615,6 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
             or summary_features[video]["average_rfpaw_tracking_likelihood"] < 0.6
         ):
             summary_features[video]["paws_tracking_quality_control_flag"] = 1
-
-        context = summary_contexts[video]
-
-        for column in SummaryContext.get_all_columns():
-            column.summarize(context)
-
-        context.compare_summary_columns(summary_features[video])
 
         # change column names for the summary to be more readable
         summary_features[video] = {

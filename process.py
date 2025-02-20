@@ -12,6 +12,15 @@ def process_recording_wrapper(recording):
 # THIS IS AN API ENTRYPOINT! If the signature is modified, ensure api.py matches!
 # The body of this function can change without affecting the API.
 def extract_features(name, ftir_path, tracking_path, dest_path):
+    ctx = FeaturesContext(name, tracking_path, ftir_path)
+
+    for feature in FeaturesContext.get_all_features():
+        feature.extract(ctx=ctx)
+
+    ctx.to_hdf5(dest_path)
+
+
+def extract_features_old(name, ftir_path, tracking_path, dest_path):
     # create a dictionary to store the extracted features
     features = {}
 
@@ -191,16 +200,6 @@ def extract_features(name, ftir_path, tracking_path, dest_path):
     # features["snout_tracking_likelihood"] = label["snout"]["likelihood"]
 
     ftir_video.release()
-
-    # temp: OOP computation + comparison to legacy implementation; will replace
-    # legacy
-    ctx = FeaturesContext(name, tracking_path, ftir_path)
-
-    for feature in FeaturesContext.get_all_features():
-        feature.extract(ctx=ctx)
-
-    ctx.compare_feature_tables(features)
-    ctx.to_hdf5(f"{dest_path}_test")
 
     # -------------------------------------------------------------
 

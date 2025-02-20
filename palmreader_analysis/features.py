@@ -20,7 +20,7 @@ class FeaturesContext:
         # add paw-specific features
         for paw in Paw:
             # add reworked luminance-based measures
-            for kind in ["luminescence", "print_size", "luminance_rework"]:
+            for kind in LuminanceMeasure:
                 features.append(PawFeatureDef(paw, kind))
 
             # add legacy luminance measures
@@ -45,7 +45,7 @@ class FeaturesContext:
 
         # Add body part angle features
         for column in ANGLE_FEATURES.keys():
-            vector_parts_1, vector_parts_2, sign = ANGLE_FEATURES[column]
+            vector_parts_1, vector_parts_2, sign, _summary_dest = ANGLE_FEATURES[column]
             features.append(
                 BodyPartAngleDef(column, vector_parts_1, vector_parts_2, sign)
             )
@@ -133,9 +133,9 @@ class PawFeatureDef(Feature):
         }
 
         # add the paw feature to the dictionary
-        ctx._data[f"{self.paw.value}_{self.kind.value}"] = luminance_data[self.kind][
-            self.paw.value
-        ]
+        ctx._data[f"{self.paw.value}_{self.kind.feature_name()}"] = luminance_data[
+            self.kind
+        ][self.paw.value]
 
 
 class LegacyPawLuminanceDef(Feature):

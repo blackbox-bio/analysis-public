@@ -289,7 +289,8 @@ class PawLuminanceMeanDataHolder:
 class Mask:
     NONE: "Mask"
 
-    def __init__(self, mask: np.ndarray):
+    def __init__(self, name: str, mask: np.ndarray):
+        self.name = name
         self.mask = mask
 
     def apply(self, original: Any) -> Any:
@@ -302,8 +303,14 @@ class Mask:
         else:
             return original[self.mask]
 
+    def cache_key(self, original: str) -> str:
+        if self.name == "":
+            return original
+        else:
+            return f"{original}_{self.name}"
 
-Mask.NONE = Mask(np.array([]))
+
+Mask.NONE = Mask("", np.array([]))
 
 
 class PawLuminanceMeanComputation:
@@ -426,12 +433,6 @@ class MaskComputer:
         else:
             return f"_{self.name}"
 
-    def cache_key(self, original: str) -> str:
-        if self.name == "":
-            return original
-        else:
-            return f"{original}_{self.name}"
-
     def displayname(self) -> str:
         if self.name == "":
             return ""
@@ -464,7 +465,7 @@ class StandingMaskComputer(MaskComputer):
                 ctx._features[f"{Paw.LEFT_FRONT.value}_luminance_rework"],
                 ctx._features[f"{Paw.RIGHT_FRONT.value}_luminance_rework"],
             )
-            ctx._cache["standing_mask"] = Mask(standing_mask)
+            ctx._cache["standing_mask"] = Mask("standing", standing_mask)
 
         return ctx._cache["standing_mask"]
 
@@ -629,7 +630,7 @@ class LegacyStandingMaskComputer(MaskComputer):
                 ctx._features[f"{Paw.LEFT_FRONT.old_name()}_luminance"],
                 ctx._features[f"{Paw.RIGHT_FRONT.old_name()}_luminance"],
             )
-            ctx._cache["legacy_standing_mask"] = Mask(standing_mask)
+            ctx._cache["legacy_standing_mask"] = Mask("standing", standing_mask)
 
         return ctx._cache["legacy_standing_mask"]
 
