@@ -358,7 +358,7 @@ class AverageOverallLuminanceColumn(SummaryColumn):
                 column=self._get_column_name(),
                 category=ColumnCategory.LUMINANCE_BASED,
                 tags=all_paws_tags(),
-                displayname=f"Average Overall {self.measure.displayname()}",
+                displayname=f"Average overall {self.measure.displayname()}",
                 description=f"The sum of the average {self.measure.displayname()} of all paws",
             )
         ]
@@ -437,7 +437,7 @@ class MaskComputer:
         if self.name == "":
             return ""
         else:
-            return f" {self.name.capitalize()}"
+            return f" {self.name}"
 
     def description_infix(self) -> str:
         if self.name == "":

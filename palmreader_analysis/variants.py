@@ -58,7 +58,7 @@ class Paw(Enum):
         side = self.side()
         direction = self.direction()
 
-        return f"{side.value.capitalize()} {direction.value.capitalize()}"
+        return f"{side.value} {direction.value} paw"
 
 
 class LuminanceMeasure(Enum):
@@ -83,11 +83,11 @@ class LuminanceMeasure(Enum):
 
     def displayname(self) -> str:
         if self == LuminanceMeasure.LUMINANCE:
-            return "Pressure Index"
+            return "pressure index"
         elif self == LuminanceMeasure.LUMINESCENCE:
-            return "Luminance"
+            return "luminance"
         elif self == LuminanceMeasure.PRINT_SIZE:
-            return "Print size"
+            return "print size"
         else:
             raise ValueError(f"Invalid measure: {self}")
 
@@ -114,9 +114,9 @@ class RatioOrder(Enum):
 
     def displayname(self) -> str:
         if self == RatioOrder.RIGHT_OVER_LEFT:
-            return "Right over Left"
+            return "right over left"
         elif self == RatioOrder.LEFT_OVER_RIGHT:
-            return "Left over Right"
+            return "left over right"
         else:
             raise ValueError(f"Invalid direction: {self}")
 

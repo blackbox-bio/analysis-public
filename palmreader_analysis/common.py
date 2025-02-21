@@ -7,6 +7,7 @@ Any features which do not have a single column in the summary are defined in the
 from typing import Literal, Dict, Tuple, Union
 import numpy as np
 from utils import cal_distance_, body_parts_distance, get_vector, get_angle
+from cols_name_dicts import summary_col_name_dict
 
 from .features import FeaturesContext, Feature
 from .summary import SummaryColumn
@@ -57,10 +58,6 @@ DISTANCE_FEATURES = {
 
 
 class BodyPartDistanceDef(Feature, SummaryColumn):
-    @staticmethod
-    def _dest_to_displayname(dest: str) -> str:
-        return dest.replace("_", " ").capitalize()
-
     dest: str
     part1: str
     part2: str
@@ -77,6 +74,16 @@ class BodyPartDistanceDef(Feature, SummaryColumn):
     def _get_column_name(self) -> str:
         return f"{self.dest} (pixel)"
 
+    def _get_displayname(self) -> str:
+        # TODO: remove once the name dictionary is removed
+        name = self._get_column_name()
+        name = summary_col_name_dict.get(name, name)
+
+        # remove (pixel) from the name
+        name = name[: -len(" (pixel)")]
+
+        return name.replace("_", " ").capitalize()
+
     def summarize(self, ctx):
         ctx._data[self._get_column_name()] = np.nanmean(ctx._features[self.dest])
 
@@ -86,7 +93,7 @@ class BodyPartDistanceDef(Feature, SummaryColumn):
                 column=self._get_column_name(),
                 category=ColumnCategory.POSTURAL,
                 tags=[],
-                displayname=BodyPartDistanceDef._dest_to_displayname(self.dest),
+                displayname=self._get_displayname(),
                 description=f"Measures the average distance between {self.part1} and {self.part2}",
             )
         ]
@@ -181,10 +188,13 @@ class BodyPartAngleDef(Feature, SummaryColumn):
     def _get_displayname(self) -> str:
         dest = self.summary_dest if self.summary_dest is not None else self.dest
 
-        # chop off the "_angle" part, every dest has it
-        slice_end = len("_angle")
+        # TODO: remove once the name dictionary is removed
+        dest = summary_col_name_dict.get(dest, dest)
 
-        return dest[:-slice_end].replace("_", " ").capitalize()
+        # chop off the "_angle" part, every dest has it (after remapping some are "-angle" but this handles that case too)
+        # slice_end = len("_angle")
+
+        return dest.replace("_", " ").capitalize()
 
     def summarize(self, ctx):
         ctx._data[self._get_column_name()] = np.nanmean(ctx._features[self.dest])
