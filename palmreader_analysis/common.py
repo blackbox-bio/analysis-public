@@ -191,9 +191,6 @@ class BodyPartAngleDef(Feature, SummaryColumn):
         # TODO: remove once the name dictionary is removed
         dest = summary_col_name_dict.get(dest, dest)
 
-        # chop off the "_angle" part, every dest has it (after remapping some are "-angle" but this handles that case too)
-        # slice_end = len("_angle")
-
         return dest.replace("_", " ").capitalize()
 
     def summarize(self, ctx):

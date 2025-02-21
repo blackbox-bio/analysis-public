@@ -506,7 +506,7 @@ class HindPawRatioColumn(SummaryColumn):
                 column=self._get_column_name(),
                 category=ColumnCategory.LUMINANCE_BASED,
                 tags=[Paw.LEFT_HIND.as_tag(), Paw.RIGHT_HIND.as_tag()],
-                displayname=f"Average{self.mask.displayname()} {self.ratio_order.displayname()} Hind Paw {self.measure.displayname()} ratio",
+                displayname=f"Average{self.mask.displayname()} {self.ratio_order.displayname()} hind paw {self.measure.displayname()} ratio",
                 description=f"The average ratio of {self.measure.displayname()}{self.mask.description_infix()} of the left and right hind paws, divided {self.ratio_order.displayname()}",
             )
         ]
@@ -538,7 +538,7 @@ class FrontToHindPawRatioColumn(SummaryColumn):
                 column=self._get_column_name(),
                 category=ColumnCategory.LUMINANCE_BASED,
                 tags=all_paws_tags(),
-                displayname=f"Average Front to Hind Paw {self.measure.displayname()} ratio",
+                displayname=f"Average front to hind paw {self.measure.displayname()} ratio",
                 description=f"The average ratio of {self.measure.displayname()} of the front paws to the hind paws",
             )
         ]
@@ -568,7 +568,7 @@ class PawLiftedTimeColumn(SummaryColumn):
                 column=self._get_column_name(),
                 category=ColumnCategory.TEMPORAL,
                 tags=[self.paw.as_tag()],
-                displayname=f"{self.paw.displayname()} Paw Lifted Time",
+                displayname=f"{self.paw.displayname().capitalize()} paw lifted time",
                 description=f"The amount of time the {self.paw.displayname()} paw was lifted (in seconds)",
             )
         ]
@@ -594,7 +594,7 @@ class BothFrontPawsLiftedColumn(SummaryColumn):
                     Paw.LEFT_FRONT.as_tag(),
                     Paw.RIGHT_FRONT.as_tag(),
                 ],
-                displayname=f"Both Front Paws Lifted Time",
+                displayname=f"Both front paws lifted time",
                 description=f"The amount of time both front paws were lifted (in seconds)",
             )
         ]
@@ -681,7 +681,7 @@ class LegacyPawLuminanceColumn(SummaryColumn):
                 column=self._get_column_name(),
                 category=ColumnCategory.LUMINANCE_BASED,
                 tags=[self.paw.as_tag()],
-                displayname=f"Legacy Average {self.paw.displayname()} Luminance",
+                displayname=f"Legacy average {self.paw.displayname()} luminance",
                 description=f"The average luminance of the {self.paw.displayname()}",
                 legacy=True,
             )
@@ -702,7 +702,7 @@ class LegacyAllPawsLuminanceColumn(SummaryColumn):
                 column=LegacyAllPawsLuminanceColumn.COLUMN_NAME,
                 category=ColumnCategory.LUMINANCE_BASED,
                 tags=all_paws_tags(),
-                displayname=f"Legacy Average All Paws Sum Luminance",
+                displayname=f"Legacy average all paws sum luminance",
                 description=f"The sum of the average luminance of all paws",
                 legacy=True,
             )
@@ -729,7 +729,7 @@ class LegacyRelativePawLuminanceColumn(SummaryColumn):
                 column=self._get_column_name(),
                 category=ColumnCategory.LUMINANCE_BASED,
                 tags=[self.paw.as_tag()],
-                displayname=f"Legacy Relative {self.paw.displayname()} Luminance",
+                displayname=f"Legacy relative {self.paw.displayname()} luminance",
                 description=f"The ratio of the average luminance of the {self.paw.displayname()} to the sum of the average luminance of all paws",
                 legacy=True,
             )
@@ -770,7 +770,7 @@ class LegacyHindPawRatioColumn(SummaryColumn):
                 column=self._get_column_name(),
                 category=ColumnCategory.LUMINANCE_BASED,
                 tags=[Paw.LEFT_HIND.as_tag(), Paw.RIGHT_HIND.as_tag()],
-                displayname=f"Legacy Average{self.mask.displayname()} {self.ratio_order.displayname()} Hind Paw Luminance ratio",
+                displayname=f"Legacy average{self.mask.displayname()} {self.ratio_order.displayname()} hind paw luminance ratio",
                 description=f"The average ratio of luminance{self.mask.description_infix()} of the left and right hind paws, divided {self.ratio_order.displayname()}",
                 legacy=True,
             )
@@ -799,7 +799,7 @@ class LegacyFrontToHindRatioColumn(SummaryColumn):
                 column=LegacyFrontToHindRatioColumn.COLUMN_NAME,
                 category=ColumnCategory.LUMINANCE_BASED,
                 tags=all_paws_tags(),
-                displayname=f"Legacy Average Front to Hind Paw Luminance ratio",
+                displayname=f"Legacy average front to hind paw luminance ratio",
                 description=f"The average ratio of luminance of the front paws to the hind paws",
                 legacy=True,
             )
@@ -825,7 +825,7 @@ class LegacyPawLiftedTimeColumn(SummaryColumn):
                 column=self._get_column_name(),
                 category=ColumnCategory.TEMPORAL,
                 tags=[self.paw.as_tag()],
-                displayname=f"Legacy {self.paw.displayname()} Paw Lifted Time",
+                displayname=f"Legacy {self.paw.displayname()} paw lifted time",
                 description=f"The amount of time the {self.paw.displayname()} paw was lifted (in seconds)",
                 legacy=True,
             )
@@ -850,7 +850,7 @@ class LegacyBothFrontPawsLiftedColumn(SummaryColumn):
                     Paw.LEFT_FRONT.as_tag(),
                     Paw.RIGHT_FRONT.as_tag(),
                 ],
-                displayname=f"Legacy Both Front Paws Lifted Time",
+                displayname=f"Legacy both front paws lifted time",
                 description=f"The ratio of time both front paws were lifted",
                 legacy=True,
             )
