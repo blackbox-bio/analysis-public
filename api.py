@@ -1,6 +1,6 @@
 # globally import things that all functions share
 # don't import anything not strictly required for the API itself. import API specific things in the functions themselves
-from palmreader import Palmreader, PalmreaderProgress
+from palmreader_analysis.events import Palmreader, PalmreaderProgress
 import argparse
 from enum import Enum
 from typing import TypedDict, List, Tuple, Literal

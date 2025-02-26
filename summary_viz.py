@@ -7,7 +7,7 @@ import cv2 as cv
 from enum import Enum
 from statsmodels.stats.multitest import multipletests
 from scipy.stats import zscore
-from palmreader import Palmreader
+from palmreader_analysis.events import Palmreader
 
 class GraphType(Enum):
     KDE = "kde"

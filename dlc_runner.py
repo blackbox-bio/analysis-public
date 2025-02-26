@@ -1,4 +1,4 @@
-from palmreader import PalmreaderProgress
+from palmreader_analysis.events import PalmreaderProgress
 import os
 import deeplabcut
 
@@ -42,7 +42,9 @@ def get_recording_list(directorys):
 # THIS IS AN API ENTRYPOINT! If the signature is modified, ensure api.py matches!
 # The body of this function can change without affecting the API.
 def run_deeplabcut(dlc_config_path, body_videos, also_generate_skeleton=True):
-    PalmreaderProgress.start_multi(len(body_videos), "Analyzing videos", autoincrement=True)
+    PalmreaderProgress.start_multi(
+        len(body_videos), "Analyzing videos", autoincrement=True
+    )
 
     deeplabcut.analyze_videos(dlc_config_path, body_videos, videotype=".avi")
 
@@ -58,8 +60,9 @@ def run_deeplabcut(dlc_config_path, body_videos, also_generate_skeleton=True):
 
     if also_generate_skeleton:
         generate_skeleton(dlc_config_path, body_videos)
-    
+
     return
+
 
 # Function to generate a skeleton video from the specified videos
 #
@@ -76,6 +79,7 @@ def generate_skeleton(dlc_config_path, body_videos):
         draw_skeleton=True,
     )
     return
+
 
 # Function to prompt the user to select folders using a GUI dialog
 def select_folders():

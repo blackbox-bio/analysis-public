@@ -10,6 +10,10 @@ from collections import defaultdict
 import cv2
 from scipy.ndimage import gaussian_filter1d
 from scipy.ndimage import median_filter
+from dataclasses import dataclass
+from typing import Dict
+from palmreader_analysis.variants import LuminanceMeasure, Paw
+
 
 def select_folder():
     import tkinter as tk
@@ -152,7 +156,7 @@ def cal_paw_luminance(label, cap, size=22):
     # https://stackoverflow.com/questions/31472155/python-opencv-cv2-cv-cv-cap-prop-frame-count-get-wrong-numbers
     # for i in tqdm(range(500)):
     i = 0
-    pbar = tqdm(total=None, dynamic_ncols=True,desc="legacy paw luminance calculation")
+    pbar = tqdm(total=None, dynamic_ncols=True, desc="legacy paw luminance calculation")
     while True:
         ret, frame = cap.read()  # Read the next frame
 
@@ -287,6 +291,7 @@ def get_ftir_mask(ftir_frame_gray):
 
     return ftir_frame_final, ftir_mask
 
+
 def get_individual_paw_luminance(ftir_frame, ftir_mask, x, y, size=22):
     """
     Get the paw luminescence, paw print size, and paw luminance.
@@ -306,6 +311,50 @@ def get_individual_paw_luminance(ftir_frame, ftir_mask, x, y, size=22):
     paw_luminance = paw_luminescence / paw_print_size if paw_print_size > 0 else 0.0
 
     return paw_luminescence, paw_print_size, paw_luminance
+
+
+@dataclass
+class LegacyPawLuminanceData:
+    """Data class for legacy paw luminance data"""
+
+    hind_left: np.ndarray
+    hind_right: np.ndarray
+    front_left: np.ndarray
+    front_right: np.ndarray
+
+    def get_paw(self, paw: Paw) -> np.ndarray:
+        if paw == Paw.LEFT_HIND:
+            return self.hind_left
+        elif paw == Paw.RIGHT_HIND:
+            return self.hind_right
+        elif paw == Paw.LEFT_FRONT:
+            return self.front_left
+        elif paw == Paw.RIGHT_FRONT:
+            return self.front_right
+        else:
+            raise ValueError(f"Invalid paw: {paw}")
+
+
+@dataclass
+class PawLuminanceData:
+    """Data class for paw luminance data"""
+
+    paw_luminescence: Dict[str, list]
+    paw_print_size: Dict[str, list]
+    paw_luminance: Dict[str, list]
+    background_luminance: np.ndarray
+    frame_count: int
+    legacy_paw_luminance: LegacyPawLuminanceData
+
+    def get_measure(self, measure: LuminanceMeasure) -> Dict[str, list]:
+        if measure == LuminanceMeasure.LUMINANCE:
+            return self.paw_luminance
+        elif measure == LuminanceMeasure.LUMINESCENCE:
+            return self.paw_luminescence
+        elif measure == LuminanceMeasure.PRINT_SIZE:
+            return self.paw_print_size
+        else:
+            raise ValueError(f"Invalid measure: {measure}")
 
 
 def cal_paw_luminance_rework(label, cap, size=22):
@@ -331,7 +380,9 @@ def cal_paw_luminance_rework(label, cap, size=22):
     expected_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
     i = 0
-    pbar = tqdm(total=expected_total,dynamic_ncols=True,desc="paw luminance calculation")
+    pbar = tqdm(
+        total=expected_total, dynamic_ncols=True, desc="paw luminance calculation"
+    )
 
     while True:
         ret, frame = cap.read()  # Read the next frame
@@ -348,25 +399,25 @@ def cal_paw_luminance_rework(label, cap, size=22):
             int(label["rhpaw"][["x"]].values[i]),
             int(label["rhpaw"][["y"]].values[i]),
         )
-        hind_right.append(np.nanmean(frame[y - size: y + size, x - size: x + size]))
+        hind_right.append(np.nanmean(frame[y - size : y + size, x - size : x + size]))
 
         x, y = (
             int(label["lhpaw"][["x"]].values[i]),
             int(label["lhpaw"][["y"]].values[i]),
         )
-        hind_left.append(np.nanmean(frame[y - size: y + size, x - size: x + size]))
+        hind_left.append(np.nanmean(frame[y - size : y + size, x - size : x + size]))
 
         x, y = (
             int(label["rfpaw"][["x"]].values[i]),
             int(label["rfpaw"][["y"]].values[i]),
         )
-        front_right.append(np.nanmean(frame[y - size: y + size, x - size: x + size]))
+        front_right.append(np.nanmean(frame[y - size : y + size, x - size : x + size]))
 
         x, y = (
             int(label["lfpaw"][["x"]].values[i]),
             int(label["lfpaw"][["y"]].values[i]),
         )
-        front_left.append(np.nanmean(frame[y - size: y + size, x - size: x + size]))
+        front_left.append(np.nanmean(frame[y - size : y + size, x - size : x + size]))
         # legacy paw luminance calculation end----------------
 
         frame_denoise, paw_print = get_ftir_mask(frame)
@@ -418,18 +469,25 @@ def cal_paw_luminance_rework(label, cap, size=22):
     front_left = denoise(front_left, background_luminance)
     front_right = denoise(front_right, background_luminance)
 
-    legacy_paw_luminance = [
-        hind_left,
-        hind_right,
-        front_left,
-        front_right
-    ]
+    legacy_paw_luminance = LegacyPawLuminanceData(
+        hind_left=hind_left,
+        hind_right=hind_right,
+        front_left=front_left,
+        front_right=front_right,
+    )
     # legacy paw luminance calculation end----------------
 
-    return paw_luminescence, paw_print_size, paw_luminance, background_luminance, i, legacy_paw_luminance
+    return PawLuminanceData(
+        paw_luminescence=paw_luminescence,
+        paw_print_size=paw_print_size,
+        paw_luminance=paw_luminance,
+        background_luminance=background_luminance,
+        frame_count=i,
+        legacy_paw_luminance=legacy_paw_luminance,
+    )
 
 
-def cal_orientation_vector(label, alpha = 2.0, beta = 1.0):
+def cal_orientation_vector(label, alpha=2.0, beta=1.0):
     """
     helper function for calculating the orientation vector of the mouse
     input:
@@ -453,9 +511,9 @@ def cal_orientation_vector(label, alpha = 2.0, beta = 1.0):
     # secondary orientation vectors: every segment to the next segment
 
     # primary orientation vector
-    primary_vector = label["snout"][["x", "y"]].values - label["tailbase"][
-        ["x", "y"]
-    ].values
+    primary_vector = (
+        label["snout"][["x", "y"]].values - label["tailbase"][["x", "y"]].values
+    )
     # add the average likelihood of the two points
     primary_likelihood = (
         label["snout"]["likelihood"].values + label["tailbase"]["likelihood"].values
@@ -464,9 +522,10 @@ def cal_orientation_vector(label, alpha = 2.0, beta = 1.0):
     secondary_vectors = []
     secondary_likelihoods = []
     for i in range(len(body_parts) - 1):
-        secondary_vector = label[body_parts[i + 1]][["x", "y"]].values - label[
-            body_parts[i]
-        ][["x", "y"]].values
+        secondary_vector = (
+            label[body_parts[i + 1]][["x", "y"]].values
+            - label[body_parts[i]][["x", "y"]].values
+        )
         secondary_vectors.append(secondary_vector)
         secondary_likelihood = (
             label[body_parts[i + 1]]["likelihood"].values
@@ -497,12 +556,18 @@ def cal_orientation_vector(label, alpha = 2.0, beta = 1.0):
     # get the last non-zero index
     last_non_zero_index = np.where(~is_zero_row)[0][-1]
     # slice the final orientation vector to the last non-zero index
-    final_orientation_vector_trimmed = final_orientation_vector[: last_non_zero_index + 1]
+    final_orientation_vector_trimmed = final_orientation_vector[
+        : last_non_zero_index + 1
+    ]
     # normalize the final orientation vector
-    norms_trimmed = np.linalg.norm(final_orientation_vector_trimmed, axis=1, keepdims=True)
+    norms_trimmed = np.linalg.norm(
+        final_orientation_vector_trimmed, axis=1, keepdims=True
+    )
     # avoid division by zero
     norms_trimmed[norms_trimmed == 0] = 1e-10
-    final_orientation_vector_normalized = final_orientation_vector_trimmed / norms_trimmed
+    final_orientation_vector_normalized = (
+        final_orientation_vector_trimmed / norms_trimmed
+    )
 
     return final_orientation_vector_normalized
 
@@ -555,6 +620,7 @@ def cal_orientation_vector(label, alpha = 2.0, beta = 1.0):
 #
 #     return warped
 
+
 def four_point_transform(frame, orientation_frame, center, width, height):
     """
     :param frame: a single frame
@@ -581,7 +647,9 @@ def four_point_transform(frame, orientation_frame, center, width, height):
     pts = np.array([A, B, C, D], dtype="float32")
 
     # generate the corresponding four corners of the output frame
-    output_pts = np.array([[0, 0], [width, 0], [width, height], [0, height]], dtype="float32")
+    output_pts = np.array(
+        [[0, 0], [width, 0], [width, height], [0, height]], dtype="float32"
+    )
 
     # calculate the perspective transform matrix
     M = cv2.getPerspectiveTransform(pts, output_pts)
@@ -590,4 +658,3 @@ def four_point_transform(frame, orientation_frame, center, width, height):
     transformed_frame = cv2.warpPerspective(frame, M, (width, height))
 
     return transformed_frame
-

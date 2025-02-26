@@ -78,32 +78,15 @@ class FeaturesContext:
             for key in self._data.keys():
                 video_data.create_dataset(key, data=self._data[key])
 
-    def compare_feature_tables(self, old_feature_dict):
-        # the new implementations don't have the top level keys so we can just compare each key directly
-        error_count = 0
-        pass_count = 0
-
-        # Cant directly compare every feature with just ==, so convert them to series for access to .equals
-        for key in old_feature_dict:
-            if pd.Series(old_feature_dict[key]).equals(pd.Series(self._data[key])):
-                print(f"PASS: {key} was found equal in both dataframes")
-                pass_count += 1
-            else:
-                print(f"ERROR: {key} was found NOT equal in both dataframes")
-                error_count += 1
-
-        print(f"{error_count}/{pass_count} features had missing or incorrect data")
-        print(f"{pass_count}/{len(old_feature_dict)} were migrated")
-
 
 class Feature:
     def extract(self, ctx: FeaturesContext):
-        pass
+        raise NotImplementedError
 
 
 class PawLuminanceComputation:
     @staticmethod
-    def compute_paw_luminance(ctx: FeaturesContext):
+    def compute_paw_luminance(ctx: FeaturesContext) -> PawLuminanceData:
         """
         Computes the paw luminance. If this computation has already been done, it is not repeated.
         """
@@ -121,21 +104,12 @@ class PawFeatureDef(Feature):
         self.kind = measure
 
     def extract(self, ctx: FeaturesContext):
-        (paw_luminescence, paw_print_size, paw_luminance, _, _, _) = (
-            PawLuminanceComputation.compute_paw_luminance(ctx)
-        )
-
-        # map the corresponding dictionaries to the provided `kind`
-        luminance_data = {
-            LuminanceMeasure.LUMINESCENCE: paw_luminescence,
-            LuminanceMeasure.PRINT_SIZE: paw_print_size,
-            LuminanceMeasure.LUMINANCE: paw_luminance,
-        }
+        luminance_data = PawLuminanceComputation.compute_paw_luminance(ctx)
 
         # add the paw feature to the dictionary
-        ctx._data[f"{self.paw.value}_{self.kind.feature_name()}"] = luminance_data[
-            self.kind
-        ][self.paw.value]
+        ctx._data[f"{self.paw.value}_{self.kind.feature_name()}"] = (
+            luminance_data.get_measure(self.kind)[self.paw.value]
+        )
 
 
 class LegacyPawLuminanceDef(Feature):
@@ -143,32 +117,20 @@ class LegacyPawLuminanceDef(Feature):
         self.paw = paw
 
     def extract(self, ctx: FeaturesContext):
-        (_, _, _, _, _, legacy_paw_luminance) = (
-            PawLuminanceComputation.compute_paw_luminance(ctx)
-        )
+        luminance_data = PawLuminanceComputation.compute_paw_luminance(ctx)
 
-        (hind_left, hind_right, front_left, front_right) = legacy_paw_luminance
-
-        # map the luminance data to the corresponding paw
-        luminance_data = {
-            Paw.LEFT_HIND: hind_left,
-            Paw.RIGHT_HIND: hind_right,
-            Paw.LEFT_FRONT: front_left,
-            Paw.RIGHT_FRONT: front_right,
-        }
+        paw_data = luminance_data.legacy_paw_luminance.get_paw(self.paw)
 
         # add the paw feature to the dictionary
-        ctx._data[f"{self.paw.old_name()}_luminance"] = luminance_data[self.paw]
+        ctx._data[f"{self.paw.old_name()}_luminance"] = paw_data
 
 
 class BackgroundLuminanceDef(Feature):
     def extract(self, ctx: FeaturesContext):
-        (_, _, _, background_luminance, _, _) = (
-            PawLuminanceComputation.compute_paw_luminance(ctx)
-        )
+        luminance_data = PawLuminanceComputation.compute_paw_luminance(ctx)
 
         # add the background luminance to the dictionary
-        ctx._data["background_luminance"] = background_luminance
+        ctx._data["background_luminance"] = luminance_data.background_luminance
 
 
 class SingleFeaturesDef(Feature):
@@ -179,14 +141,12 @@ class SingleFeaturesDef(Feature):
     """
 
     def extract(self, ctx: FeaturesContext):
-        (_, _, _, _, frame_count, _) = PawLuminanceComputation.compute_paw_luminance(
-            ctx
-        )
+        luminance_data = PawLuminanceComputation.compute_paw_luminance(ctx)
         fps = int(ctx.ftir_video.get(cv2.CAP_PROP_FPS))
 
         # add the single features to the dictionary
         ctx._data["fps"] = np.array(fps)
-        ctx._data["frame_count"] = np.array(frame_count)
+        ctx._data["frame_count"] = np.array(luminance_data.frame_count)
 
 
 class AnimalDetectionDef(Feature):

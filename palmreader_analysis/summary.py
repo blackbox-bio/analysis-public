@@ -198,32 +198,6 @@ class SummaryContext:
             summary_col_name_dict[key]: value for key, value in self._data.items()
         }
 
-    def compare_summary_columns(self, old_video: Dict[Any, Any]):
-        error_count = 0
-        pass_count = 0
-        missing_count = 0
-
-        for key in old_video.keys():
-            if key in self._data:
-                old_value = old_video[key]
-                new_value = self._data[key]
-                if new_value == old_value:
-                    pass_count += 1
-                    print(f"PASS: '{key}' is the same in both new and old")
-                else:
-                    error_count += 1
-                    print(
-                        f"FAIL: '{key}' is different in new and old. new = {new_value}, old = {old_value}"
-                    )
-            else:
-                missing_count += 1
-                print(f"MISSING: '{key}' is missing in new")
-
-        print("Summary columns comparison:")
-        print(f"PASS: {pass_count}")
-        print(f"FAIL: {error_count}")
-        print(f"MISSING: {missing_count}")
-
 
 class SummaryColumn:
     def summarize(self, ctx: SummaryContext):
