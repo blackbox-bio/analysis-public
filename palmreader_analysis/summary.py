@@ -143,6 +143,8 @@ class SummaryContext:
 
             self._apply_bin(start_frame, end_frame)
 
+            self._features["frame_count"] = end_frame - start_frame
+
         # apply binning
         frame_count = self._features["frame_count"]
         fps = self._features["fps"]
@@ -188,8 +190,6 @@ class SummaryContext:
                 continue
 
             self._features[key] = self._features[key][start_frame:end_frame]
-
-            self._features["frame_count"] = end_frame - start_frame
 
     def finish(self):
         # this just applies the name dictionary to the columns
