@@ -12,6 +12,7 @@ from cols_name_dicts import summary_col_name_dict
 from .features import FeaturesContext, Feature
 from .summary import SummaryColumn
 from .variants import ColumnMetadata, ColumnCategory
+from .warnings import WarningContext
 
 
 class DistanceDeltaDef(Feature, SummaryColumn):
@@ -173,12 +174,15 @@ class BodyPartAngleDef(Feature, SummaryColumn):
 
     def extract(self, ctx: FeaturesContext):
         label = ctx.label
-        vector1 = get_vector(label, self.vector_parts_1[0], self.vector_parts_1[1])
-        vector2 = get_vector(label, self.vector_parts_2[0], self.vector_parts_2[1])
-        if self.sign == "positive":
-            ctx._data[self.dest] = get_angle(vector1, vector2)
-        elif self.sign == "negative":
-            ctx._data[self.dest] = -get_angle(vector1, vector2)
+        with WarningContext(
+            f"Calculating {self.dest} using {self.vector_parts_1} and {self.vector_parts_2}"
+        ):
+            vector1 = get_vector(label, self.vector_parts_1[0], self.vector_parts_1[1])
+            vector2 = get_vector(label, self.vector_parts_2[0], self.vector_parts_2[1])
+            if self.sign == "positive":
+                ctx._data[self.dest] = get_angle(vector1, vector2)
+            elif self.sign == "negative":
+                ctx._data[self.dest] = -get_angle(vector1, vector2)
 
     def _get_column_name(self) -> str:
         dest = self.summary_dest if self.summary_dest is not None else self.dest
