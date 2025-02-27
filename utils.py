@@ -396,26 +396,26 @@ def cal_paw_luminance_rework(label, cap, size=22):
 
         # legacy paw luminance calculation
         x, y = (
-            int(label["rhpaw"][["x"]].values[i]),
-            int(label["rhpaw"][["y"]].values[i]),
+            int(label["rhpaw"][["x"]].values[i].item()),
+            int(label["rhpaw"][["y"]].values[i].item()),
         )
         hind_right.append(np.nanmean(frame[y - size : y + size, x - size : x + size]))
 
         x, y = (
-            int(label["lhpaw"][["x"]].values[i]),
-            int(label["lhpaw"][["y"]].values[i]),
+            int(label["lhpaw"][["x"]].values[i].item()),
+            int(label["lhpaw"][["y"]].values[i].item()),
         )
         hind_left.append(np.nanmean(frame[y - size : y + size, x - size : x + size]))
 
         x, y = (
-            int(label["rfpaw"][["x"]].values[i]),
-            int(label["rfpaw"][["y"]].values[i]),
+            int(label["rfpaw"][["x"]].values[i].item()),
+            int(label["rfpaw"][["y"]].values[i].item()),
         )
         front_right.append(np.nanmean(frame[y - size : y + size, x - size : x + size]))
 
         x, y = (
-            int(label["lfpaw"][["x"]].values[i]),
-            int(label["lfpaw"][["y"]].values[i]),
+            int(label["lfpaw"][["x"]].values[i].item()),
+            int(label["lfpaw"][["y"]].values[i].item()),
         )
         front_left.append(np.nanmean(frame[y - size : y + size, x - size : x + size]))
         # legacy paw luminance calculation end----------------
@@ -425,8 +425,8 @@ def cal_paw_luminance_rework(label, cap, size=22):
         # calculate the luminance of the four paws
         for paw in paws:
             x, y = (
-                int(label[paw][["x"]].values[i]),
-                int(label[paw][["y"]].values[i]),
+                int(label[paw][["x"]].values[i].item()),
+                int(label[paw][["y"]].values[i].item()),
             )
             luminescence, print_size, luminance = get_individual_paw_luminance(
                 frame_denoise, paw_print, x, y, size
