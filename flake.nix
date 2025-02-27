@@ -13,6 +13,9 @@
           inherit system;
           config = { allowUnfree = true; allowBroken = true; };
         };
+        tensorrt = (pkgs.cudaPackages_11.tensorrt_8_6.overrideAttrs (prev: next: {
+          dontCheckForBrokenSymlinks = true;
+        }));
       in
       with pkgs;
       {
@@ -29,9 +32,9 @@
             zlib
             libGL
             glib
+            tensorrt
           ] ++ (with cudaPackages_11; [
             cudatoolkit
-            tensorrt_8_6
             libcufft
             libcurand
             libcusparse
@@ -41,8 +44,8 @@
           shellHook = ''
             if [[ ! -d .hack ]]; then
               mkdir ./.hack
-              ln -s ${cudaPackages_11.tensorrt_8_6}/lib/libnvinfer.so.8.6.1 ./.hack/libnvinfer.so.7
-              ln -s ${cudaPackages_11.tensorrt_8_6}/lib/libnvinfer_plugin.so.8.6.1 ./.hack/libnvinfer_plugin.so.7
+              ln -s ${tensorrt}/lib/libnvinfer.so.8.6.1 ./.hack/libnvinfer.so.7
+              ln -s ${tensorrt}/lib/libnvinfer_plugin.so.8.6.1 ./.hack/libnvinfer_plugin.so.7
             fi
             export LD_LIBRARY_PATH="$PWD/.hack:$LD_LIBRARY_PATH"
           '';

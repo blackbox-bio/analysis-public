@@ -11,8 +11,13 @@ __pycache__/
 *.avi
 *.mp4
 *.csv
+*.h5*
+
+!tests/data/**/*
 
 # nixos env stuff
 /.direnv
 /.hack
 /.venv
+/.idea
+/C-TestData
