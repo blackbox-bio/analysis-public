@@ -542,8 +542,8 @@ class PawLiftedTimeColumn(SummaryColumn):
                 column=self._get_column_name(),
                 category=ColumnCategory.TEMPORAL,
                 tags=[self.paw.as_tag()],
-                displayname=f"{self.paw.displayname().capitalize()} paw lifted time",
-                description=f"The amount of time the {self.paw.displayname()} paw was lifted (in seconds)",
+                displayname=f"{self.paw.displayname().capitalize()} lifted time",
+                description=f"The amount of time the {self.paw.displayname()} was lifted (in seconds)",
             )
         ]
 
@@ -799,8 +799,8 @@ class LegacyPawLiftedTimeColumn(SummaryColumn):
                 column=self._get_column_name(),
                 category=ColumnCategory.TEMPORAL,
                 tags=[self.paw.as_tag()],
-                displayname=f"Legacy {self.paw.displayname()} paw lifted time",
-                description=f"The amount of time the {self.paw.displayname()} paw was lifted (in seconds)",
+                displayname=f"Legacy {self.paw.displayname()} lifted time",
+                description=f"The amount of time the {self.paw.displayname()} was lifted (in seconds)",
                 legacy=True,
             )
         ]
