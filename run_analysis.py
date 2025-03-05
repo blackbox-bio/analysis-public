@@ -5,6 +5,7 @@ from dlc_runner import *
 import concurrent.futures
 from joblib import Parallel, delayed
 import sys
+import warnings
 
 sys.path.append("./preprocess/")
 from FourChamber_split_resize import *
@@ -35,26 +36,18 @@ def main():
     ]
 
     # run deeplabcut
-    run_deeplabcut(dlc_config_path, body_videos)
+    # run_deeplabcut(dlc_config_path, body_videos)
 
     # now that done with DLC tracking, start process the recordings
     print(f"In total {len(recording_list)} videos to be processed: ")
     print(f"{[os.path.basename(recording) for recording in recording_list]}")
 
-    # # # Process the videos iteratively
-    # for recording in recording_list:
-    #     process_recording_wrapper(recording)
-
-    # # Get the number of available CPU cores
-    # num_workers = os.cpu_count() - 2 if os.cpu_count() > 2 else 1
-
-    num_workers = 16  # set to work with 13900K CPU
-    # #
-    # # # Use joblib for parallel processing
-    # Parallel(n_jobs=num_workers)(
-    #     delayed(process_recording_wrapper)(recording) for recording in recording_list
-    # )
-    #
+    num_workers = 6  # set to work with 13900K CPU
+    # ignore warnings encountered during the process
+    warnings.filterwarnings("ignore", message="Mean of empty slice")
+    warnings.filterwarnings("ignore", message="invalid value encountered in scalar divide")
+    warnings.filterwarnings("ignore", message="invalid value encountered in arccos")
+    warnings.filterwarnings("ignore", message="divide by zero encountered in scalar divide")
     with concurrent.futures.ProcessPoolExecutor(max_workers=num_workers) as executor:
         futures = [
             executor.submit(process_recording_wrapper, recording)
@@ -64,7 +57,7 @@ def main():
 
 
     # generate summary csv from the processed videos
-    time_bins = ((0, -1),)
+    time_bins = ((0, 5),)
     generate_summary_csv(analysis_folder, time_bins)
 
 
