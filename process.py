@@ -269,10 +269,14 @@ def process_recording(recording):
     trans_path = os.path.join(recording, "trans_resize.avi")
     ftir_path = os.path.join(recording, "ftir_resize.avi")
 
-    dlc_postfix = "DLC_resnet50_arcteryx500Nov4shuffle1_350000"
-    # dlc_path = os.path.join(recording, "trans_resize" + dlc_postfix + ".h5")
+    # dlc_postfix = "DLC_resnet50_arcteryx500Nov4shuffle1_350000"
+    # dlc_path = os.path.join(recording, "trans_resize" + dlc_postfix + "_filtered.h5")
 
-    dlc_path = os.path.join(recording, "trans_resize" + dlc_postfix + "_filtered.h5")
+    for file in os.listdir(recording):
+        if file.endswith("_filtered.h5"):
+            dlc_path = os.path.join(recording, file)
+            break
+
     dest_path = os.path.join(recording, "features.h5")
 
     extract_features(recording_name, ftir_path, dlc_path, dest_path)
