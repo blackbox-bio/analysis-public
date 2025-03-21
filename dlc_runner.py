@@ -10,7 +10,7 @@ if os.name == "posix":
     dlc_config_path = r"/Users/zihealexzhang/work_local/blackbox_data/arcteryx500-alex-2023-11-04/config.yaml"
 if info.sysname == "Linux":
     print("Running on Linux, right now dedicated to torch backend")
-    dlc_config_path = r"/home/alex/Documents/DLC/arcteryx500-alex-2023-11-04/config.yaml"
+    dlc_config_path = r"/home/alex/Documents/DLC/dlc-torch-deployment/config.yaml"
 
 
 selected_folders = []
@@ -132,6 +132,7 @@ def main():
 
     # dlc_config_path = r"D:\DLC\arcteryx500-alex-2023-11-04\config.yaml"
     dlc_config_path = r"/Users/zihealexzhang/work_local/blackbox_data/arcteryx500-alex-2023-11-04/config.yaml"
+
 
     # Ask the user to select subfolders to process
     selected_folders = select_folders()
