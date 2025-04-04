@@ -1,3 +1,4 @@
+import palmreader_analysis
 from process import *
 from summary import *
 from dlc_runner import *
