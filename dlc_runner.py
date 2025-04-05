@@ -100,9 +100,10 @@ def generate_skeleton(dlc_config_path, body_videos):
         dlc_config_path,
         body_videos,
         shuffle=0,
-        displayedbodyparts=bodyparts,
+        # displayedbodyparts=bodyparts,
         filtered=True,
         draw_skeleton=True,
+        overwrite=True,
     )
     return
 
