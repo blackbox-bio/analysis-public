@@ -862,8 +862,8 @@ class QualityControlFlagColumn(SummaryColumn):
         ctx._data[QualityControlFlagColumn.COLUMN_NAME] = 0
 
         if (
-            ctx._data[f"average_{Paw.LEFT_HIND.value}_tracking_likelihood"] < 0.85
-            or ctx._data[f"average_{Paw.RIGHT_HIND.value}_tracking_likelihood"] < 0.85
+            ctx._data[f"average_{Paw.LEFT_HIND.value}_tracking_likelihood"] < 0.4
+            or ctx._data[f"average_{Paw.RIGHT_HIND.value}_tracking_likelihood"] < 0.4
             or ctx._data[f"average_{Paw.LEFT_FRONT.value}_tracking_likelihood"] < 0.6
             or ctx._data[f"average_{Paw.RIGHT_FRONT.value}_tracking_likelihood"] < 0.6
         ):
