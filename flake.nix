@@ -47,7 +47,7 @@
               ln -s ${tensorrt}/lib/libnvinfer.so.8.6.1 ./.hack/libnvinfer.so.7
               ln -s ${tensorrt}/lib/libnvinfer_plugin.so.8.6.1 ./.hack/libnvinfer_plugin.so.7
             fi
-            export LD_LIBRARY_PATH="$PWD/.hack:$LD_LIBRARY_PATH"
+            export LD_LIBRARY_PATH="/run/opengl-driver/lib:$PWD/.hack:$LD_LIBRARY_PATH"
           '';
 
           LD_LIBRARY_PATH = lib.makeLibraryPath buildInputs;
