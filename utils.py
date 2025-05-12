@@ -56,10 +56,8 @@ def get_recording_list(directorys):
     for directory in directorys:
         for root, dirs, files in os.walk(directory):
             for file in files:
-                # file_path = os.path.join(root, file)
-                if file.endswith("trans_resize.avi"):
+                if file.endswith("trans_resize.mp4"):
                     recording_list.append(root)
-                    # avi_files.append(os.path.join(root, file))
     return recording_list
 
 
