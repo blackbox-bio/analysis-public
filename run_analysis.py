@@ -32,7 +32,7 @@ def main():
 
     # generate the list of trans_resize.avi videos to pass to deeplabcut
     body_videos = [
-        os.path.join(recording, "trans_resize.avi") for recording in recording_list
+        os.path.join(recording, "trans_resize.mp4") for recording in recording_list
     ]
 
     # run deeplabcut

@@ -53,7 +53,7 @@ def run_deeplabcut(dlc_config_path, body_videos, also_generate_skeleton=True):
         len(body_videos), "Analyzing videos", autoincrement=True
     )
 
-    deeplabcut.analyze_videos(dlc_config_path, body_videos, videotype=".avi", shuffle=0)
+    deeplabcut.analyze_videos(dlc_config_path, body_videos, videotype=".mp4", shuffle=0)
 
     PalmreaderProgress.start_multi(len(body_videos), "Filtering predictions")
 
@@ -128,32 +128,3 @@ def select_folders():
 
     return selected_folders
 
-
-def main():
-    root = tk.Tk()
-    root.withdraw()
-
-    # dlc_config_path = r"D:\DLC\arcteryx500-alex-2023-11-04\config.yaml"
-    dlc_config_path = r"/Users/zihealexzhang/work_local/blackbox_data/arcteryx500-alex-2023-11-04/config.yaml"
-
-
-    # Ask the user to select subfolders to process
-    selected_folders = select_folders()
-
-    # Get all '_body' videos in the selected subfolders
-    body_videos = get_body_videos(selected_folders)
-    print("Found body_videos:", body_videos)
-
-    # Run DeepLabCut analyze_videos function on the body videos
-    run_deeplabcut(dlc_config_path, body_videos)
-
-    print(f"Found these folders: {selected_folders}")
-
-    return
-
-
-if __name__ == "__main__":
-    import tkinter as tk
-    from tkinter import filedialog
-
-    main()
