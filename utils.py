@@ -390,6 +390,11 @@ def cal_paw_luminance_rework(label, cap, size=22):
         if not ret:
             break
 
+        # workaround: if the ftir video is longer than DLC tracking, exit to
+        # avoid index error
+        if len(label["rhpaw"]) <= i:
+            break
+
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # Convert to grayscale
         # calculate background luminance
         background_luminance.append(np.mean(frame))
