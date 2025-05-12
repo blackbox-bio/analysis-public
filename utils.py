@@ -378,13 +378,16 @@ def cal_paw_luminance_rework(label, cap, size=22):
     # legacy end----------------
 
     expected_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    DLC_tracking_length = label["snout"][["x"]].shape[0]
+
+    expected_total = min(expected_total, DLC_tracking_length) # take the minimum of the two
 
     i = 0
     pbar = tqdm(
         total=expected_total, dynamic_ncols=True, desc="paw luminance calculation"
     )
 
-    while True:
+    while 1<expected_total:
         ret, frame = cap.read()  # Read the next frame
 
         if not ret:
