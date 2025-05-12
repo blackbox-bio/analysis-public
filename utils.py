@@ -380,7 +380,9 @@ def cal_paw_luminance_rework(label, cap, size=22):
     expected_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     DLC_tracking_length = label["snout"][["x"]].shape[0]
 
-    expected_total = min(expected_total, DLC_tracking_length) # take the minimum of the two
+    print(f"expected_total: {expected_total}, DLC_tracking_length: {DLC_tracking_length}")
+
+    # expected_total = min(expected_total, DLC_tracking_length) # take the minimum of the two
 
     i = 0
     pbar = tqdm(
@@ -389,8 +391,12 @@ def cal_paw_luminance_rework(label, cap, size=22):
 
     while 1<expected_total:
         ret, frame = cap.read()  # Read the next frame
+        if i > DLC_tracking_length-15:
+            print(f"current frame: {i}")
+            print(f"DLC snot tracking for the frame: {label['snout'][['x']].values[i]}")
 
         if not ret:
+            print(f"frame {i} not read")
             break
 
         # workaround: if the ftir video is longer than DLC tracking, exit to
