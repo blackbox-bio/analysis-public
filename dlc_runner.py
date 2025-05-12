@@ -30,18 +30,18 @@ selected_folders = []
 #     return body_videos
 
 
-def get_recording_list(directorys):
-
-    recording_list = []
-
-    for directory in directorys:
-        for root, dirs, files in os.walk(directory):
-            for file in files:
-                # file_path = os.path.join(root, file)
-                if file.endswith("trans_resize.avi"):
-                    recording_list.append(root)
-                    # avi_files.append(os.path.join(root, file))
-    return recording_list
+# def get_recording_list(directorys):
+#
+#     recording_list = []
+#
+#     for directory in directorys:
+#         for root, dirs, files in os.walk(directory):
+#             for file in files:
+#                 # file_path = os.path.join(root, file)
+#                 if file.endswith("trans_resize.avi"):
+#                     recording_list.append(root)
+#                     # avi_files.append(os.path.join(root, file))
+#     return recording_list
 
 
 # Function to run DeepLabCut on the specified videos
