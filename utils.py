@@ -389,14 +389,10 @@ def cal_paw_luminance_rework(label, cap, size=22):
         total=expected_total, dynamic_ncols=True, desc="paw luminance calculation"
     )
 
-    while 1<expected_total:
+    while True:
         ret, frame = cap.read()  # Read the next frame
-        if i > DLC_tracking_length-15:
-            print(f"current frame: {i}")
-            print(f"DLC snot tracking for the frame: {label['snout'][['x']].values[i]}")
 
         if not ret:
-            print(f"frame {i} not read")
             break
 
         # workaround: if the ftir video is longer than DLC tracking, exit to
