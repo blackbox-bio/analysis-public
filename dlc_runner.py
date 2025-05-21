@@ -1,6 +1,8 @@
 from palmreader_analysis.events import PalmreaderProgress
 import os
 import deeplabcut
+import multiprocessing as mp
+mp.set_start_method("spawn", force=True)
 
 info = os.uname()
 
