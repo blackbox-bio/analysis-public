@@ -4,15 +4,15 @@ import deeplabcut
 import multiprocessing as mp
 mp.set_start_method("spawn", force=True)
 
-info = os.uname()
-
-if os.name == "nt":
-    dlc_config_path = r"D:\DLC\blackbox_dlc_deployment\config.yaml"
-if os.name == "posix":
-    dlc_config_path = r"/Users/zihealexzhang/work_local/blackbox_data/arcteryx500-alex-2023-11-04/config.yaml"
-if info.sysname == "Linux":
-    print("Running on Linux, right now dedicated to torch backend")
-    dlc_config_path = r"/home/alex/Documents/DLC/dlc-torch-deployment/config.yaml"
+# info = os.uname()
+#
+# if os.name == "nt":
+#     dlc_config_path = r"D:\DLC\blackbox_dlc_deployment\config.yaml"
+# if os.name == "posix":
+#     dlc_config_path = r"/Users/zihealexzhang/work_local/blackbox_data/arcteryx500-alex-2023-11-04/config.yaml"
+# if info.sysname == "Linux":
+#     print("Running on Linux, right now dedicated to torch backend")
+#     dlc_config_path = r"/home/alex/Documents/DLC/dlc-torch-deployment/config.yaml"
 
 
 # Function to run DeepLabCut on the specified videos

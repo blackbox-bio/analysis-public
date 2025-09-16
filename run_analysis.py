@@ -33,6 +33,12 @@ def main():
         help="Path to the experiment folder",
     )
     parser.add_argument(
+        "--dlc_config_path",
+        type=str,
+        required=True,
+        help="Path to the deeplabcut config.yaml file",
+    )
+    parser.add_argument(
         "--num_workers",
         type=int,
         default=6,
@@ -64,7 +70,7 @@ def main():
     ]
 
     # run deeplabcut
-    run_deeplabcut(dlc_config_path, body_videos)
+    run_deeplabcut(args.dlc_config_path, body_videos)
 
     # now that done with DLC tracking, start process the recordings
     print(f"In total {len(recording_list)} videos to be processed: ")
