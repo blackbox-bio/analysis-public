@@ -13,6 +13,7 @@ __pycache__/
 *.mp4
 *.csv
 *.h5*
+*.sh
 
 !tests/data/**/*
 tests/data/**/*.DS_Store
