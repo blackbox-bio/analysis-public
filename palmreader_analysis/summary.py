@@ -23,6 +23,7 @@ class SummaryContext:
         from .common import (
             DistanceDeltaDef,
             BodyPartDistanceDef,
+            AngleSummaryMode,
             BodyPartAngleDef,
             DISTANCE_FEATURES,
             ANGLE_FEATURES,
@@ -82,9 +83,10 @@ class SummaryContext:
 
         for column in ANGLE_FEATURES.keys():
             vector_parts_1, vector_parts_2, sign, dest = ANGLE_FEATURES[column]
-            columns.append(
-                BodyPartAngleDef(column, vector_parts_1, vector_parts_2, sign, dest)
-            )
+            for mode in AngleSummaryMode:
+                columns.append(
+                    BodyPartAngleDef(column, vector_parts_1, vector_parts_2, sign, dest, mode)
+                )
 
         for paw in Paw:
             columns.append(TrackingLikelihoodColumn(paw))
