@@ -579,56 +579,7 @@ def cal_orientation_vector(label, alpha=2.0, beta=1.0):
 
     return final_orientation_vector_normalized
 
-
-# def four_point_transform(image, tx, ty, cx, cy, wid, length):
-#     """
-#     helper function for center and align a single video frame
-#     input:
-#         T, coord of tailbase, which is used to center the mouse
-#         TN, vector from tailbase to centroid
-#         wid, the width of the to-be-cropped portion
-#         length, the length of the to-be-cropped portion
-#
-#     output:
-#         warped: the cropped portion in the size of (wid, length),
-#         mouse will be centered by tailbase,
-#         aligned by the direction from tailbase to centroid
-#
-#     """
-#     T = np.array([tx, ty])
-#     N = np.array([cx, cy])
-#     TN = N - T
-#
-#     uTN = TN / np.linalg.norm(TN)  # calculate the unit vector for TN
-#
-#     # calculate the unit vector perpendicular to uTN
-#     uAB = np.zeros((1, 2), dtype="float32")
-#     uAB[0][0] = uTN[1]
-#     uAB[0][1] = -uTN[0]
-#
-#     # calculate four corners of the to-be-cropped portion of the image
-#     #   use centroid to center the mouse
-#     A = N + uAB * (wid / 2) + uTN * (length / 2)
-#     B = N - uAB * (wid / 2) + uTN * (length / 2)
-#     C = N - uAB * (wid / 2) - uTN * (length / 2)
-#     D = N + uAB * (wid / 2) - uTN * (length / 2)
-#
-#     # concatenate four corners into a np.array
-#     pts = np.concatenate((A, B, C, D))
-#     pts = pts.astype("float32")
-#
-#     # generate the corresponding four corners in the cropped image
-#     dst = np.float32([[0, 0], [wid, 0], [wid, length], [0, length]])
-#
-#     # generate transform matrix
-#     M = cv2.getPerspectiveTransform(pts, dst)
-#
-#     # rotate and crop image
-#     warped = cv2.warpPerspective(image, M, (wid, length))
-#
-#     return warped
-
-
+    
 def four_point_transform(frame, orientation_frame, center, width, height):
     """
     :param frame: a single frame
