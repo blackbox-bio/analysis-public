@@ -19,7 +19,7 @@ mp.set_start_method("spawn", force=True)
 #
 # THIS IS AN API ENTRYPOINT! If the signature is modified, ensure api.py matches!
 # The body of this function can change without affecting the API.
-def run_deeplabcut(dlc_config_path, body_videos, generate_skeleton=True, simple_skeleton=False):
+def run_deeplabcut(dlc_config_path, body_videos, generate_skeleton_flag=True, simple_skeleton_flag=False):
     PalmreaderProgress.start_multi(
         len(body_videos), "Analyzing videos", autoincrement=True
     )
@@ -36,8 +36,8 @@ def run_deeplabcut(dlc_config_path, body_videos, generate_skeleton=True, simple_
         #     dlc_config_path, [video], videotype=".avi", filtered=True
         # )
 
-    if generate_skeleton:
-        generate_skeleton(dlc_config_path, body_videos, simple_skeleton)
+    if generate_skeleton_flag:
+        generate_skeleton(dlc_config_path, body_videos, simple_skeleton_flag)
 
     return
 
@@ -46,7 +46,7 @@ def run_deeplabcut(dlc_config_path, body_videos, generate_skeleton=True, simple_
 #
 # THIS IS AN API ENTRYPOINT! If the signature is modified, ensure api.py matches!
 # The body of this function can change without affecting the API.
-def generate_skeleton(dlc_config_path, body_videos, simple_skeleton=False):
+def generate_skeleton(dlc_config_path, body_videos, simple_skeleton_flag=False):
     PalmreaderProgress.start_single("Generating skeleton videos", parallel=True)
 
     bodyparts = [
@@ -69,7 +69,7 @@ def generate_skeleton(dlc_config_path, body_videos, simple_skeleton=False):
         "rfpaw"
     ]
 
-    if simple_skeleton:
+    if simple_skeleton_flag:
         for video in body_videos:
             deeplabcut.create_labeled_video(
                 dlc_config_path,
