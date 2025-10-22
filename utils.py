@@ -579,7 +579,7 @@ def cal_orientation_vector(label, alpha=2.0, beta=1.0):
 
     return final_orientation_vector_normalized
 
-    
+
 def four_point_transform(frame, orientation_frame, center, width, height):
     """
     :param frame: a single frame
