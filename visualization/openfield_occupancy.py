@@ -26,6 +26,17 @@ def plot_open_field_occupancy_map(
 
         animal_name = group_names[0]
         frame_size = f[animal_name]['frame_size'][()]
+        frame_count = f[animal_name]['frame_count'][()]
+
+        # use animal detection to dynamically trim the beginning of the recording with an empty field
+        start_frame = 0
+        if "animal_detection" in f[animal_name].keys():
+            animal_detection = f[animal_name]['animal_detection'][:]
+
+            for i in range(frame_count):
+                if animal_detection[i] == 1:
+                    start_frame = i
+                    break
 
         # field_size = f[animal_name['field_size'][()]
         # TODO: Once feature could read the physical size of the recording field,
@@ -37,7 +48,7 @@ def plot_open_field_occupancy_map(
     df = pd.read_hdf(tracking_h5)
     model_id = df.columns[0][0]
     label = df[model_id]
-    tailbase = label['tailbase'][['x','y']][:]
+    tailbase = label['tailbase'][['x','y']][start_frame:frame_count]
 
     # for now, normalize x,y location to [0,1] by the frame size
     tailbase = tailbase / frame_size
