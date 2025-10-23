@@ -48,23 +48,24 @@ def plot_open_field_occupancy_map(
     df = pd.read_hdf(tracking_h5)
     model_id = df.columns[0][0]
     label = df[model_id]
-    tailbase = label['tailbase'][['x','y']][start_frame:frame_count]
+
+    centroid = cal_centroid(label)
 
     # for now, normalize x,y location to [0,1] by the frame size
-    tailbase = tailbase / frame_size
+    centroid = centroid / frame_size
 
-    # take the tailbase x,y location tracking and generate a heatmap for the occupancy
+    # take the centroid x,y location tracking and generate a heatmap for the occupancy
     plt.figure(figsize=[8, 8])
 
     # KDE heatmap
     sns.kdeplot(
-        x=tailbase["x"] * scale,
-        y=tailbase["y"] * scale,
+        x=centroid["x"] * scale,
+        y=centroid["y"] * scale,
         fill=True, cmap="inferno",
         thresh=0, levels=100
     )
     # Overlay trajectory
-    plt.plot(tailbase["x"] * scale, tailbase["y"] * scale, color="white", alpha=0.3, lw=0.5)
+    plt.plot(centroid["x"] * scale, centroid["y"] * scale, color="white", alpha=0.3, lw=0.5)
 
     # Flip y-axis
     plt.gca().invert_yaxis()
@@ -81,3 +82,41 @@ def plot_open_field_occupancy_map(
     plt.close()
     print(f"occupancy map saved to {dest_path}")
 
+
+def cal_centroid(label):
+    """
+    input:
+    label: DLC tracking of the recording
+    return: the x,y location of the (estimated) centroid of the mouse
+    """
+
+    # for now hard-code the list of bodyparts used to estimate centroid
+    bp_list = [
+        'tailbase',
+        'hip',
+        'sternumtail',
+        'sternumhead',
+        'neck',
+        'snout',
+        'lhip',
+        'rhip',
+        'lshoulder',
+        'rshoulder'
+    ]
+
+    sub = label.loc[:, pd.IndexSlice[bp_list, ['x', 'y', 'likelihood']]]
+    x = sub.xs('x', axis=1, level=-1)
+    y = sub.xs('y', axis=1, level=-1)
+    lik = sub.xs('likelihood', axis=1, level=-1)
+
+    # likelihood-weighted sum that integrate different bodyparts locations
+    weighted_x = (x * lik).sum(axis=1)
+    weighted_y = (y * lik).sum(axis=1)
+    sum_weights = lik.sum(axis=1)
+    mean_x = weighted_x.div(sum_weights).where(sum_weights.ne(0))
+    mean_y = weighted_y.div(sum_weights).where(sum_weights.ne(0))
+
+    centroid = pd.concat([mean_x, mean_y], axis=1)
+    centroid.columns = ['x', 'y']
+
+    return centroid

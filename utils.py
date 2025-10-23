@@ -13,6 +13,7 @@ from scipy.ndimage import median_filter
 from dataclasses import dataclass
 from typing import Dict
 from palmreader_analysis.variants import LuminanceMeasure, Paw
+from visualization.openfield_occupancy import cal_centroid
 
 
 def select_folder():
@@ -61,10 +62,12 @@ def get_recording_list(directorys):
     return recording_list
 
 
-def cal_distance_(label, bodypart="tailbase"):
+def cal_distance_(label):
     """helper function for "calculate distance traveled"""
-    x = gaussian_filter1d(label[bodypart]["x"].values, 3)
-    y = gaussian_filter1d(label[bodypart]["y"].values, 3)
+
+    centroid = cal_centroid(label)
+    x = gaussian_filter1d(centroid["x"].values, 3)
+    y = gaussian_filter1d(centroid["y"].values, 3)
     d_x = np.diff(x)
     d_y = np.diff(y)
     d_location = np.sqrt(d_x**2 + d_y**2)
@@ -105,18 +108,6 @@ def get_angle(v1, v2):
     sign[sign == 0] = 1  # if cross product is 0, set sign to 1
     counterclockwise_angle = angle * sign
     return counterclockwise_angle
-
-
-# def cal_body_mean_movement(label):
-#     """using DLC tracking of several main body parts to calculate mean body movement
-#        first calculate the frame to frame speed for each body part, then average them
-#        return body_mean_movement"""
-#     bodyparts = ['tailbase', 'centroid', 'neck', 'snout', 'hlpaw', 'hrpaw', 'flpaw', 'frpaw']
-#     place_holder = {}
-#     for body in bodyparts:
-#         place_holder[body] = cal_distance_(label, body)
-#
-#     return np.mean(np.vstack([place_holder[body] for body in bodyparts]).T, axis=1, keepdims=True)
 
 
 def denoise(luminance, noise):
