@@ -13,7 +13,7 @@ from scipy.ndimage import median_filter
 from dataclasses import dataclass
 from typing import Dict
 from palmreader_analysis.variants import LuminanceMeasure, Paw
-from visualization.openfield_occupancy import cal_centroid
+from report.openfield_occupancy import cal_centroid
 
 
 def select_folder():

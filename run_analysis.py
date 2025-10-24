@@ -7,7 +7,7 @@ import sys
 import warnings
 import os
 import argparse
-from visualization.openfield_occupancy import plot_open_field_occupancy_map
+from report.openfield_occupancy import plot_open_field_occupancy_map
 
 sys.path.append("./preprocess/")
 
