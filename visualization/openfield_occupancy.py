@@ -92,12 +92,12 @@ def cal_centroid(label):
 
     # for now hard-code the list of bodyparts used to estimate centroid
     bp_list = [
-        'tailbase',
+        # 'tailbase',
         'hip',
         'sternumtail',
         'sternumhead',
         'neck',
-        'snout',
+        # 'snout',
         'lhip',
         'rhip',
         'lshoulder',
