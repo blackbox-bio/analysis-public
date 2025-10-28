@@ -542,8 +542,8 @@ class PawLiftedTimeColumn(SummaryColumn):
                 column=self._get_column_name(),
                 category=ColumnCategory.TEMPORAL,
                 tags=[self.paw.as_tag()],
-                displayname=f"{self.paw.displayname().capitalize()} paw lifted time",
-                description=f"The amount of time the {self.paw.displayname()} paw was lifted (in seconds)",
+                displayname=f"{self.paw.displayname().capitalize()} lifted time",
+                description=f"The amount of time the {self.paw.displayname()} was lifted (in seconds)",
             )
         ]
 
@@ -799,8 +799,8 @@ class LegacyPawLiftedTimeColumn(SummaryColumn):
                 column=self._get_column_name(),
                 category=ColumnCategory.TEMPORAL,
                 tags=[self.paw.as_tag()],
-                displayname=f"Legacy {self.paw.displayname()} paw lifted time",
-                description=f"The amount of time the {self.paw.displayname()} paw was lifted (in seconds)",
+                displayname=f"Legacy {self.paw.displayname()} lifted time",
+                description=f"The amount of time the {self.paw.displayname()} was lifted (in seconds)",
                 legacy=True,
             )
         ]
@@ -862,8 +862,8 @@ class QualityControlFlagColumn(SummaryColumn):
         ctx._data[QualityControlFlagColumn.COLUMN_NAME] = 0
 
         if (
-            ctx._data[f"average_{Paw.LEFT_HIND.value}_tracking_likelihood"] < 0.85
-            or ctx._data[f"average_{Paw.RIGHT_HIND.value}_tracking_likelihood"] < 0.85
+            ctx._data[f"average_{Paw.LEFT_HIND.value}_tracking_likelihood"] < 0.4
+            or ctx._data[f"average_{Paw.RIGHT_HIND.value}_tracking_likelihood"] < 0.4
             or ctx._data[f"average_{Paw.LEFT_FRONT.value}_tracking_likelihood"] < 0.6
             or ctx._data[f"average_{Paw.RIGHT_FRONT.value}_tracking_likelihood"] < 0.6
         ):

@@ -56,10 +56,8 @@ def get_recording_list(directorys):
     for directory in directorys:
         for root, dirs, files in os.walk(directory):
             for file in files:
-                # file_path = os.path.join(root, file)
-                if file.endswith("trans_resize.avi"):
+                if file.endswith("trans_resize.mp4"):
                     recording_list.append(root)
-                    # avi_files.append(os.path.join(root, file))
     return recording_list
 
 
@@ -378,6 +376,11 @@ def cal_paw_luminance_rework(label, cap, size=22):
     # legacy end----------------
 
     expected_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    DLC_tracking_length = label["snout"][["x"]].shape[0]
+
+    print(f"expected_total: {expected_total}, DLC_tracking_length: {DLC_tracking_length}")
+
+    # expected_total = min(expected_total, DLC_tracking_length) # take the minimum of the two
 
     i = 0
     pbar = tqdm(
@@ -388,6 +391,11 @@ def cal_paw_luminance_rework(label, cap, size=22):
         ret, frame = cap.read()  # Read the next frame
 
         if not ret:
+            break
+
+        # workaround: if the ftir video is longer than DLC tracking, exit to
+        # avoid index error
+        if len(label["rhpaw"]) <= i:
             break
 
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # Convert to grayscale
