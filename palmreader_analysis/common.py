@@ -1,13 +1,21 @@
 """
-Some features have a 1:1 relationship with some column in the summary CSV. In those cases, it makes the most sense to define the computation for both the feature and the summarized column in the same place. This module has all of those columns.
+Some features have a 1:1 relationship with some column in the summary CSV. In
+those cases, it makes the most sense to define the computation for both the
+feature and the summarized column in the same place. This module has all of
+those columns.
 
-Any features which do not have a single column in the summary are defined in the `features.py` file, and likely have one or more summary columns defined in `summary.py`. This separation is not visible to the user. To get all columns for either features or summary, use `FeaturesContext.get_all_features` or `SummaryContext.get_all_columns`.
+Any features which do not have a single column in the summary are defined in the
+`features.py` file, and likely have one or more summary columns defined in
+`summary.py`. This separation is not visible to the user. To get all columns for
+either features or summary, use `FeaturesContext.get_all_features` or
+`SummaryContext.get_all_columns`.
 """
 
 from typing import Literal, Dict, Tuple, Union
 import numpy as np
 from utils import cal_distance_, body_parts_distance, get_vector, get_angle
 from cols_name_dicts import summary_col_name_dict
+from enum import Enum
 
 from .features import FeaturesContext, Feature
 from .summary import SummaryColumn
@@ -151,12 +159,24 @@ ANGLE_FEATURES: Dict[
 }
 
 
+class AngleSummaryMode(Enum):
+    MEAN = "mean"
+    STANDARD_DEVIATION = "standard_deviation"
+
+    def get_infix(self) -> str:
+        if self == AngleSummaryMode.MEAN:
+            return ""
+        else:
+            return " standard deviation"
+
+
 class BodyPartAngleDef(Feature, SummaryColumn):
     dest: str
     vector_parts_1: VectorParts
     vector_parts_2: VectorParts
     sign: AngleSign
     summary_dest: Union[str, None]
+    mode: AngleSummaryMode
 
     def __init__(
         self,
@@ -165,12 +185,15 @@ class BodyPartAngleDef(Feature, SummaryColumn):
         vector_parts_2: VectorParts,
         sign: AngleSign,
         summary_dest: Union[str, None] = None,
+        # only used for summary computation
+        mode: AngleSummaryMode = AngleSummaryMode.MEAN,
     ):
         self.dest = dest
         self.vector_parts_1 = vector_parts_1
         self.vector_parts_2 = vector_parts_2
         self.sign = sign
         self.summary_dest = summary_dest
+        self.mode = mode
 
     def extract(self, ctx: FeaturesContext):
         label = ctx.label
@@ -187,7 +210,9 @@ class BodyPartAngleDef(Feature, SummaryColumn):
     def _get_column_name(self) -> str:
         dest = self.summary_dest if self.summary_dest is not None else self.dest
 
-        return f"{dest} (degree)"
+        infix = self.mode.get_infix()
+
+        return f"{dest}{infix} (degree)"
 
     def _get_displayname(self) -> str:
         dest = self.summary_dest if self.summary_dest is not None else self.dest
@@ -195,18 +220,24 @@ class BodyPartAngleDef(Feature, SummaryColumn):
         # TODO: remove once the name dictionary is removed
         dest = summary_col_name_dict.get(dest, dest)
 
-        return dest.replace("_", " ").capitalize()
+        return dest.replace("_", " ").capitalize() + self.mode.get_infix()
 
     def summarize(self, ctx):
-        ctx._data[self._get_column_name()] = np.nanmean(ctx._features[self.dest])
+        computer = np.nanmean if self.mode == AngleSummaryMode.MEAN else np.nanstd
+        ctx._data[self._get_column_name()] = computer(ctx._features[self.dest])
 
     def metadata(self):
+        infix = (
+            "the standard deviation of "
+            if self.mode == AngleSummaryMode.STANDARD_DEVIATION
+            else ""
+        )
         return [
             ColumnMetadata.make(
                 column=self._get_column_name(),
                 category=ColumnCategory.POSTURAL,
                 tags=[],
                 displayname=self._get_displayname(),
-                description=f"Measures the angle between {self.vector_parts_1} and {self.vector_parts_2}",
+                description=f"Measures {infix}the angle between {self.vector_parts_1} and {self.vector_parts_2}",
             )
         ]

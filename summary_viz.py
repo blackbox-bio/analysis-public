@@ -441,12 +441,20 @@ def generate_cluster_heatmap(
         g_ind.ax_heatmap.set_yticklabels(ordered_features, rotation=0, fontsize=10)
         # g_ind.ax_heatmap.set_xticklabels(g_ind.ax_heatmap.get_xmajorticklabels(), rotation=45, fontsize=10, ha="right")
 
+        # get the new sample order
+        col_order = g_ind.dendrogram_col.reordered_ind
+        # reorder the index and the colors to match
+
         # Align the x-axis labels
         # Set ticks at the center of each column
         g_ind.ax_heatmap.set_xticks(np.arange(len(df_individual)) + 0.5)
         # Use the original index for labels
-        g_ind.ax_heatmap.set_xticklabels(df_individual.index, rotation=45, fontsize=10,
+        g_ind.ax_heatmap.set_xticklabels(df_individual.index[col_order], rotation=45, fontsize=10,
                                          ha="right")
+
+        # reorder colors
+        group_colors = group_colors.iloc[col_order]
+        g_ind.ax_col_dendrogram.collections[0].set_color(group_colors)
 
         # Add legend for group colors
         for label in df[group_variable].unique():

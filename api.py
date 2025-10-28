@@ -224,7 +224,7 @@ def cluster_heatmap(args: ClusterHeatmapArgs):
     grouping_mode = args["groupingMode"]
     dest_path = args["destPath"]
 
-    df = pd.read_csv(summary_path)
+    df = pd.read_csv(summary_path, index_col=0)
 
     df = summary_viz_preprocess(df, enabled_rows, vars, hue)
 
