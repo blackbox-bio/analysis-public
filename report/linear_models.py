@@ -4,9 +4,11 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+from networkx.generators.classic import ladder_graph
 from sklearn.preprocessing import StandardScaler
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from .utils import summary_qc
+from palmreader_analysis.events import Palmreader
 
 def _plot_confidence_ellipse(ax, x, y, n_std=2.0, **kwargs):
     import matplotlib.transforms as transforms
@@ -24,7 +26,6 @@ def fit_lda_model(
     df: pd.DataFrame,
     group_variable: str,
     shrinkage: str | float = 'auto',
-    random_state: int = 42,
 ):
     """
         Fit a shrinkage-regularized LDA model on numeric features and compute
@@ -49,17 +50,17 @@ def fit_lda_model(
               "lda": fitted LDA model,
               "scores_LD": array (n_samples, n_classes-1),
               "posteriors": class probabilities,
+              "correlation": global correlation matrix of the features (DataFrame),
               "classes": class labels,
               "X_scaled": standardized feature matrix,
               "feature_names": feature names,
               "coefficients": global LDA coefficients (DataFrame),
               "class_means": per-class means (DataFrame),
-              "mean_differences": pairwise mean differences (DataFrame),
               "class_importance": per-class feature importance (DataFrame)
             }
         """
 
-    # clean up the dataframe
+    # --- clean up the dataframe ---
     df = summary_qc(df, group_variable)
 
     # --- Extract X, y ---
@@ -67,12 +68,21 @@ def fit_lda_model(
     X = df.drop(columns=[group_variable]).select_dtypes(include=np.number)
     feature_names = X.columns
 
+    #--- check and make sure the group variable contains more than one group ---
+    # TODO: come back to this and make the palmreader software handle this situation better
+    if df[group_variable].nunique() < 2:
+        Palmreader.warning(
+            f"The group variable {group_variable} must contain more than one group. Exiting.")
+        print(f"Warning: The group variable {group_variable} must contain more than one group. Exiting.")
+
+        return None
+
     # --- Standardize features ---
     scaler = StandardScaler().fit(X)
     X_scaled = scaler.transform(X)
 
     # --- Fit shrinkage-regularized LDA ---
-    lda = LinearDiscriminantAnalysis(solver="eigen", shrinkage=shrinkage)
+    lda = LinearDiscriminantAnalysis(solver="eigen", shrinkage=shrinkage, store_covariance=True)
     lda.fit(X_scaled, y)
 
     # --- Projected scores & posteriors ---
@@ -80,6 +90,10 @@ def fit_lda_model(
     if scores.ndim == 1:
         scores = scores.reshape(-1, 1)
     posteriors = lda.predict_proba(X_scaled)
+
+    # --- LDA global correlation matrix ---
+    cov = lda.covariance_
+    corr_df = pd.DataFrame(cov, index=feature_names, columns=feature_names).corr()
 
     # --- LDA coefficients (global importance) ---
     coef = lda.coef_.T  # shape (n_features, n_classes-1)
@@ -98,21 +112,19 @@ def fit_lda_model(
         .T  # features as rows, groups as columns
     )
 
-    diffs = {}
-    for g1, g2 in combinations(mean_df.columns, 2):
-        diffs[f"{g2} - {g1}"] = mean_df[g2] - mean_df[g1]
-    diff_df = pd.DataFrame(diffs)
-
     # --- Class-specific feature importance ---
-    # Average discriminant weights across LD axes
+    # 1. Average coefficients across all discriminant axes
     mean_coef = coef.mean(axis=1)  # (n_features,)
-    # Standardize class means to same scaling as training data
+
+    # 2. Standardize class means
     mean_std = pd.DataFrame(
         scaler.transform(mean_df.T),
         columns=feature_names,
         index=mean_df.columns,
-    ).T
-    # Multiply standardized means by global LDA weights
+    ).T  # features × classes
+
+    # 3. Compute per-class feature importance
+    #    multiply each feature’s standardized mean by its global discriminant weight
     class_importance_df = mean_std.mul(mean_coef, axis=0)
 
     return dict(
@@ -120,22 +132,19 @@ def fit_lda_model(
         lda=lda,
         scores_LD=scores,
         posteriors=posteriors,
+        correlation=corr_df,
         classes=lda.classes_,
         X_scaled=X_scaled,
         y=y,
         feature_names=feature_names,
         coefficients=coef_df,
         class_means=mean_df,
-        mean_differences=diff_df,
         class_importance=class_importance_df,
     )
 
 def plot_lda_projection(
     lda_result: dict,
-    binary_mode: str = "ld1_vs_logit",  # 'ld1_vs_logit' | '1d_density' | 'ld1_jitter'
-    show_ellipses: bool = True,
     point_size: int = 60,
-    random_state: int = 42,
 ):
     """
     Visualize LDA results in 2D.
@@ -144,71 +153,108 @@ def plot_lda_projection(
     ----------
     lda_result : dict
         Output of `fit_lda_model`.
-    binary_mode : str
-        For 2-class data, choose visualization style.
-    show_ellipses : bool
-        Draw covariance ellipses for multi-class groups.
     point_size : int
         Scatter point size.
-    random_state : int
-        RNG seed for jitter.
 
     Returns
     -------
     matplotlib.figure.Figure
     """
+
+    # check to make sure lda_result is not an empty dict
+    if lda_result is None:
+        print("Not a valid LDA result")
+        return None
+
     y = lda_result["y"]
     classes = lda_result["classes"]
     scores = lda_result["scores_LD"]
     post = lda_result["posteriors"]
     K = len(classes)
+
+    # color palette and marker set
     palette = sns.color_palette("husl", K)
+    markers = ["o", "s", "D", "^", "v", "P", "X", "*", "h", "8"]  # up to 10 distinct shapes
+    marker_map = {cls: markers[i % len(markers)] for i, cls in enumerate(classes)}
 
     fig, ax = plt.subplots(figsize=(7, 6))
 
+    # ---- Multiclass case ----
     if K >= 3:
-        x, y2 = scores[:, 0], scores[:, 1] if scores.shape[1] >= 2 else np.zeros_like(scores[:, 0])
+        x = scores[:, 0]
+        y2 = scores[:, 1] if scores.shape[1] >= 2 else np.zeros_like(scores[:, 0])
+
         for idx, cls in enumerate(classes):
             mask = (y == cls)
-            ax.scatter(x[mask], y2[mask], s=point_size, alpha=0.85, label=str(cls), c=[palette[idx]])
+            ax.scatter(
+                x[mask],
+                y2[mask],
+                s=point_size,
+                alpha=0.8,
+                c=[palette[idx]],
+                marker=marker_map[cls],
+                edgecolor="black",
+                linewidth=0.7,
+                label=str(cls),
+            )
+
         # centroids
         for idx, cls in enumerate(classes):
             mask = (y == cls)
-            ax.scatter(x[mask].mean(), y2[mask].mean(), c=[palette[idx]],
-                       s=140, edgecolors="k", marker="X", zorder=5)
-        ax.set_xlabel("LD1"); ax.set_ylabel("LD2")
-        ax.set_title("LDA (LD1 vs LD2)")
-    else:
-        # binary
-        ld1 = scores[:, 0]
-        if binary_mode == "ld1_vs_logit":
-            p1 = post[:, 1]
-            logit = np.log((p1 + 1e-6) / (1 - p1 + 1e-6))
-            for idx, cls in enumerate(classes):
-                mask = (y == cls)
-                ax.scatter(ld1[mask], logit[mask], s=point_size, alpha=0.85,
-                           label=str(cls), c=[palette[idx]])
-            ax.set_xlabel("LD1")
-            ax.set_ylabel(f"logit P({classes[1]})")
-            ax.set_title("Binary LDA: LD1 vs logit")
-        elif binary_mode == "1d_density":
-            sns.kdeplot(x=ld1, hue=y, fill=True, common_norm=False,
-                        palette=palette, ax=ax)
-            ax.set_xlabel("LD1"); ax.set_ylabel("Density")
-            ax.set_title("Binary LDA: LD1 densities")
-        else:  # jitter
-            rng = np.random.default_rng(random_state)
-            jitter = rng.normal(0, 0.02, size=len(ld1))
-            for idx, cls in enumerate(classes):
-                mask = (y == cls)
-                ax.scatter(ld1[mask], jitter[mask], s=point_size,
-                           alpha=0.85, label=str(cls), c=[palette[idx]])
-            ax.set_xlabel("LD1"); ax.set_ylabel("Jitter")
-            ax.set_title("Binary LDA: LD1 with jitter")
+            ax.scatter(
+                x[mask].mean(),
+                y2[mask].mean(),
+                c=[palette[idx]],
+                s=180,
+                edgecolors="black",
+                marker="X",
+                zorder=5,
+                linewidth=1.0,
+            )
 
-    ax.legend(title="Group", bbox_to_anchor=(1.02, 1), loc="upper left")
+        ax.set_xlabel("LD1", fontsize=12)
+        ax.set_ylabel("LD2", fontsize=12)
+        ax.set_title("LDA Projection (LD1 vs LD2)", fontsize=13, pad=10)
+
+    # ---- Binary case ----
+    else:
+        ld1 = scores[:, 0]
+        p1 = post[:, 1]
+        logit = np.log((p1 + 1e-6) / (1 - p1 + 1e-6))
+        for idx, cls in enumerate(classes):
+            mask = (y == cls)
+            ax.scatter(
+                ld1[mask],
+                logit[mask],
+                s=point_size,
+                alpha=0.8,
+                c=[palette[idx]],
+                marker=marker_map[cls],
+                edgecolor="black",
+                linewidth=0.7,
+                label=str(cls),
+            )
+
+        ax.set_xlabel("LD1", fontsize=12)
+        ax.set_ylabel(f"logit P({classes[1]})", fontsize=12)
+        ax.set_title("Binary LDA: LD1 vs logit", fontsize=13, pad=10)
+
+    # ---- Legend & layout ----
+    ax.legend(
+        title="Group",
+        bbox_to_anchor=(1.02, 1),
+        loc="upper left",
+        frameon=True,
+        fontsize=10,
+        title_fontsize=11,
+        markerscale=1.2,
+    )
+
+    ax.grid(alpha=0.3, linestyle="--")
+    sns.despine()
     plt.tight_layout()
     return fig
+
 
 def plot_lda_class_feature_importance(
     lda_result: dict,
