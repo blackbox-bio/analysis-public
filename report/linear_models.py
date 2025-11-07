@@ -3,8 +3,10 @@ from itertools import combinations
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.patches import Ellipse
+from scipy.spatial.distance import mahalanobis
+from numpy.linalg import inv
 import seaborn as sns
-from networkx.generators.classic import ladder_graph
 from sklearn.preprocessing import StandardScaler
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from .utils import summary_qc
@@ -142,12 +144,14 @@ def fit_lda_model(
         class_importance=class_importance_df,
     )
 
-def plot_lda_projection(
-    lda_result: dict,
-    point_size: int = 60,
-):
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from matplotlib.patches import Ellipse
+
+def plot_lda_projection(lda_result: dict, point_size: int = 60, ring_std: float = 1.0):
     """
-    Visualize LDA results in 2D.
+    Visualize LDA results in 2D with Gaussian ellipse contours around group means.
 
     Parameters
     ----------
@@ -155,103 +159,88 @@ def plot_lda_projection(
         Output of `fit_lda_model`.
     point_size : int
         Scatter point size.
+    ring_std : float
+        Radius of the ellipse in standard deviations (1 = 1σ ellipse).
 
     Returns
     -------
     matplotlib.figure.Figure
     """
 
-    # check to make sure lda_result is not an empty dict
-    if lda_result is None:
-        print("Not a valid LDA result")
-        return None
-
     y = lda_result["y"]
     classes = lda_result["classes"]
     scores = lda_result["scores_LD"]
     post = lda_result["posteriors"]
     K = len(classes)
-
-    # color palette and marker set
     palette = sns.color_palette("husl", K)
-    markers = ["o", "s", "D", "^", "v", "P", "X", "*", "h", "8"]  # up to 10 distinct shapes
-    marker_map = {cls: markers[i % len(markers)] for i, cls in enumerate(classes)}
 
     fig, ax = plt.subplots(figsize=(7, 6))
 
-    # ---- Multiclass case ----
     if K >= 3:
-        x = scores[:, 0]
-        y2 = scores[:, 1] if scores.shape[1] >= 2 else np.zeros_like(scores[:, 0])
+        x, y2 = scores[:, 0], scores[:, 1] if scores.shape[1] >= 2 else np.zeros_like(scores[:, 0])
 
         for idx, cls in enumerate(classes):
             mask = (y == cls)
-            ax.scatter(
-                x[mask],
-                y2[mask],
-                s=point_size,
-                alpha=0.8,
-                c=[palette[idx]],
-                marker=marker_map[cls],
-                edgecolor="black",
-                linewidth=0.7,
-                label=str(cls),
+            color = palette[idx]
+
+            # Scatter points
+            ax.scatter(x[mask], y2[mask], s=point_size, alpha=0.75, label=str(cls), c=[color])
+
+            # Mean and covariance
+            mean = np.mean(np.column_stack((x[mask], y2[mask])), axis=0)
+            cov = np.cov(x[mask], y2[mask])
+
+            # Eigen decomposition for ellipse orientation and axes
+            vals, vecs = np.linalg.eigh(cov)
+            order = vals.argsort()[::-1]
+            vals, vecs = vals[order], vecs[:, order]
+
+            theta = np.degrees(np.arctan2(*vecs[:, 0][::-1]))
+            width, height = 2 * ring_std * np.sqrt(vals)
+
+            ellipse = Ellipse(
+                xy=mean,
+                width=width,
+                height=height,
+                angle=theta,
+                edgecolor=color,
+                facecolor='none',
+                lw=2,
+                alpha=0.9,
             )
+            ax.add_patch(ellipse)
 
-        # centroids
-        for idx, cls in enumerate(classes):
-            mask = (y == cls)
-            ax.scatter(
-                x[mask].mean(),
-                y2[mask].mean(),
-                c=[palette[idx]],
-                s=180,
-                edgecolors="black",
-                marker="X",
-                zorder=5,
-                linewidth=1.0,
-            )
+            # Centroid marker
+            ax.scatter(*mean, c=[color], s=140, edgecolors="k", marker="X", zorder=5)
 
-        ax.set_xlabel("LD1", fontsize=12)
-        ax.set_ylabel("LD2", fontsize=12)
-        ax.set_title("LDA Projection (LD1 vs LD2)", fontsize=13, pad=10)
+        ax.set_xlabel("LD1")
+        ax.set_ylabel("LD2")
+        ax.set_title("LDA (LD1 vs LD2, Gaussian Ellipses)")
 
-    # ---- Binary case ----
     else:
+        # Binary: LD1 vs logit
         ld1 = scores[:, 0]
         p1 = post[:, 1]
         logit = np.log((p1 + 1e-6) / (1 - p1 + 1e-6))
+
         for idx, cls in enumerate(classes):
             mask = (y == cls)
-            ax.scatter(
-                ld1[mask],
-                logit[mask],
-                s=point_size,
-                alpha=0.8,
-                c=[palette[idx]],
-                marker=marker_map[cls],
-                edgecolor="black",
-                linewidth=0.7,
-                label=str(cls),
-            )
+            color = palette[idx]
+            ax.scatter(ld1[mask], logit[mask], s=point_size, alpha=0.75, label=str(cls), c=[color])
 
-        ax.set_xlabel("LD1", fontsize=12)
-        ax.set_ylabel(f"logit P({classes[1]})", fontsize=12)
-        ax.set_title("Binary LDA: LD1 vs logit", fontsize=13, pad=10)
+            # Mean ± std band
+            mean = ld1[mask].mean()
+            std = ld1[mask].std()
+            ax.axvline(mean, color=color, lw=2, alpha=0.8)
+            ax.fill_betweenx([logit.min(), logit.max()],
+                             mean - std, mean + std,
+                             color=color, alpha=0.15)
 
-    # ---- Legend & layout ----
-    ax.legend(
-        title="Group",
-        bbox_to_anchor=(1.02, 1),
-        loc="upper left",
-        frameon=True,
-        fontsize=10,
-        title_fontsize=11,
-        markerscale=1.2,
-    )
+        ax.set_xlabel("LD1")
+        ax.set_ylabel(f"logit P({classes[1]})")
+        ax.set_title("Binary LDA: LD1 vs logit")
 
-    ax.grid(alpha=0.3, linestyle="--")
-    sns.despine()
+    ax.legend(title="Group", bbox_to_anchor=(1.02, 1), loc="upper left")
     plt.tight_layout()
     return fig
 
