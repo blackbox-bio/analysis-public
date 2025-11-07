@@ -1,5 +1,5 @@
 from itertools import combinations
-
+from typing import Optional
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -149,7 +149,11 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib.patches import Ellipse
 
-def plot_lda_projection(lda_result: dict, point_size: int = 60, ring_std: float = 1.0):
+def plot_lda_projection(lda_result: dict,
+                        point_size: int = 60,
+                        ring_std: float = 1.0,
+                        dest_path: Optional[str] = None,
+):
     """
     Visualize LDA results in 2D with Gaussian ellipse contours around group means.
 
@@ -161,6 +165,8 @@ def plot_lda_projection(lda_result: dict, point_size: int = 60, ring_std: float 
         Scatter point size.
     ring_std : float
         Radius of the ellipse in standard deviations (1 = 1σ ellipse).
+    dest_path : str, optional
+        Destination path for the plot.
 
     Returns
     -------
@@ -242,6 +248,14 @@ def plot_lda_projection(lda_result: dict, point_size: int = 60, ring_std: float 
 
     ax.legend(title="Group", bbox_to_anchor=(1.02, 1), loc="upper left")
     plt.tight_layout()
+
+    # save fig if a dest_path is provided
+    if dest_path:
+        fig.savefig(dest_path,dpi=300, bbox_inches="tight")
+        fig.close()
+
+        return
+
     return fig
 
 
