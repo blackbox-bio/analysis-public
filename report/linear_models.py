@@ -4,8 +4,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
-from scipy.spatial.distance import mahalanobis
-from numpy.linalg import inv
 import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
@@ -41,8 +39,6 @@ def fit_lda_model(
             Column containing group labels.
         shrinkage : str | float
             LDA shrinkage parameter ('auto' = Ledoit–Wolf regularization).
-        random_state : int
-            Random seed.
 
         Returns
         -------
@@ -144,10 +140,6 @@ def fit_lda_model(
         class_importance=class_importance_df,
     )
 
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from matplotlib.patches import Ellipse
 
 def plot_lda_projection(lda_result: dict,
                         point_size: int = 60,
