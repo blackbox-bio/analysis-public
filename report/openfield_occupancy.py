@@ -2,7 +2,8 @@ from matplotlib import pyplot as plt
 import seaborn as sns
 import pandas as pd
 import h5py
-
+from scipy.ndimage import uniform_filter1d, gaussian_filter1d
+import numpy as np
 
 def plot_open_field_occupancy_map(
         features_h5: str,
@@ -50,6 +51,9 @@ def plot_open_field_occupancy_map(
     label = df[model_id]
 
     centroid = cal_centroid(label)
+
+    # trim the time series by animal detection
+    centroid = centroid[start_frame:]
 
     # for now, normalize x,y location to [0,1] by the frame size
     centroid = centroid / frame_size
@@ -120,3 +124,80 @@ def cal_centroid(label):
     centroid.columns = ['x', 'y']
 
     return centroid
+
+
+def cal_displacement(
+        features_h5: str,
+        tracking_h5: str,
+        window_sec: float = 2.0,
+        smooth_sigma: int = 3
+):
+    """
+    Calculate the displacement of the animal relative to a rolling mean location
+    in the past N seconds.
+
+    Parameters
+    ----------
+    features_h5: full path of the features_h5 file
+    tracking_h5: full path of the tracking_h5 file
+    window_sec : float, optional
+        Size of rolling window in seconds (default = 2.0).
+    smooth_sigma : int, optional
+        Gaussian smoothing sigma in frames to reduce jitter (default = 3).
+
+    Returns
+    -------
+    displacement_px : np.ndarray
+        Displacement (in pixels) from rolling mean location.
+    """
+
+    # --- basic setup ---
+    with h5py.File(features_h5, 'r') as f:
+        group_names = list(f.keys())
+        if not group_names:
+            raise ValueError(f"No group names found in {features_h5}")
+
+        animal_name = group_names[0]
+        frame_size = f[animal_name]['frame_size'][()]
+        frame_count = f[animal_name]['frame_count'][()]
+        fps = f[animal_name]['fps'][()]
+
+        # use animal detection to dynamically trim the beginning of the recording with an empty field
+        start_frame = 0
+        if "animal_detection" in f[animal_name].keys():
+            animal_detection = f[animal_name]['animal_detection'][:]
+
+            for i in range(frame_count):
+                if animal_detection[i] == 1:
+                    start_frame = i
+                    break
+
+    window = int(window_sec * fps)
+    half_window = int((window_sec * fps) / 2)
+
+    df = pd.read_hdf(tracking_h5)
+    model_id = df.columns[0][0]
+    label = df[model_id]
+
+    centroid = cal_centroid(label)
+    centroid = centroid[start_frame:] # trim the timeseries by animal_detection
+
+    x = centroid["x"]
+    y = centroid["y"]
+
+    # --- smooth position ---
+    x_smooth = gaussian_filter1d(x, sigma=smooth_sigma)
+    y_smooth = gaussian_filter1d(y, sigma=smooth_sigma)
+
+    n = len(x_smooth)
+    displacement_px = np.zeros(n)
+
+    # --- compute centered displacement ---
+    for i in range(n):
+        left = max(i - half_window, 0)
+        right = min(i + half_window, n - 1)
+        dx = x_smooth[right] - x_smooth[left]
+        dy = y_smooth[right] - y_smooth[left]
+        displacement_px[i] = np.hypot(dx, dy)
+
+    return displacement_px
