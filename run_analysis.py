@@ -7,7 +7,7 @@ import sys
 import warnings
 import os
 import argparse
-from report.openfield_occupancy import plot_open_field_occupancy_map
+from report.openfield_occupancy import plot_open_field_occupancy_map, cal_displacement
 
 sys.path.append("./preprocess/")
 
@@ -126,6 +126,8 @@ def main():
                     break
             dest_path = os.path.join(recording, "openfield_occupancy_map.png")
             plot_open_field_occupancy_map(features_h5, dlc_path, dest_path)
+            _ = cal_displacement(features_h5, dlc_path)
+
 
 
     # generate summary csv from the processed videos

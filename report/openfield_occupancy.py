@@ -129,19 +129,19 @@ def cal_centroid(label):
 def cal_displacement(
         features_h5: str,
         tracking_h5: str,
-        window_sec: float = 2.0,
+        window_sec: float = 0.5,
         smooth_sigma: int = 3
 ):
     """
     Calculate the displacement of the animal relative to a rolling mean location
-    in the past N seconds.
+    in the past N seconds, and save it to the same features.h5 file.
 
     Parameters
     ----------
     features_h5: full path of the features_h5 file
     tracking_h5: full path of the tracking_h5 file
     window_sec : float, optional
-        Size of rolling window in seconds (default = 2.0).
+        Size of rolling window in seconds (default = 0.5).
     smooth_sigma : int, optional
         Gaussian smoothing sigma in frames to reduce jitter (default = 3).
 
@@ -172,7 +172,6 @@ def cal_displacement(
                     start_frame = i
                     break
 
-    window = int(window_sec * fps)
     half_window = int((window_sec * fps) / 2)
 
     df = pd.read_hdf(tracking_h5)
@@ -199,5 +198,14 @@ def cal_displacement(
         dx = x_smooth[right] - x_smooth[left]
         dy = y_smooth[right] - y_smooth[left]
         displacement_px[i] = np.hypot(dx, dy)
+
+    # --- write back to the same features file ---
+    with h5py.File(features_h5, 'a') as f:
+        g = f[animal_name]
+        if "displacement_px" in g.keys():
+            del g["displacement_px"]
+        g.create_dataset("displacement_px", data=displacement_px)
+
+    print(f"displacement_px saved to group '{animal_name}' in {features_h5}")
 
     return displacement_px
