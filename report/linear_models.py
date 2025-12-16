@@ -244,7 +244,7 @@ def plot_lda_projection(lda_result: dict,
     # save fig if a dest_path is provided
     if dest_path:
         fig.savefig(dest_path,dpi=300, bbox_inches="tight")
-        fig.close()
+        plt.close()
 
         return
 
