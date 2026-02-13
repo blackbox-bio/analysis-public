@@ -187,8 +187,8 @@ class SummaryContext:
 
     def _apply_bin(self, start_frame: int, end_frame: int):
         for key in self._features.keys():
-            # these two columns are scalar values
-            if key in ["frame_count", "fps"]:
+            # these three columns are scalar values
+            if key in ["frame_count", "fps", "frame_size"]:
                 continue
 
             self._features[key] = self._features[key][start_frame:end_frame]

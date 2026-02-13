@@ -143,10 +143,12 @@ class SingleFeaturesDef(Feature):
     def extract(self, ctx: FeaturesContext):
         luminance_data = PawLuminanceComputation.compute_paw_luminance(ctx)
         fps = int(ctx.ftir_video.get(cv2.CAP_PROP_FPS))
+        frame_size = int(ctx.ftir_video.get(cv2.CAP_PROP_FRAME_WIDTH))
 
         # add the single features to the dictionary
         ctx._data["fps"] = np.array(fps)
         ctx._data["frame_count"] = np.array(luminance_data.frame_count)
+        ctx._data["frame_size"] = np.array(frame_size)
 
 
 class AnimalDetectionDef(Feature):

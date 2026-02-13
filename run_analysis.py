@@ -3,11 +3,11 @@ from process import *
 from summary import *
 from dlc_runner import *
 import concurrent.futures
-from joblib import Parallel, delayed
 import sys
 import warnings
 import os
 import argparse
+from report.openfield_occupancy import plot_open_field_occupancy_map, cal_displacement
 
 sys.path.append("./preprocess/")
 
@@ -51,8 +51,29 @@ def main():
         help=(
             "Space-separated list of time bins as start,end (default: '0,-1'). "
             "Example: '0,-1 0,1 3,5 3,-1'"
-        ),
+        )
     )
+    parser.add_argument(
+        "--openfield_test",
+        action= "store_true",
+        help=(
+            "flag for running openfield test on each recording"
+        )
+    ),
+    parser.add_argument(
+        "--generate_skeleton",
+        action="store_true",
+        help=(
+            "flag for generating skeleton video on each recording"
+        )
+    ),
+    parser.add_argument(
+        "--simple_skeleton",
+        action="store_true",
+        help=(
+            "flag for generating simple skeleton video on each recording instead of the full skeleton"
+        )
+    ),
 
     args = parser.parse_args()
     experiment_folder = args.experiment_folder
@@ -70,7 +91,12 @@ def main():
     ]
 
     # run deeplabcut
-    run_deeplabcut(args.dlc_config_path, body_videos)
+    run_deeplabcut(
+        args.dlc_config_path,
+        body_videos,
+        args.generate_skeleton,
+        args.simple_skeleton
+    )
 
     # now that done with DLC tracking, start process the recordings
     print(f"In total {len(recording_list)} videos to be processed: ")
@@ -89,6 +115,20 @@ def main():
         ]
         # wait for completion
         concurrent.futures.wait(futures)
+
+    if args.openfield_test:
+        for recording in recording_list:
+
+            features_h5 = os.path.join(recording, "features.h5")
+            for file in os.listdir(recording):
+                if file.endswith("_filtered.h5"):
+                    dlc_path = os.path.join(recording, file)
+                    break
+            dest_path = os.path.join(recording, "openfield_occupancy_map.png")
+            plot_open_field_occupancy_map(features_h5, dlc_path, dest_path)
+            _ = cal_displacement(features_h5, dlc_path)
+
+
 
     # generate summary csv from the processed videos
     time_bins = parse_time_bins(args.time_bins)

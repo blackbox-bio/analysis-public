@@ -33,13 +33,13 @@ def get_plot_fn(kind: str):
 
 def summary_viz_preprocess(df, rows_to_include, columns_to_include, group_variable):
     """
-    preprocess the summary csv file for visualization with user inputs
+    preprocess the summary csv file for report with user inputs
     df: the summary.csv file
     rows_to_include: a boolean vector mask for selecting a subset of the recordings
     columns_to_include: a list of columns to be included in the plot
     group_variable: the grouping variable for the plot hue
 
-    df_plot: the processed df for visualization
+    df_plot: the processed df for report
     """
     columns_to_include.append(group_variable)
     df_plot = df[columns_to_include]
