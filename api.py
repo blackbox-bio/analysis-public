@@ -36,6 +36,7 @@ class Extractions(TypedDict):
 
 def features(args: Extractions):
     from process import extract_features
+    from report.openfield_occupancy import cal_displacement
 
     extractions = args["extractions"]
 
@@ -45,12 +46,19 @@ def features(args: Extractions):
         # increment before each iteration so it's not zero indexed
         PalmreaderProgress.increment_multi()
 
+        name = extraction["name"]
+        ftir_path = extraction["ftir_path"]
+        tracking_path = extraction["tracking_path"]
+        dest_path = extraction["dest_path"]
+
         extract_features(
-            extraction["name"],
-            extraction["ftir_path"],
-            extraction["tracking_path"],
-            extraction["dest_path"],
+            name,
+            ftir_path,
+            tracking_path,
+            dest_path,
         )
+
+        cal_displacement(dest_path, tracking_path)
 
 
 class SummaryArgsV1(TypedDict):
@@ -133,6 +141,17 @@ def skeleton(args: SkeletonArgs):
     generate_skeleton(config_path, videos)
 
 
+def _graph_read_csv(csv_path: str, *args, **kwargs):
+    import pandas as pd
+    # provide a custom na_values so the string "N/A" doesn't turn into a NaN
+    return pd.read_csv(
+        csv_path,
+        keep_default_na=False,
+        na_values=["", "NaN", "NULL", "null", "None", "nan"],
+        *args,
+        **kwargs
+    )
+
 class PairGridArgs(TypedDict):
     # graph arguments arrive in camelCase because of a Palmreader optimization
     summaryPath: str
@@ -159,7 +178,7 @@ def pair_grid(args: PairGridArgs):
     lower_kind = args["lowerKind"]
     dest_path = args["destPath"]
 
-    df = pd.read_csv(summary_path)
+    df = _graph_read_csv(summary_path)
 
     df = summary_viz_preprocess(df, enabled_rows, vars, hue)
 
@@ -195,7 +214,7 @@ def bar_plots(args: BarPlotsArgs):
     sort_by_significance = args["sortBySignificance"]
     dest_path = args["destPath"]
 
-    df = pd.read_csv(summary_path)
+    df = _graph_read_csv(summary_path)
 
     df = summary_viz_preprocess(df, enabled_rows, vars, hue)
 
@@ -224,11 +243,24 @@ def cluster_heatmap(args: ClusterHeatmapArgs):
     grouping_mode = args["groupingMode"]
     dest_path = args["destPath"]
 
-    df = pd.read_csv(summary_path, index_col=0)
+    df = _graph_read_csv(summary_path, index_col=0)
 
     df = summary_viz_preprocess(df, enabled_rows, vars, hue)
 
     generate_cluster_heatmap(df, hue, dest_path, grouping_mode)
+
+class OpenFieldOccupancyArgs(TypedDict):
+    features_path: str
+    tracking_path: str
+    dest_path: str
+
+def open_field_occupancy(args: OpenFieldOccupancyArgs):
+    from report.openfield_occupancy import plot_open_field_occupancy_map
+    features_path = args["features_path"]
+    tracking_path = args["tracking_path"]
+    dest_path = args["dest_path"]
+
+    plot_open_field_occupancy_map(features_path, tracking_path, dest_path)
 
 
 # Palmreader <-> Analysis API
@@ -241,6 +273,7 @@ class ApiFunction(Enum):
     PAIRGRID = "pairgrid"
     BAR_PLOTS = "bar_plots"
     CLUSTER_HEATMAP = "cluster_heatmap"
+    OPEN_FIELD_OCCUPANCY = "open_field_occupancy"
 
     def __str__(self):
         return self.value
@@ -307,6 +340,9 @@ def main():
     elif args.function == ApiFunction.CLUSTER_HEATMAP:
         func = cluster_heatmap
         task = "generating cluster heatmap"
+    elif args.function == ApiFunction.OPEN_FIELD_OCCUPANCY:
+        func = open_field_occupancy
+        task = "generating open-field occupancy map"
 
     if func is None:
         raise ValueError("Invalid function")
