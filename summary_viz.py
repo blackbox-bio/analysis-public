@@ -44,6 +44,7 @@ def summary_viz_preprocess(df, rows_to_include, columns_to_include, group_variab
     columns_to_include.append(group_variable)
     df_plot = df[columns_to_include]
     df_plot = df_plot[rows_to_include]
+    df_plot = df_plot.dropna(subset=[col for col in columns_to_include if col != group_variable], how="all")
 
     return df_plot
 
