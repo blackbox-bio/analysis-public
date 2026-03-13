@@ -162,16 +162,6 @@ def cal_displacement(
         frame_count = f[animal_name]['frame_count'][()]
         fps = f[animal_name]['fps'][()]
 
-        # use animal detection to dynamically trim the beginning of the recording with an empty field
-        start_frame = 0
-        if "animal_detection" in f[animal_name].keys():
-            animal_detection = f[animal_name]['animal_detection'][:]
-
-            for i in range(frame_count):
-                if animal_detection[i] == 1:
-                    start_frame = i
-                    break
-
     half_window = int((window_sec * fps) / 2)
 
     df = pd.read_hdf(tracking_h5)
@@ -179,8 +169,6 @@ def cal_displacement(
     label = df[model_id]
 
     centroid = cal_centroid(label)
-    centroid = centroid[start_frame:] # trim the timeseries by animal_detection
-
     x = centroid["x"]
     y = centroid["y"]
 
