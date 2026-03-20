@@ -57,7 +57,7 @@ def get_recording_list(directorys):
     for directory in directorys:
         for root, dirs, files in os.walk(directory):
             for file in files:
-                if file.endswith("trans_resize.mp4"):
+                if file.endswith("trans.mp4"):
                     recording_list.append(root)
     return recording_list
 

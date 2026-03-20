@@ -78,16 +78,12 @@ def main():
     args = parser.parse_args()
     experiment_folder = args.experiment_folder
 
-    experiment_name = os.path.basename(experiment_folder)
-    parent_folder = os.path.dirname(experiment_folder)
-    analysis_folder = os.path.join(parent_folder, f"{experiment_name}_analysis")
-
     # generate the list of recordings to be processed
-    recording_list = get_recording_list([analysis_folder])
+    recording_list = get_recording_list([experiment_folder])
 
-    # generate the list of trans_resize.avi videos to pass to deeplabcut
+    # generate the list of trans.avi videos to pass to deeplabcut
     body_videos = [
-        os.path.join(recording, "trans_resize.mp4") for recording in recording_list
+        os.path.join(recording, "trans.mp4") for recording in recording_list
     ]
 
     # run deeplabcut
@@ -132,7 +128,7 @@ def main():
 
     # generate summary csv from the processed videos
     time_bins = parse_time_bins(args.time_bins)
-    generate_summary_csv(analysis_folder, time_bins)
+    generate_summary_csv(experiment_folder, time_bins)
 
 
 if __name__ == "__main__":

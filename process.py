@@ -266,11 +266,8 @@ def process_recording(recording):
     print(f"Processing {os.path.basename(recording)}...")
 
     recording_name = os.path.basename(recording)
-    trans_path = os.path.join(recording, "trans_resize.mp4")
-    ftir_path = os.path.join(recording, "ftir_resize.mp4")
-
-    # dlc_postfix = "DLC_resnet50_arcteryx500Nov4shuffle1_350000"
-    # dlc_path = os.path.join(recording, "trans_resize" + dlc_postfix + "_filtered.h5")
+    trans_path = os.path.join(recording, "trans.mp4")
+    ftir_path = os.path.join(recording, "ftir.mp4")
 
     for file in os.listdir(recording):
         if file.endswith("_filtered.h5"):
