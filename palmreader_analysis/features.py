@@ -39,8 +39,11 @@ class FeaturesContext:
         # add centroid tracking feature
         features.append(TimeSpentInCenterDef())
 
-        # Add Animal detection features
+        # Add animal detection features
         features.append(AnimalDetectionDef())
+
+        # Add displacement feature
+        features.append(DisplacementDef())
 
         # Add body parts distance features
         for column in DISTANCE_FEATURES.keys():
@@ -153,6 +156,15 @@ class SingleFeaturesDef(Feature):
         ctx._data["fps"] = np.array(fps)
         ctx._data["frame_count"] = np.array(luminance_data.frame_count)
         ctx._data["frame_size"] = np.array(frame_size)
+
+
+class DisplacementDef(Feature):
+    def extract(self, ctx: FeaturesContext):
+        ctx._data["displacement_px"] = cal_displacement(
+            ctx._data["centroid"],
+            ctx._data["fps"]
+        ).reshape(-1)
+        print("calculating displacement")
 
 
 class AnimalDetectionDef(Feature):

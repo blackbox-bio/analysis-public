@@ -7,12 +7,10 @@ import numpy as np
 
 def plot_open_field_occupancy_map(
         features_h5: str,
-        # tracking_h5: str,
         dest_path: str):
 
     '''
     :param features_h5: full path of the features_h5 file
-    :param tracking_h5: full path of the tracking_h5 file
     :param dest_path: full path of the output plot file, saved as PNG right now
 
     The function takes the centroid tracking and plot a heatmap to visualize
@@ -46,13 +44,6 @@ def plot_open_field_occupancy_map(
         # we could convert the x,y axis to actual distance unit such as cm
         # scale = field_size / frame_size  # 2x2 mouse or openfield would be scale = 30/1024
         scale = 1.0  # for now, scale set to 1
-
-    # # read tracking.h5 file
-    # df = pd.read_hdf(tracking_h5)
-    # model_id = df.columns[0][0]
-    # label = df[model_id]
-    #
-    # centroid = cal_centroid(label)
 
     # trim the time series by animal detection
     centroid = centroid[start_frame:]
@@ -128,77 +119,3 @@ def plot_open_field_occupancy_map(
     plt.savefig(dest_path, bbox_inches="tight", pad_inches=0, dpi=600, facecolor=fig.get_facecolor())
     plt.close()
     print(f"occupancy map saved to {dest_path}")
-
-
-
-def cal_displacement(
-        features_h5: str,
-        tracking_h5: str,
-        window_sec: float = 0.5,
-        smooth_sigma: int = 3
-):
-    """
-    Calculate the displacement of the animal relative to a rolling mean location
-    in the past N seconds, and save it to the same features.h5 file.
-
-    Parameters
-    ----------
-    features_h5: full path of the features_h5 file
-    tracking_h5: full path of the tracking_h5 file
-    window_sec : float, optional
-        Size of rolling window in seconds (default = 0.5).
-    smooth_sigma : int, optional
-        Gaussian smoothing sigma in frames to reduce jitter (default = 3).
-
-    Returns
-    -------
-    displacement_px : np.ndarray
-        Displacement (in pixels) from rolling mean location.
-    """
-
-    # --- basic setup ---
-    with h5py.File(features_h5, 'r') as f:
-        group_names = list(f.keys())
-        if not group_names:
-            raise ValueError(f"No group names found in {features_h5}")
-
-        animal_name = group_names[0]
-        frame_size = f[animal_name]['frame_size'][()]
-        frame_count = f[animal_name]['frame_count'][()]
-        fps = f[animal_name]['fps'][()]
-
-    half_window = int((window_sec * fps) / 2)
-
-    df = pd.read_hdf(tracking_h5)
-    model_id = df.columns[0][0]
-    label = df[model_id]
-
-    centroid = cal_centroid(label)
-    x = centroid["x"]
-    y = centroid["y"]
-
-    # --- smooth position ---
-    x_smooth = gaussian_filter1d(x, sigma=smooth_sigma)
-    y_smooth = gaussian_filter1d(y, sigma=smooth_sigma)
-
-    n = len(x_smooth)
-    displacement_px = np.zeros(n)
-
-    # --- compute centered displacement ---
-    for i in range(n):
-        left = max(i - half_window, 0)
-        right = min(i + half_window, n - 1)
-        dx = x_smooth[right] - x_smooth[left]
-        dy = y_smooth[right] - y_smooth[left]
-        displacement_px[i] = np.hypot(dx, dy)
-
-    # --- write back to the same features file ---
-    with h5py.File(features_h5, 'a') as f:
-        g = f[animal_name]
-        if "displacement_px" in g.keys():
-            del g["displacement_px"]
-        g.create_dataset("displacement_px", data=displacement_px)
-
-    print(f"displacement_px saved to group '{animal_name}' in {features_h5}")
-
-    return displacement_px

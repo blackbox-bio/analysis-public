@@ -7,7 +7,7 @@ import sys
 import warnings
 import os
 import argparse
-from report.openfield_occupancy import plot_open_field_occupancy_map, cal_displacement
+from report.openfield_occupancy import plot_open_field_occupancy_map
 
 sys.path.append("./preprocess/")
 
@@ -86,6 +86,8 @@ def main():
         os.path.join(recording, "trans.mp4") for recording in recording_list
     ]
 
+    body_videos = list(dict.fromkeys(body_videos))
+
     # run deeplabcut
     run_deeplabcut(
         args.dlc_config_path,
@@ -122,9 +124,6 @@ def main():
                     break
             dest_path = os.path.join(recording, "openfield_occupancy_map.png")
             plot_open_field_occupancy_map(features_h5, dest_path)
-            # _ = cal_displacement(features_h5, dlc_path) #TODO: move this into extract feature
-
-
 
     # generate summary csv from the processed videos
     time_bins = parse_time_bins(args.time_bins)

@@ -56,7 +56,7 @@ def get_recording_list(directorys):
     for directory in directorys:
         for root, dirs, files in os.walk(directory):
             for file in files:
-                if file.endswith("trans.mp4"):
+                if file == "trans.mp4":
                     recording_list.append(root)
     return recording_list
 
@@ -110,6 +110,53 @@ def cal_centroid(label):
     centroid.columns = ['x', 'y']
 
     return centroid
+
+def cal_displacement(
+        centroid,
+        fps,
+        window_sec: float = 0.5,
+        smooth_sigma: int = 3
+):
+    """
+    Calculate the displacement of the animal relative to a rolling mean location
+    in the past N seconds, and save it to the same features.h5 file.
+
+    Parameters
+    ----------
+    centroid: centroid tracking time series
+    fps: fps of the recording
+    window_sec : float, optional
+        Size of rolling window in seconds (default = 0.5).
+    smooth_sigma : int, optional
+        Gaussian smoothing sigma in frames to reduce jitter (default = 3).
+
+    Returns
+    -------
+    displacement_px : np.ndarray
+        Displacement (in pixels) from rolling mean location.
+    """
+
+    # --- basic setup ---
+    half_window = int((window_sec * fps) / 2)
+    x = centroid[:,0]
+    y = centroid[:,1]
+
+    # --- smooth position ---
+    x_smooth = gaussian_filter1d(x, sigma=smooth_sigma)
+    y_smooth = gaussian_filter1d(y, sigma=smooth_sigma)
+
+    n = len(x_smooth)
+    displacement_px = np.zeros(n)
+
+    # --- compute centered displacement ---
+    for i in range(n):
+        left = max(i - half_window, 0)
+        right = min(i + half_window, n - 1)
+        dx = x_smooth[right] - x_smooth[left]
+        dy = y_smooth[right] - y_smooth[left]
+        displacement_px[i] = np.hypot(dx, dy)
+
+    return displacement_px
 
 
 def get_distance(x1, y1, x2, y2):
