@@ -13,7 +13,6 @@ from scipy.ndimage import median_filter
 from dataclasses import dataclass
 from typing import Dict
 from palmreader_analysis.variants import LuminanceMeasure, Paw
-from report.openfield_occupancy import cal_centroid
 
 
 def select_folder():
@@ -73,6 +72,44 @@ def cal_distance_(label):
     d_location = np.sqrt(d_x**2 + d_y**2)
     d_location = np.insert(d_location, 0, 0)
     return d_location
+
+def cal_centroid(label):
+    """
+    input:
+    label: DLC tracking of the recording
+    return: the x,y location of the (estimated) centroid of the mouse
+    """
+
+    # for now hard-code the list of bodyparts used to estimate centroid
+    bp_list = [
+        # 'tailbase',
+        'hip',
+        'sternumtail',
+        'sternumhead',
+        'neck',
+        # 'snout',
+        'lhip',
+        'rhip',
+        'lshoulder',
+        'rshoulder'
+    ]
+
+    sub = label.loc[:, pd.IndexSlice[bp_list, ['x', 'y', 'likelihood']]]
+    x = sub.xs('x', axis=1, level=-1)
+    y = sub.xs('y', axis=1, level=-1)
+    lik = sub.xs('likelihood', axis=1, level=-1)
+
+    # likelihood-weighted sum that integrate different bodyparts locations
+    weighted_x = (x * lik).sum(axis=1)
+    weighted_y = (y * lik).sum(axis=1)
+    sum_weights = lik.sum(axis=1)
+    mean_x = weighted_x.div(sum_weights).where(sum_weights.ne(0))
+    mean_y = weighted_y.div(sum_weights).where(sum_weights.ne(0))
+
+    centroid = pd.concat([mean_x, mean_y], axis=1)
+    centroid.columns = ['x', 'y']
+
+    return centroid
 
 
 def get_distance(x1, y1, x2, y2):

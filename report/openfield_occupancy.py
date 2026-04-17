@@ -7,7 +7,7 @@ import numpy as np
 
 def plot_open_field_occupancy_map(
         features_h5: str,
-        tracking_h5: str,
+        # tracking_h5: str,
         dest_path: str):
 
     '''
@@ -15,7 +15,7 @@ def plot_open_field_occupancy_map(
     :param tracking_h5: full path of the tracking_h5 file
     :param dest_path: full path of the output plot file, saved as PNG right now
 
-    The function takes the tailbase tracking and plot a heatmap to visualize
+    The function takes the centroid tracking and plot a heatmap to visualize
     the occupancy map of the animal in a given recording
     '''
 
@@ -29,6 +29,7 @@ def plot_open_field_occupancy_map(
         frame_size = f[animal_name]['frame_size'][()]
         frame_count = f[animal_name]['frame_count'][()]
         fps = f[animal_name]['fps'][()]
+        centroid = f[animal_name]['centroid'][()]
 
         # use animal detection to dynamically trim the beginning of the recording with an empty field
         start_frame = 0
@@ -46,12 +47,12 @@ def plot_open_field_occupancy_map(
         # scale = field_size / frame_size  # 2x2 mouse or openfield would be scale = 30/1024
         scale = 1.0  # for now, scale set to 1
 
-    # read tracking.h5 file
-    df = pd.read_hdf(tracking_h5)
-    model_id = df.columns[0][0]
-    label = df[model_id]
-
-    centroid = cal_centroid(label)
+    # # read tracking.h5 file
+    # df = pd.read_hdf(tracking_h5)
+    # model_id = df.columns[0][0]
+    # label = df[model_id]
+    #
+    # centroid = cal_centroid(label)
 
     # trim the time series by animal detection
     centroid = centroid[start_frame:]
@@ -60,7 +61,7 @@ def plot_open_field_occupancy_map(
     centroid = centroid / frame_size
 
     # clean the data to remove NaNs before plotting
-    clean_data = pd.DataFrame({"x": centroid["x"] * scale, "y": centroid["y"] * scale}).dropna()
+    clean_data = pd.DataFrame({"x": centroid[:,0] * scale, "y": centroid[:,1] * scale}).dropna()
 
     # flip the y-axis to match the video recording
     clean_data["y"] = 1.0 - clean_data["y"]
@@ -128,44 +129,6 @@ def plot_open_field_occupancy_map(
     plt.close()
     print(f"occupancy map saved to {dest_path}")
 
-
-def cal_centroid(label):
-    """
-    input:
-    label: DLC tracking of the recording
-    return: the x,y location of the (estimated) centroid of the mouse
-    """
-
-    # for now hard-code the list of bodyparts used to estimate centroid
-    bp_list = [
-        # 'tailbase',
-        'hip',
-        'sternumtail',
-        'sternumhead',
-        'neck',
-        # 'snout',
-        'lhip',
-        'rhip',
-        'lshoulder',
-        'rshoulder'
-    ]
-
-    sub = label.loc[:, pd.IndexSlice[bp_list, ['x', 'y', 'likelihood']]]
-    x = sub.xs('x', axis=1, level=-1)
-    y = sub.xs('y', axis=1, level=-1)
-    lik = sub.xs('likelihood', axis=1, level=-1)
-
-    # likelihood-weighted sum that integrate different bodyparts locations
-    weighted_x = (x * lik).sum(axis=1)
-    weighted_y = (y * lik).sum(axis=1)
-    sum_weights = lik.sum(axis=1)
-    mean_x = weighted_x.div(sum_weights).where(sum_weights.ne(0))
-    mean_y = weighted_y.div(sum_weights).where(sum_weights.ne(0))
-
-    centroid = pd.concat([mean_x, mean_y], axis=1)
-    centroid.columns = ['x', 'y']
-
-    return centroid
 
 
 def cal_displacement(

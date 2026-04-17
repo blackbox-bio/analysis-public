@@ -4,6 +4,7 @@
     "PV: bin start-end (min)": "PV: bin start-end (min)",
     "bin duration (min)": "bin duration (min)",
     "distance_traveled (pixel)": "distance_traveled (pixel)",
+    "time_spent_in_center (seconds)": "time_spent_in_center (seconds)",
     "average_overall_print_size (pixel area)": "average_overall_print_size (pixel area)",
     "average_hind_left_print_size (pixel area)": "average_LHP_print_size (pixel area)",
     "relative_hind_left_print_size (ratio)": "relative_LHP_print_size (ratio)",

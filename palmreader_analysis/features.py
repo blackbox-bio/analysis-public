@@ -9,6 +9,7 @@ class FeaturesContext:
         # we have to import these here otherwise we get a circular import. same thing with the SummaryContext
         from .common import (
             DistanceDeltaDef,
+            TimeSpentInCenterDef,
             BodyPartDistanceDef,
             BodyPartAngleDef,
             DISTANCE_FEATURES,
@@ -34,6 +35,9 @@ class FeaturesContext:
 
         # add distance delta feature
         features.append(DistanceDeltaDef())
+
+        # add centroid tracking feature
+        features.append(TimeSpentInCenterDef())
 
         # Add Animal detection features
         features.append(AnimalDetectionDef())

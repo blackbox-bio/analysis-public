@@ -121,8 +121,8 @@ def main():
                     dlc_path = os.path.join(recording, file)
                     break
             dest_path = os.path.join(recording, "openfield_occupancy_map.png")
-            plot_open_field_occupancy_map(features_h5, dlc_path, dest_path)
-            _ = cal_displacement(features_h5, dlc_path)
+            plot_open_field_occupancy_map(features_h5, dest_path)
+            # _ = cal_displacement(features_h5, dlc_path) #TODO: move this into extract feature
 
 
 

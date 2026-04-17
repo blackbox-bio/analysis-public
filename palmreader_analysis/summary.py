@@ -22,6 +22,7 @@ class SummaryContext:
         # we have to import these here otherwise we get a circular import. same thing with the FeaturesContext
         from .common import (
             DistanceDeltaDef,
+            TimeSpentInCenterDef,
             BodyPartDistanceDef,
             AngleSummaryMode,
             BodyPartAngleDef,
@@ -36,6 +37,7 @@ class SummaryContext:
         columns.append(TimeInformationColumns())
 
         columns.append(DistanceDeltaDef())
+        columns.append(TimeSpentInCenterDef())
 
         for measure in LuminanceMeasure:
             columns.append(AverageOverallLuminanceColumn(measure))

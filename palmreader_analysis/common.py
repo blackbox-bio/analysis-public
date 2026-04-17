@@ -13,7 +13,7 @@ either features or summary, use `FeaturesContext.get_all_features` or
 
 from typing import Literal, Dict, Tuple, Union
 import numpy as np
-from utils import cal_distance_, body_parts_distance, get_vector, get_angle
+from utils import cal_distance_, body_parts_distance, get_vector, get_angle, cal_centroid
 from cols_name_dicts import summary_col_name_dict
 from enum import Enum
 
@@ -42,6 +42,50 @@ class DistanceDeltaDef(Feature, SummaryColumn):
                 tags=[],
                 displayname="Distance traveled",
                 description="Measures the distance traveled by the animal",
+            )
+        ]
+
+class TimeSpentInCenterDef(Feature, SummaryColumn):
+    COLUMN_NAME = "time_spent_in_center (seconds)"
+
+    def extract(self, ctx: FeaturesContext):
+        ctx._data["centroid"] = cal_centroid(ctx.label)
+
+    def summarize(self, ctx):
+
+        # need to implement, count the amount of time (seconds) that the animal stays in the middle third of the grid
+        frame_size = ctx._features["frame_size"]
+        centroid = ctx._features["centroid"]
+
+        fps = ctx._features.get("fps")
+        if fps is None:
+            raise ValueError("fps must be provided in ctx._data to calculate time in seconds.")
+
+        centroid_normed = centroid / frame_size
+
+        # Create boolean masks for when the animal is within the center bounds
+        lower_bound = 1.0 / 3.0
+        upper_bound = 2.0 / 3.0
+        in_center_x = (centroid_normed[:, 0] >= lower_bound) & (centroid_normed[:, 0] <= upper_bound)
+        in_center_y = (centroid_normed[:, 1] >= lower_bound) & (centroid_normed[:, 1] <= upper_bound)
+
+        in_center = in_center_x & in_center_y
+
+        # Count total frames in center and convert to seconds
+        # .sum() safely counts True values and ignores NaNs
+        frames_in_center = in_center.sum()
+        time_in_center_sec = frames_in_center / fps
+
+        ctx._data[TimeSpentInCenterDef.COLUMN_NAME] = time_in_center_sec
+
+    def metadata(self):
+        return [
+            ColumnMetadata.make(
+                column=TimeSpentInCenterDef.COLUMN_NAME,
+                category=ColumnCategory.TEMPORAL,
+                tags=[],
+                displayname="Time spent in center",
+                description="Measures the time spent in the center of a 3x3 grid of the field by the animal",
             )
         ]
 
