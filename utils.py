@@ -113,7 +113,8 @@ def cal_centroid(label):
     return centroid
 
 def cal_displacement(
-        centroid,
+        centroid_x,
+        centroid_y,
         fps,
         window_sec: float = 0.5,
         smooth_sigma: int = 3
@@ -139,12 +140,10 @@ def cal_displacement(
 
     # --- basic setup ---
     half_window = int((window_sec * fps) / 2)
-    x = centroid[:,0]
-    y = centroid[:,1]
 
     # --- smooth position ---
-    x_smooth = gaussian_filter1d(x, sigma=smooth_sigma)
-    y_smooth = gaussian_filter1d(y, sigma=smooth_sigma)
+    x_smooth = gaussian_filter1d(centroid_x, sigma=smooth_sigma)
+    y_smooth = gaussian_filter1d(centroid_y, sigma=smooth_sigma)
 
     n = len(x_smooth)
     displacement_px = np.zeros(n)

@@ -49,13 +49,16 @@ class TimeSpentInCenterDef(Feature, SummaryColumn):
     COLUMN_NAME = "time_spent_in_center (seconds)"
 
     def extract(self, ctx: FeaturesContext):
-        ctx._data["centroid"] = cal_centroid(ctx.label)
+        centroid = cal_centroid(ctx.label)
+        ctx._data["centroid_x"] = centroid[:,0]
+        ctx._data["centroid_y"] = centroid[:,1]
 
     def summarize(self, ctx):
 
-        # need to implement, count the amount of time (seconds) that the animal stays in the middle third of the grid
         frame_size = ctx._features["frame_size"]
-        centroid = ctx._features["centroid"]
+        centroid_x = ctx._features["centroid_x"]
+        centroid_y = ctx._features["centroid_y"]
+        centroid = np.column_stack((centroid_x, centroid_y))
 
         fps = ctx._features.get("fps")
         if fps is None:

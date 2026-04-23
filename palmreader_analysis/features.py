@@ -161,7 +161,8 @@ class SingleFeaturesDef(Feature):
 class DisplacementDef(Feature):
     def extract(self, ctx: FeaturesContext):
         ctx._data["displacement_px"] = cal_displacement(
-            ctx._data["centroid"],
+            ctx._data["centroid_x"],
+            ctx._data["centroid_y"],
             ctx._data["fps"]
         ).reshape(-1)
         print("calculating displacement")

@@ -27,7 +27,8 @@ def plot_open_field_occupancy_map(
         frame_size = f[animal_name]['frame_size'][()]
         frame_count = f[animal_name]['frame_count'][()]
         fps = f[animal_name]['fps'][()]
-        centroid = f[animal_name]['centroid'][()]
+        centroid_x = f[animal_name]['centroid_x'][()]
+        centroid_y = f[animal_name]['centroid_y'][()]
 
         # use animal detection to dynamically trim the beginning of the recording with an empty field
         start_frame = 0
@@ -46,13 +47,15 @@ def plot_open_field_occupancy_map(
         scale = 1.0  # for now, scale set to 1
 
     # trim the time series by animal detection
-    centroid = centroid[start_frame:]
+    centroid_x = centroid_x[start_frame:]
+    centroid_y = centroid_y[start_frame:]
 
     # for now, normalize x,y location to [0,1] by the frame size
-    centroid = centroid / frame_size
+    centroid_x = centroid_x / frame_size
+    centroid_y = centroid_y / frame_size
 
     # clean the data to remove NaNs before plotting
-    clean_data = pd.DataFrame({"x": centroid[:,0] * scale, "y": centroid[:,1] * scale}).dropna()
+    clean_data = pd.DataFrame({"x": centroid_x * scale, "y": centroid_y * scale}).dropna()
 
     # flip the y-axis to match the video recording
     clean_data["y"] = 1.0 - clean_data["y"]
