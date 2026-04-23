@@ -65,8 +65,8 @@ def cal_distance_(label):
     """helper function for "calculate distance traveled"""
 
     centroid = cal_centroid(label)
-    x = gaussian_filter1d(centroid["x"].values, 3)
-    y = gaussian_filter1d(centroid["y"].values, 3)
+    x = gaussian_filter1d(centroid[:, 0], 3)
+    y = gaussian_filter1d(centroid[:, 1], 3)
     d_x = np.diff(x)
     d_y = np.diff(y)
     d_location = np.sqrt(d_x**2 + d_y**2)
@@ -108,6 +108,7 @@ def cal_centroid(label):
 
     centroid = pd.concat([mean_x, mean_y], axis=1)
     centroid.columns = ['x', 'y']
+    centroid = centroid.to_numpy()
 
     return centroid
 

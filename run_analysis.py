@@ -111,8 +111,10 @@ def main():
             executor.submit(process_recording_wrapper, recording)
             for recording in recording_list
         ]
-        # wait for completion
-        concurrent.futures.wait(futures)
+
+        # Wait for completion AND raise any hidden exceptions
+        for future in concurrent.futures.as_completed(futures):
+            future.result()  # This forces the worker's traceback to print to your terminal
 
     if args.openfield_test:
         for recording in recording_list:
