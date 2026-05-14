@@ -36,7 +36,6 @@ class Extractions(TypedDict):
 
 def features(args: Extractions):
     from process import extract_features
-    from report.openfield_occupancy import cal_displacement
 
     extractions = args["extractions"]
 
@@ -57,8 +56,6 @@ def features(args: Extractions):
             tracking_path,
             dest_path,
         )
-
-        cal_displacement(dest_path, tracking_path)
 
 
 class SummaryArgsV1(TypedDict):
@@ -260,7 +257,7 @@ def open_field_occupancy(args: OpenFieldOccupancyArgs):
     tracking_path = args["tracking_path"]
     dest_path = args["dest_path"]
 
-    plot_open_field_occupancy_map(features_path, tracking_path, dest_path)
+    plot_open_field_occupancy_map(features_path, dest_path)
 
 
 # Palmreader <-> Analysis API
