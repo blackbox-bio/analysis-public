@@ -144,6 +144,7 @@ def fit_lda_model(
 def plot_lda_projection(lda_result: dict,
                         point_size: int = 60,
                         ring_std: float = 1.0,
+                        figsize: tuple = (7, 6),
                         dest_path: Optional[str] = None,
 ):
     """
@@ -172,7 +173,7 @@ def plot_lda_projection(lda_result: dict,
     K = len(classes)
     palette = sns.color_palette("husl", K)
 
-    fig, ax = plt.subplots(figsize=(7, 6))
+    fig, ax = plt.subplots(figsize = figsize)
 
     if K >= 3:
         x, y2 = scores[:, 0], scores[:, 1] if scores.shape[1] >= 2 else np.zeros_like(scores[:, 0])
