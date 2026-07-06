@@ -19,12 +19,24 @@ mp.set_start_method("spawn", force=True)
 #
 # THIS IS AN API ENTRYPOINT! If the signature is modified, ensure api.py matches!
 # The body of this function can change without affecting the API.
-def run_deeplabcut(dlc_config_path, body_videos, generate_skeleton_flag=True, simple_skeleton_flag=False):
+def run_deeplabcut(
+    dlc_config_path,
+    body_videos,
+    generate_skeleton_flag=True,
+    simple_skeleton_flag=False,
+    gpu_idx=0,
+):
     PalmreaderProgress.start_multi(
         len(body_videos), "Analyzing videos", autoincrement=True
     )
 
-    deeplabcut.analyze_videos(dlc_config_path, body_videos, videotype=".mp4", shuffle=0)
+    deeplabcut.analyze_videos(
+        dlc_config_path,
+        body_videos,
+        videotype=".mp4",
+        shuffle=0,
+        device=f"cuda:{gpu_idx}",
+    )
 
     PalmreaderProgress.start_multi(len(body_videos), "Filtering predictions")
 
@@ -93,5 +105,3 @@ def generate_skeleton(dlc_config_path, body_videos, simple_skeleton_flag=False):
             )
 
     return
-
-

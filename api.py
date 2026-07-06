@@ -8,20 +8,43 @@ import json
 
 
 # API functions
-class DeepLabCutArgs(TypedDict):
+class DeepLabCutArgsV1(TypedDict):
     config_path: str
     videos: List[str]
 
 
-def deeplabcut(args: DeepLabCutArgs):
+def deeplabcut_v1(args: DeepLabCutArgsV1):
     # only import code that depends on deeplabcut if we're actually going to use it
     from dlc_runner import run_deeplabcut
 
     config_path = args["config_path"]
     videos = args["videos"]
 
-    run_deeplabcut(config_path, videos, False)
+    run_deeplabcut(
+        dlc_config_path=config_path,
+        body_videos=videos,
+        generate_skeleton_flag=False,
+    )
 
+
+class DeepLabCutArgsV2(TypedDict):
+    config_path: str
+    videos: List[str]
+    gpu_idx: int
+
+def deeplabcut_v2(args: DeepLabCutArgsV2):
+    from dlc_runner import run_deeplabcut
+
+    config_path = args["config_path"]
+    videos = args["videos"]
+    gpu_idx = args["gpu_idx"]
+
+    run_deeplabcut(
+        dlc_config_path=config_path,
+        body_videos=videos,
+        generate_skeleton_flag=False,
+        gpu_idx=gpu_idx,
+    )
 
 class Extraction(TypedDict):
     name: str
@@ -311,8 +334,12 @@ def main():
     task = ""
 
     if args.function == ApiFunction.DEEPLABCUT:
-        func = deeplabcut
         task = "running DeepLabCut"
+
+        if args.api_version == 1:
+            func = deeplabcut_v1
+        else:
+            func = deeplabcut_v2
     elif args.function == ApiFunction.FEATURES:
         func = features
         task = "extracting features"
