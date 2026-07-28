@@ -148,7 +148,8 @@ class BackgroundLuminanceDef(Feature):
 
 class SingleFeaturesDef(Feature):
     """
-    This is a special feature definition that computes multiple columns. It is the only feature that does this. It does this because it provides scalar values that are not optional and are only used internally.
+    This is a special feature definition that computes multiple columns. It is the only feature that does this.
+    It does this because it provides scalar values that are not optional and are only used internally.
 
     Palmreader users will never see these values directly.
     """

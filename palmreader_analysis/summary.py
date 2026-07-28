@@ -4,7 +4,7 @@ import numpy as np
 from collections import defaultdict
 import h5py
 from cols_name_dicts import summary_col_name_dict
-from utils import both_front_paws_lifted
+from utils import both_front_paws_lifted, label_locomotion
 
 from .variants import (
     Paw,
@@ -44,17 +44,27 @@ class SummaryContext:
         for behavior in Behavior:
             columns.append(BehaviorDef(behavior))
 
-        for measure in LuminanceMeasure:
-            columns.append(AverageOverallLuminanceColumn(measure))
+        # Define the masks you want to iterate over
+        masks_to_apply = [MaskComputer.NONE, LocomotionMaskComputer(), NotLocomotionMaskComputer()]
 
-            for paw in Paw:
-                columns.append(AveragePawLuminanceColumn(paw, measure))
-                columns.append(RelativePawLuminanceColumn(paw, measure))
+        for measure in LuminanceMeasure:
+            for mask in masks_to_apply:
+                columns.append(AverageOverallLuminanceColumn(measure, mask))
+
+                for paw in Paw:
+                    columns.append(AveragePawLuminanceColumn(paw, measure, mask))
+                    columns.append(RelativePawLuminanceColumn(paw, measure, mask))
 
             for ratio_order in RatioOrder:
                 columns.append(HindPawRatioColumn(measure, ratio_order))
                 columns.append(
                     HindPawRatioColumn(measure, ratio_order, StandingMaskComputer())
+                )
+                columns.append(
+                    HindPawRatioColumn(measure, ratio_order, LocomotionMaskComputer())
+                )
+                columns.append(
+                    HindPawRatioColumn(measure, ratio_order, NotLocomotionMaskComputer())
                 )
             columns.append(FrontToHindPawRatioColumn(measure))
 
@@ -204,7 +214,7 @@ class SummaryContext:
         # this just applies the name dictionary to the columns
         # TODO: remove this and just change the computation methods
         self._data = {
-            summary_col_name_dict[key]: value for key, value in self._data.items()
+            summary_col_name_dict.get(key, key): value for key, value in self._data.items()
         }
 
 
@@ -295,112 +305,6 @@ class Mask:
 
 Mask.NONE = Mask("", np.array([]))
 
-
-class PawLuminanceMeanComputation:
-    @staticmethod
-    def compute_paw_luminance_average(
-        ctx: SummaryContext, mask: Mask = Mask.NONE
-    ) -> PawLuminanceMeanDataHolder:
-        key = mask.cache_key("paw_luminance")
-
-        if key not in ctx._cache:
-            paw_luminance = PawLuminanceMeanDataHolder()
-
-            for paw in Paw:
-                for measure in LuminanceMeasure:
-                    paw_luminance.set_value(
-                        paw,
-                        measure,
-                        np.nanmean(
-                            mask.apply(
-                                ctx._features[f"{paw.value}_{measure.feature_name()}"]
-                            )
-                        ),
-                    )
-
-            ctx._cache[key] = paw_luminance
-
-        return ctx._cache[key]
-
-
-class AverageOverallLuminanceColumn(SummaryColumn):
-    def __init__(self, measure: LuminanceMeasure):
-        self.measure = measure
-
-    def _get_column_name(self) -> str:
-        return f"average_overall_{self.measure.value} ({self.measure.units()})"
-
-    def summarize(self, ctx):
-        paw_luminance = PawLuminanceMeanComputation.compute_paw_luminance_average(ctx)
-
-        ctx._data[self._get_column_name()] = paw_luminance.get_sum(self.measure)
-
-    def metadata(self):
-        return [
-            ColumnMetadata.make(
-                column=self._get_column_name(),
-                category=ColumnCategory.LUMINANCE_BASED,
-                tags=all_paws_tags(),
-                displayname=f"Average overall {self.measure.displayname()}",
-                description=f"The sum of the average {self.measure.displayname()} of all paws",
-            )
-        ]
-
-
-class AveragePawLuminanceColumn(SummaryColumn):
-    def __init__(self, paw: Paw, measure: LuminanceMeasure):
-        self.paw = paw
-        self.measure = measure
-
-    def _get_column_name(self) -> str:
-        return f"average_{self.paw.old_name()}_{self.measure.value} ({self.measure.units()})"
-
-    def summarize(self, ctx):
-        paw_luminance = PawLuminanceMeanComputation.compute_paw_luminance_average(ctx)
-
-        ctx._data[self._get_column_name()] = paw_luminance.get_value(
-            self.paw, self.measure
-        )
-
-    def metadata(self):
-        return [
-            ColumnMetadata.make(
-                column=self._get_column_name(),
-                category=ColumnCategory.LUMINANCE_BASED,
-                tags=[self.paw.as_tag()],
-                displayname=f"Average {self.paw.displayname()} {self.measure.displayname()}",
-                description=f"The average {self.measure.displayname()} of the {self.paw.displayname()}",
-            )
-        ]
-
-
-class RelativePawLuminanceColumn(SummaryColumn):
-    def __init__(self, paw: Paw, measure: LuminanceMeasure):
-        self.paw = paw
-        self.measure = measure
-
-    def _get_column_name(self) -> str:
-        return f"relative_{self.paw.old_name()}_{self.measure.value} (ratio)"
-
-    def summarize(self, ctx):
-        paw_luminance = PawLuminanceMeanComputation.compute_paw_luminance_average(ctx)
-
-        ctx._data[self._get_column_name()] = paw_luminance.get_value(
-            self.paw, self.measure
-        ) / paw_luminance.get_sum(self.measure)
-
-    def metadata(self):
-        return [
-            ColumnMetadata.make(
-                column=self._get_column_name(),
-                category=ColumnCategory.LUMINANCE_BASED,
-                tags=[self.paw.as_tag()],
-                displayname=f"Relative {self.paw.displayname()} {self.measure.displayname()}",
-                description=f"The ratio of the average {self.measure.displayname()} of the {self.paw.displayname()} to the sum of the average {self.measure.displayname()} of all paws",
-            )
-        ]
-
-
 class MaskComputer:
     NONE: "MaskComputer"
 
@@ -451,6 +355,162 @@ class StandingMaskComputer(MaskComputer):
             ctx._cache["standing_mask"] = Mask("standing", standing_mask)
 
         return ctx._cache["standing_mask"]
+
+
+class LocomotionMaskComputer(MaskComputer):
+    def __init__(self):
+        super().__init__("locomoting")
+
+    def compute(self, ctx: SummaryContext) -> Mask:
+        if "locomoting_mask" not in ctx._cache:
+            displacement = ctx._features["displacement_px"]
+            fps = float(ctx._features["fps"])  # Cast the 0-d array to float
+
+            # Generate the locomotion mask using the external tool
+            locomotion_mask = label_locomotion(displacement, fps)
+            ctx._cache["locomoting_mask"] = Mask("locomoting", locomotion_mask)
+
+        return ctx._cache["locomoting_mask"]
+
+
+class NotLocomotionMaskComputer(MaskComputer):
+    def __init__(self):
+        super().__init__("not_locomoting")
+
+    def compute(self, ctx: SummaryContext) -> Mask:
+        if "not_locomoting_mask" not in ctx._cache:
+            # The inverse of the locomotion mask
+            locomoting = LocomotionMaskComputer().compute(ctx)
+            ctx._cache["not_locomoting_mask"] = Mask("not_locomoting", ~locomoting.mask)
+
+        return ctx._cache["not_locomoting_mask"]
+
+
+
+class PawLuminanceMeanComputation:
+    @staticmethod
+    def compute_paw_luminance_average(
+        ctx: SummaryContext, mask: Mask = Mask.NONE
+    ) -> PawLuminanceMeanDataHolder:
+        key = mask.cache_key("paw_luminance")
+
+        if key not in ctx._cache:
+            paw_luminance = PawLuminanceMeanDataHolder()
+
+            for paw in Paw:
+                for measure in LuminanceMeasure:
+                    paw_luminance.set_value(
+                        paw,
+                        measure,
+                        np.nanmean(
+                            mask.apply(
+                                ctx._features[f"{paw.value}_{measure.feature_name()}"]
+                            )
+                        ),
+                    )
+
+            ctx._cache[key] = paw_luminance
+
+        return ctx._cache[key]
+
+
+class AverageOverallLuminanceColumn(SummaryColumn):
+    def __init__(
+            self,
+            measure: LuminanceMeasure,
+            mask: MaskComputer = MaskComputer.NONE,
+    ):
+        self.measure = measure
+        self.mask = mask
+
+    def _get_column_name(self) -> str:
+        return f"average{self.mask.column_infix()}_overall_{self.measure.value} ({self.measure.units()})"
+
+    def summarize(self, ctx):
+        mask = self.mask.compute(ctx)
+        paw_luminance = PawLuminanceMeanComputation.compute_paw_luminance_average(ctx, mask)
+        ctx._data[self._get_column_name()] = paw_luminance.get_sum(self.measure)
+
+    def metadata(self):
+        return [
+            ColumnMetadata.make(
+                column=self._get_column_name(),
+                category=ColumnCategory.LUMINANCE_BASED,
+                tags=all_paws_tags(),
+                displayname=f"Average{self.mask.displayname()} overall {self.measure.displayname()}",
+                description=f"The sum of the average {self.measure.displayname()} of all paws{self.mask.description_infix()}",
+            )
+        ]
+
+
+class AveragePawLuminanceColumn(SummaryColumn):
+    def __init__(
+            self,
+            paw: Paw,
+            measure: LuminanceMeasure,
+            mask: MaskComputer = MaskComputer.NONE
+    ):
+        self.paw = paw
+        self.measure = measure
+        self.mask = mask
+
+    def _get_column_name(self) -> str:
+        return f"average{self.mask.column_infix()}_{self.paw.old_name()}_{self.measure.value} ({self.measure.units()})"
+
+    def summarize(self, ctx):
+        mask = self.mask.compute(ctx)
+        paw_luminance = PawLuminanceMeanComputation.compute_paw_luminance_average(ctx, mask)
+        ctx._data[self._get_column_name()] = paw_luminance.get_value(
+            self.paw, self.measure
+        )
+
+    def metadata(self):
+        return [
+            ColumnMetadata.make(
+                column=self._get_column_name(),
+                category=ColumnCategory.LUMINANCE_BASED,
+                tags=[self.paw.as_tag()],
+                displayname=f"Average{self.mask.displayname()} {self.paw.displayname()} {self.measure.displayname()}",
+                description=f"The average {self.measure.displayname()} of the {self.paw.displayname()}{self.mask.description_infix()}",
+            )
+        ]
+
+
+class RelativePawLuminanceColumn(SummaryColumn):
+    def __init__(
+            self,
+            paw: Paw,
+            measure: LuminanceMeasure,
+            mask: MaskComputer = MaskComputer.NONE
+    ):
+        self.paw = paw
+        self.measure = measure
+        self.mask = mask
+
+    def _get_column_name(self) -> str:
+        return f"relative{self.mask.column_infix()}_{self.paw.old_name()}_{self.measure.value} (ratio)"
+
+    def summarize(self, ctx):
+        mask = self.mask.compute(ctx)
+        paw_luminance = PawLuminanceMeanComputation.compute_paw_luminance_average(ctx, mask)
+
+        # Avoid division by zero if sum is 0
+        lum_sum = paw_luminance.get_sum(self.measure)
+        ctx._data[self._get_column_name()] = (
+            paw_luminance.get_value(self.paw, self.measure) / lum_sum
+            if lum_sum else np.nan
+        )
+
+    def metadata(self):
+        return [
+            ColumnMetadata.make(
+                column=self._get_column_name(),
+                category=ColumnCategory.LUMINANCE_BASED,
+                tags=[self.paw.as_tag()],
+                displayname=f"Relative{self.mask.displayname()} {self.paw.displayname()} {self.measure.displayname()}",
+                description=f"The ratio of the average {self.measure.displayname()} of the {self.paw.displayname()} to the sum of the average {self.measure.displayname()} of all paws{self.mask.description_infix()}",
+            )
+        ]
 
 
 class HindPawRatioColumn(SummaryColumn):
