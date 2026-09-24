@@ -446,6 +446,157 @@ def filter_tracking_by_likelihood(label: pd.DataFrame, likelihood_thresh: float 
     return filtered_label
 
 
+def get_angular_velocity(label: pd.DataFrame, bp1: str, bp2: str, filter_size: int = 3) -> np.ndarray:
+    """
+    Helper function to calculate smoothed angular velocity (in degrees/frame)
+    between two body parts across frames. The vector is defined as bp2 -> bp1
+
+    Parameters
+    ----------
+    label : pd.DataFrame
+        DLC tracking DataFrame with MultiIndex columns: (bodypart, coord).
+    bp1 : str
+        Name of the front body part (e.g. 'snout').
+    bp2 : str
+        Name of the back body part (e.g. 'sternumtail').
+    filter_size : int
+        Gaussian smoothing filter sigma.
+
+    Returns
+    -------
+    smoothed_angular_velocity : np.ndarray
+        Smoothed angular velocity in degrees per frame.
+    """
+    label = filter_tracking_by_likelihood(label)
+
+    x1 = label[bp1]["x"].copy()
+    y1 = label[bp1]["y"].copy()
+    x2 = label[bp2]["x"].copy()
+    y2 = label[bp2]["y"].copy()
+
+    # Compute orientation angle per frame
+    theta = np.arctan2(y1 - y2, x1 - x2)
+    theta_unwrapped = np.unwrap(theta)
+
+    # Compute angular velocity in degrees
+    d_theta = np.diff(theta_unwrapped, prepend=theta_unwrapped[0])
+    angular_velocity_deg = np.degrees(d_theta)
+
+    # Apply Gaussian smoothing
+    smoothed_angular_velocity = gaussian_filter1d(angular_velocity_deg, sigma=filter_size)
+
+    return smoothed_angular_velocity
+
+def label_turning(
+    label,
+    fps,
+    threshold_deg_per_s=90,
+    duration_s=0.4,
+    smooth_sigma=3,
+    bp1="snout",
+    bp2="tailbase"
+):
+    """
+    Label turning behavior based on angular velocity between two body parts.
+    Uses get_angular_velocity() to compute smoothed angular velocity.
+
+    Parameters
+    ----------
+    label : pd.DataFrame
+        DLC tracking DataFrame.
+    fps : float
+        Frame rate of video.
+    threshold_deg_per_s : float
+        Angular velocity threshold in deg/sec.
+    duration_s : float
+        Minimum turning duration in seconds to count as a turn.
+    smooth_sigma : float
+        Smoothing applied inside get_angular_velocity (in frames).
+    bp1 : str
+        Front body part (e.g., "snout").
+    bp2 : str
+        Rear body part (e.g., "tailbase").
+
+    Returns
+    -------
+    turning_labels : np.ndarray
+        Array of same length as frames:
+        - 0 = not turning
+        - 2 = left turn (ang_vel < -threshold)
+        - 3 = right turn (ang_vel > threshold)
+    """
+    # Get angular velocity in deg/frame
+    ang_vel = get_angular_velocity(label, bp1=bp1, bp2=bp2, filter_size=smooth_sigma)
+
+    # Convert threshold to deg/frame
+    threshold = threshold_deg_per_s / fps
+    min_duration = int(duration_s * fps)
+
+    # Init label array
+    turning_labels = np.zeros_like(ang_vel, dtype=int)
+
+    # Label left turns
+    left_mask = ang_vel > threshold
+    labeled_left, n_left = label_connected_components(left_mask)
+    for i in range(1, n_left + 1):
+        idx = np.where(labeled_left == i)[0]
+        if len(idx) >= min_duration:
+            turning_labels[idx] = 2
+
+    # Label right turns
+    right_mask = ang_vel < -threshold
+    labeled_right, n_right = label_connected_components(right_mask)
+    for i in range(1, n_right + 1):
+        idx = np.where(labeled_right == i)[0]
+        if len(idx) >= min_duration:
+            turning_labels[idx] = 3
+
+    return turning_labels
+
+
+def filter_tracking_by_likelihood(label: pd.DataFrame, likelihood_thresh: float = 0.6) -> pd.DataFrame:
+    """
+    Filter all body parts in a DLC tracking DataFrame by likelihood.
+
+    Low-confidence x/y values (likelihood < threshold) are replaced by NaN and then filled.
+
+    Parameters
+    ----------
+    label : pd.DataFrame
+        DLC tracking DataFrame with MultiIndex columns: (bodypart, coord), e.g., ('snout', 'x')
+    likelihood_thresh : float
+        Minimum confidence value required to retain a tracking point (default: 0.6)
+
+    Returns
+    -------
+    filtered_label : pd.DataFrame
+        Modified DataFrame with low-confidence positions removed and interpolated
+    """
+    filtered_label = label.copy()
+
+    # Loop through all body parts
+    for bp in label.columns.levels[0]:
+        if (bp, 'likelihood') not in label.columns:
+            continue  # skip untracked parts
+
+        x = filtered_label[(bp, "x")]
+        y = filtered_label[(bp, "y")]
+        likelihood = filtered_label[(bp, "likelihood")]
+
+        # Mask low-confidence values
+        low_confidence = likelihood < likelihood_thresh
+        x[low_confidence] = pd.NA
+        y[low_confidence] = pd.NA
+
+        # Fill gaps with backward then forward fill
+        filtered_label[(bp, "x")] = x.bfill().ffill()
+        filtered_label[(bp, "y")] = y.bfill().ffill()
+
+    return filtered_label
+
+# duplicate from Ethos end ---------------------------
+
+
 def get_distance(x1, y1, x2, y2):
     """helper function to calculate distance between two points"""
     return np.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
