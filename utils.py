@@ -554,6 +554,9 @@ def label_turning(
     return turning_labels
 
 
+# duplicate from Ethos end ---------------------------
+
+
 def filter_tracking_by_likelihood(label: pd.DataFrame, likelihood_thresh: float = 0.6) -> pd.DataFrame:
     """
     Filter all body parts in a DLC tracking DataFrame by likelihood.
