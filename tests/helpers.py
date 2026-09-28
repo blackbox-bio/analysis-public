@@ -12,14 +12,14 @@ class SampleData:
     @staticmethod
     def make_default(
         root: str,
-        dlc_scorer: str = "DLC_resnet50_arcteryx500Nov4shuffle1_350000",
+        dlc_scorer: str = "DLC_Resnet50_arcteryx500Nov4shuffle0_snapshot_2000",
     ) -> "SampleData":
         spath = lambda x: os.path.join(root, x)
         dlcpath = lambda p, ext: os.path.join(root, f"{p}{dlc_scorer}{ext}")
 
         return SampleData(
-            trans_video=spath("trans.avi"),
-            ftir_video=spath("ftir.avi"),
+            trans_video=spath("trans.mp4"),
+            ftir_video=spath("ftir.mp4"),
             features_h5=spath("features.h5"),
             tracking_h5=dlcpath("trans", ".h5"),
             tracking_filtered_h5=dlcpath("trans", "_filtered.h5"),
