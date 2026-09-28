@@ -13,7 +13,16 @@ either features or summary, use `FeaturesContext.get_all_features` or
 
 from typing import Literal, Dict, Tuple, Union
 import numpy as np
-from utils import cal_distance_, body_parts_distance, get_vector, get_angle, cal_centroid
+from utils import (
+    cal_centroid_distance_delta,
+    body_parts_distance,
+    get_vector,
+    get_angle,
+    cal_centroid,
+    label_locomotion,
+    label_not_moving,
+    label_turning,
+)
 from cols_name_dicts import summary_col_name_dict
 from enum import Enum
 
@@ -27,7 +36,7 @@ class DistanceDeltaDef(Feature, SummaryColumn):
     COLUMN_NAME = "distance_traveled (pixel)"
 
     def extract(self, ctx: FeaturesContext):
-        ctx._data["distance_delta"] = cal_distance_(ctx.label).reshape(-1)
+        ctx._data["distance_delta"] = cal_centroid_distance_delta(ctx.label).reshape(-1)
 
     def summarize(self, ctx):
         ctx._data[DistanceDeltaDef.COLUMN_NAME] = np.nansum(
@@ -89,6 +98,71 @@ class TimeSpentInCenterDef(Feature, SummaryColumn):
                 tags=[],
                 displayname="Time spent in center",
                 description="Measures the time spent in the center of a 3x3 grid of the field by the animal",
+            )
+        ]
+
+
+class Behavior(Enum):
+    LOCOMOTION = "locomotion"
+    NOT_MOVING = "not_moving"
+    LEFT_TURN = "left_turn"
+    RIGHT_TURN = "right_turn"
+
+    def displayname(self) -> str:
+        if self == Behavior.LOCOMOTION:
+            return "locomoting"
+        elif self == Behavior.NOT_MOVING:
+            return "not moving"
+        elif self == Behavior.LEFT_TURN:
+            return "turning left"
+        elif self == Behavior.RIGHT_TURN:
+            return "turning right"
+        else:
+            raise ValueError(f"Invalid behavior: {self}")
+
+
+class BehaviorDef(Feature, SummaryColumn):
+    """
+    Per-frame 0/1 label of a behavior, summarized as the time spent doing it.
+    """
+
+    def __init__(self, behavior: Behavior):
+        self.behavior = behavior
+
+    def extract(self, ctx: FeaturesContext):
+        fps = float(ctx._data["fps"])
+
+        if self.behavior == Behavior.LOCOMOTION:
+            labels = label_locomotion(ctx._data["displacement_px"], fps)
+        elif self.behavior == Behavior.NOT_MOVING:
+            labels = label_not_moving(ctx.label, fps)
+        else:
+            # left and right turns come from the same computation, only run it once
+            if "turning_labels" not in ctx._cache:
+                ctx._cache["turning_labels"] = label_turning(ctx.label, fps)
+            turning = ctx._cache["turning_labels"]
+
+            # 2 = left turn, 3 = right turn (see label_turning)
+            labels = turning == (2 if self.behavior == Behavior.LEFT_TURN else 3)
+
+        ctx._data[self.behavior.value] = np.asarray(labels).astype(np.uint8)
+
+    def _get_column_name(self) -> str:
+        return f"time_spent_{self.behavior.value} (seconds)"
+
+    def summarize(self, ctx):
+        ctx._data[self._get_column_name()] = (
+            np.sum(ctx._features[self.behavior.value]) / ctx._features["fps"]
+        )
+
+    def metadata(self):
+        return [
+            ColumnMetadata.make(
+                column=self._get_column_name(),
+                category=ColumnCategory.TEMPORAL,
+                tags=[],
+                displayname=f"Time spent {self.behavior.displayname()}",
+                description=f"Measures the time spent {self.behavior.displayname()} by the animal",
             )
         ]
 

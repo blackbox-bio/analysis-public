@@ -10,6 +10,7 @@ from collections import defaultdict
 import cv2
 from scipy.ndimage import gaussian_filter1d
 from scipy.ndimage import median_filter
+from scipy.ndimage import label as label_connected_components
 from dataclasses import dataclass
 from typing import Dict
 from palmreader_analysis.variants import LuminanceMeasure, Paw
@@ -61,8 +62,26 @@ def get_recording_list(directorys):
     return recording_list
 
 
-def cal_distance_(label):
-    """helper function for "calculate distance traveled"""
+def cal_centroid_distance_delta(label):
+    """
+    Per-frame distance moved by the body centroid, used for "distance traveled".
+
+    Note: this is not interchangeable with get_speed. This tracks the
+    likelihood-weighted centroid (see cal_centroid) and smooths the positions
+    before taking the frame-to-frame distance, whereas get_speed tracks a
+    single body part and smooths the speed after taking the distance.
+
+    Parameters
+    ----------
+    label : pd.DataFrame
+        DLC tracking DataFrame with MultiIndex columns: (bodypart, coord).
+
+    Returns
+    -------
+    d_location : np.ndarray
+        Distance (in pixels) moved by the centroid since the previous frame.
+        The first frame is 0. NaN where the centroid is undefined.
+    """
 
     centroid = cal_centroid(label)
     x = gaussian_filter1d(centroid[:, 0], 3)
@@ -157,6 +176,274 @@ def cal_displacement(
         displacement_px[i] = np.hypot(dx, dy)
 
     return displacement_px
+
+
+# duplicate from Ethos start ---------------------------
+
+def label_locomotion(displacement_px, fps, reference_threshold=20, reference_fps=45, duration_s=1.0):
+    """
+    Label locomotion frames based on per-frame displacement, with threshold scaled by fps.
+
+    Parameters
+    ----------
+    displacement_px : np.ndarray or pd.Series
+        Per-frame displacement in pixels (e.g., from center of mass or body centroid).
+    fps : float
+        Frame rate of the recording.
+    reference_threshold : float
+        Displacement threshold in pixels for locomotion at the reference_fps (default: 80 px at 45 fps).
+    reference_fps : float
+        The FPS at which the reference_threshold is defined (default: 45).
+
+    Returns
+    -------
+    locomotion_mask : np.ndarray of bool
+        Boolean array where True indicates locomotion.
+    """
+    # Adjust the threshold proportionally to frame rate
+    scaled_threshold = reference_threshold * (fps / reference_fps)
+    locomotion_mask = displacement_px > scaled_threshold
+
+    # Enforce minimum duration
+    min_duration = int(duration_s * fps)
+    labeled, n = label_connected_components(locomotion_mask)
+    locomotion_long = np.zeros_like(locomotion_mask)
+
+    for i in range(1, n + 1):
+        idx = np.where(labeled == i)[0]
+        if len(idx) >= min_duration:
+            locomotion_long[idx] = 1
+
+    return locomotion_long.astype(bool)
+
+def label_not_moving(label, fps, reference_px_per_frame=0.5, reference_fps=45, duration_s=0.5):
+    """
+    Label frames as 'not moving' based on per-frame speed threshold scaled with fps.
+
+    Parameters
+    ----------
+    label : pandas.DataFrame
+        DLC tracking DataFrame.
+    fps : float
+        Frame rate of the video.
+    reference_px_per_frame : float
+        Pixel/frame threshold at reference_fps (default = 0.5 at 45 fps).
+    reference_fps : float
+        The base FPS for which reference_px_per_frame is defined.
+    duration_s : float
+        Minimum duration (in seconds) of continuous stillness (default = 0.5).
+
+    Returns
+    -------
+    still_long : np.ndarray
+        Boolean array marking long stillness segments (True = still).
+    """
+    # List of body parts to evaluate for stillness.
+    bp_list = [
+        "hip",
+        "sternumtail",
+        "sternumhead",
+        "neck",
+        "snout",
+        "lhpaw",
+        "rhpaw",
+        "lfpaw",
+        "rfpaw",
+    ]
+
+    # Scale threshold based on fps (inverse relation)
+    px_per_frame_thresh = reference_px_per_frame * (reference_fps / fps)
+
+    # Compute smoothed speeds for all body parts
+    speeds = [get_speed(label, bp) for bp in bp_list]
+    speeds = np.vstack(speeds)
+
+    # Frame is still if all body parts are below threshold
+    still_mask = np.all(speeds < px_per_frame_thresh, axis=0)
+
+    # Enforce minimum duration
+    min_duration = int(duration_s * fps)
+    labeled, n = label_connected_components(still_mask)
+    still_long = np.zeros_like(still_mask)
+
+    for i in range(1, n + 1):
+        idx = np.where(labeled == i)[0]
+        if len(idx) >= min_duration:
+            still_long[idx] = 1
+
+    return still_long.astype(bool)
+
+
+def get_speed(label, bp, filter_size = 3):
+    """
+    helper function to calculate the speed (frame-to-frame delta distance) of a body part
+    """
+
+    label = filter_tracking_by_likelihood(label)
+
+    x = label[bp]["x"].copy()
+    y = label[bp]["y"].copy()
+
+    # Compute frame-to-frame displacement
+    d_x = np.diff(x, prepend=x.iloc[0])
+    d_y = np.diff(y, prepend=y.iloc[0])
+    speed = np.sqrt(d_x ** 2 + d_y ** 2)
+
+    # Apply Gaussian smoothing
+    smoothed_speed = gaussian_filter1d(speed, sigma=filter_size)
+
+    return smoothed_speed
+
+
+def get_angular_velocity(label: pd.DataFrame, bp1: str, bp2: str, filter_size: int = 3) -> np.ndarray:
+    """
+    Helper function to calculate smoothed angular velocity (in degrees/frame)
+    between two body parts across frames. The vector is defined as bp2 -> bp1
+
+    Parameters
+    ----------
+    label : pd.DataFrame
+        DLC tracking DataFrame with MultiIndex columns: (bodypart, coord).
+    bp1 : str
+        Name of the front body part (e.g. 'snout').
+    bp2 : str
+        Name of the back body part (e.g. 'sternumtail').
+    filter_size : int
+        Gaussian smoothing filter sigma.
+
+    Returns
+    -------
+    smoothed_angular_velocity : np.ndarray
+        Smoothed angular velocity in degrees per frame.
+    """
+    label = filter_tracking_by_likelihood(label)
+
+    x1 = label[bp1]["x"].copy()
+    y1 = label[bp1]["y"].copy()
+    x2 = label[bp2]["x"].copy()
+    y2 = label[bp2]["y"].copy()
+
+    # Compute orientation angle per frame
+    theta = np.arctan2(y1 - y2, x1 - x2)
+    theta_unwrapped = np.unwrap(theta)
+
+    # Compute angular velocity in degrees
+    d_theta = np.diff(theta_unwrapped, prepend=theta_unwrapped[0])
+    angular_velocity_deg = np.degrees(d_theta)
+
+    # Apply Gaussian smoothing
+    smoothed_angular_velocity = gaussian_filter1d(angular_velocity_deg, sigma=filter_size)
+
+    return smoothed_angular_velocity
+
+def label_turning(
+    label,
+    fps,
+    threshold_deg_per_s=90,
+    duration_s=0.4,
+    smooth_sigma=3,
+    bp1="snout",
+    bp2="tailbase"
+):
+    """
+    Label turning behavior based on angular velocity between two body parts.
+    Uses get_angular_velocity() to compute smoothed angular velocity.
+
+    Parameters
+    ----------
+    label : pd.DataFrame
+        DLC tracking DataFrame.
+    fps : float
+        Frame rate of video.
+    threshold_deg_per_s : float
+        Angular velocity threshold in deg/sec.
+    duration_s : float
+        Minimum turning duration in seconds to count as a turn.
+    smooth_sigma : float
+        Smoothing applied inside get_angular_velocity (in frames).
+    bp1 : str
+        Front body part (e.g., "snout").
+    bp2 : str
+        Rear body part (e.g., "tailbase").
+
+    Returns
+    -------
+    turning_labels : np.ndarray
+        Array of same length as frames:
+        - 0 = not turning
+        - 2 = left turn (ang_vel < -threshold)
+        - 3 = right turn (ang_vel > threshold)
+    """
+    # Get angular velocity in deg/frame
+    ang_vel = get_angular_velocity(label, bp1=bp1, bp2=bp2, filter_size=smooth_sigma)
+
+    # Convert threshold to deg/frame
+    threshold = threshold_deg_per_s / fps
+    min_duration = int(duration_s * fps)
+
+    # Init label array
+    turning_labels = np.zeros_like(ang_vel, dtype=int)
+
+    # Label left turns
+    left_mask = ang_vel > threshold
+    labeled_left, n_left = label_connected_components(left_mask)
+    for i in range(1, n_left + 1):
+        idx = np.where(labeled_left == i)[0]
+        if len(idx) >= min_duration:
+            turning_labels[idx] = 2
+
+    # Label right turns
+    right_mask = ang_vel < -threshold
+    labeled_right, n_right = label_connected_components(right_mask)
+    for i in range(1, n_right + 1):
+        idx = np.where(labeled_right == i)[0]
+        if len(idx) >= min_duration:
+            turning_labels[idx] = 3
+
+    return turning_labels
+
+# duplicate from Ethos end ---------------------------
+
+
+def filter_tracking_by_likelihood(label: pd.DataFrame, likelihood_thresh: float = 0.6) -> pd.DataFrame:
+    """
+    Filter all body parts in a DLC tracking DataFrame by likelihood.
+
+    Low-confidence x/y values (likelihood < threshold) are replaced by NaN and then filled.
+
+    Parameters
+    ----------
+    label : pd.DataFrame
+        DLC tracking DataFrame with MultiIndex columns: (bodypart, coord), e.g., ('snout', 'x')
+    likelihood_thresh : float
+        Minimum confidence value required to retain a tracking point (default: 0.6)
+
+    Returns
+    -------
+    filtered_label : pd.DataFrame
+        Modified DataFrame with low-confidence positions removed and interpolated
+    """
+    filtered_label = label.copy()
+
+    # Loop through all body parts
+    for bp in label.columns.levels[0]:
+        if (bp, 'likelihood') not in label.columns:
+            continue  # skip untracked parts
+
+        x = filtered_label[(bp, "x")]
+        y = filtered_label[(bp, "y")]
+        likelihood = filtered_label[(bp, "likelihood")]
+
+        # Mask low-confidence values
+        low_confidence = likelihood < likelihood_thresh
+        x[low_confidence] = pd.NA
+        y[low_confidence] = pd.NA
+
+        # Fill gaps with backward then forward fill
+        filtered_label[(bp, "x")] = x.bfill().ffill()
+        filtered_label[(bp, "y")] = y.bfill().ffill()
+
+    return filtered_label
 
 
 def get_distance(x1, y1, x2, y2):

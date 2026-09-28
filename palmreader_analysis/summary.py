@@ -23,6 +23,8 @@ class SummaryContext:
         from .common import (
             DistanceDeltaDef,
             TimeSpentInCenterDef,
+            Behavior,
+            BehaviorDef,
             BodyPartDistanceDef,
             AngleSummaryMode,
             BodyPartAngleDef,
@@ -38,6 +40,9 @@ class SummaryContext:
 
         columns.append(DistanceDeltaDef())
         columns.append(TimeSpentInCenterDef())
+
+        for behavior in Behavior:
+            columns.append(BehaviorDef(behavior))
 
         for measure in LuminanceMeasure:
             columns.append(AverageOverallLuminanceColumn(measure))

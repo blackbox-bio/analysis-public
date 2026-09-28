@@ -10,6 +10,8 @@ class FeaturesContext:
         from .common import (
             DistanceDeltaDef,
             TimeSpentInCenterDef,
+            Behavior,
+            BehaviorDef,
             BodyPartDistanceDef,
             BodyPartAngleDef,
             DISTANCE_FEATURES,
@@ -44,6 +46,10 @@ class FeaturesContext:
 
         # Add displacement feature
         features.append(DisplacementDef())
+
+        # Add behavior label features (must come after displacement)
+        for behavior in Behavior:
+            features.append(BehaviorDef(behavior))
 
         # Add body parts distance features
         for column in DISTANCE_FEATURES.keys():
