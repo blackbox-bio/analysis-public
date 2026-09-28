@@ -339,7 +339,7 @@ def get_angular_velocity(label: pd.DataFrame, bp1: str, bp2: str, filter_size: i
 def label_turning(
     label,
     fps,
-    threshold_deg_per_s=90,
+    threshold_deg_per_s=45,
     duration_s=0.4,
     smooth_sigma=3,
     bp1="snout",
