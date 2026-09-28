@@ -553,7 +553,6 @@ def label_turning(
 
     return turning_labels
 
-
 # duplicate from Ethos end ---------------------------
 
 
@@ -596,8 +595,6 @@ def filter_tracking_by_likelihood(label: pd.DataFrame, likelihood_thresh: float 
         filtered_label[(bp, "y")] = y.bfill().ffill()
 
     return filtered_label
-
-# duplicate from Ethos end ---------------------------
 
 
 def get_distance(x1, y1, x2, y2):
