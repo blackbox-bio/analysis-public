@@ -724,21 +724,29 @@ def cal_paw_luminance_rework(label, cap, size=22):
 
     paws = ["lhpaw", "rhpaw", "lfpaw", "rfpaw"]
 
-    paw_luminescence = {paw: [] for paw in paws}
-    paw_luminance = {paw: [] for paw in paws}
-    paw_print_size = {paw: [] for paw in paws}
+    # extract the paw coordinates once. indexing the DataFrame inside the frame
+    # loop copies the whole column every frame, which makes the loop O(n^2)
+    paw_xy = {paw: label[paw][["x", "y"]].to_numpy() for paw in paws}
+    DLC_tracking_length = len(label)
 
-    background_luminance = []
+    # the loop never runs past the end of the tracking, so preallocate arrays
+    # of that length and trim them to the number of frames read afterwards.
+    # appending to lists of numpy scalars uses ~5x the memory.
+    # dtypes match what np.array() produced from the old lists
+    paw_luminescence = {paw: np.empty(DLC_tracking_length, np.uint64) for paw in paws}
+    paw_luminance = {paw: np.empty(DLC_tracking_length, np.float64) for paw in paws}
+    paw_print_size = {paw: np.empty(DLC_tracking_length, np.int64) for paw in paws}
+
+    background_luminance = np.empty(DLC_tracking_length, np.float64)
 
     # legacy paw luminance calculation
-    hind_right = []
-    hind_left = []
-    front_right = []
-    front_left = []
+    hind_right = np.empty(DLC_tracking_length, np.float64)
+    hind_left = np.empty(DLC_tracking_length, np.float64)
+    front_right = np.empty(DLC_tracking_length, np.float64)
+    front_left = np.empty(DLC_tracking_length, np.float64)
     # legacy end----------------
 
     expected_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    DLC_tracking_length = label["snout"][["x"]].shape[0]
 
     print(f"expected_total: {expected_total}, DLC_tracking_length: {DLC_tracking_length}")
 
@@ -757,53 +765,38 @@ def cal_paw_luminance_rework(label, cap, size=22):
 
         # workaround: if the ftir video is longer than DLC tracking, exit to
         # avoid index error
-        if len(label["rhpaw"]) <= i:
+        if DLC_tracking_length <= i:
             break
 
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # Convert to grayscale
         # calculate background luminance
-        background_luminance.append(np.mean(frame))
+        background_luminance[i] = np.mean(frame)
 
         # legacy paw luminance calculation
-        x, y = (
-            int(label["rhpaw"][["x"]].values[i].item()),
-            int(label["rhpaw"][["y"]].values[i].item()),
-        )
-        hind_right.append(np.nanmean(frame[y - size : y + size, x - size : x + size]))
+        x, y = int(paw_xy["rhpaw"][i, 0]), int(paw_xy["rhpaw"][i, 1])
+        hind_right[i] = np.nanmean(frame[y - size : y + size, x - size : x + size])
 
-        x, y = (
-            int(label["lhpaw"][["x"]].values[i].item()),
-            int(label["lhpaw"][["y"]].values[i].item()),
-        )
-        hind_left.append(np.nanmean(frame[y - size : y + size, x - size : x + size]))
+        x, y = int(paw_xy["lhpaw"][i, 0]), int(paw_xy["lhpaw"][i, 1])
+        hind_left[i] = np.nanmean(frame[y - size : y + size, x - size : x + size])
 
-        x, y = (
-            int(label["rfpaw"][["x"]].values[i].item()),
-            int(label["rfpaw"][["y"]].values[i].item()),
-        )
-        front_right.append(np.nanmean(frame[y - size : y + size, x - size : x + size]))
+        x, y = int(paw_xy["rfpaw"][i, 0]), int(paw_xy["rfpaw"][i, 1])
+        front_right[i] = np.nanmean(frame[y - size : y + size, x - size : x + size])
 
-        x, y = (
-            int(label["lfpaw"][["x"]].values[i].item()),
-            int(label["lfpaw"][["y"]].values[i].item()),
-        )
-        front_left.append(np.nanmean(frame[y - size : y + size, x - size : x + size]))
+        x, y = int(paw_xy["lfpaw"][i, 0]), int(paw_xy["lfpaw"][i, 1])
+        front_left[i] = np.nanmean(frame[y - size : y + size, x - size : x + size])
         # legacy paw luminance calculation end----------------
 
         frame_denoise, paw_print = get_ftir_mask(frame)
 
         # calculate the luminance of the four paws
         for paw in paws:
-            x, y = (
-                int(label[paw][["x"]].values[i].item()),
-                int(label[paw][["y"]].values[i].item()),
-            )
+            x, y = int(paw_xy[paw][i, 0]), int(paw_xy[paw][i, 1])
             luminescence, print_size, luminance = get_individual_paw_luminance(
                 frame_denoise, paw_print, x, y, size
             )
-            paw_luminescence[paw].append(luminescence)
-            paw_print_size[paw].append(print_size)
-            paw_luminance[paw].append(luminance)
+            paw_luminescence[paw][i] = luminescence
+            paw_print_size[paw][i] = print_size
+            paw_luminance[paw][i] = luminance
 
         i += 1
 
@@ -811,10 +804,11 @@ def cal_paw_luminance_rework(label, cap, size=22):
 
     pbar.close()
 
-    background_luminance = np.array(background_luminance)
+    # trim the preallocated arrays to the number of frames actually read
+    background_luminance = background_luminance[:i]
     for dict_ in [paw_luminescence, paw_print_size, paw_luminance]:
         for paw in paws:
-            dict_[paw] = np.array(dict_[paw])
+            dict_[paw] = dict_[paw][:i]
             mean = np.nanmean(dict_[paw])
             dict_[paw] = np.nan_to_num(dict_[paw], nan=mean)
 
@@ -822,10 +816,10 @@ def cal_paw_luminance_rework(label, cap, size=22):
         paw_luminance[paw] = denoise(paw_luminance[paw], background_luminance)
 
     # legacy paw luminance calculation
-    hind_right = np.array(hind_right)
-    hind_left = np.array(hind_left)
-    front_right = np.array(front_right)
-    front_left = np.array(front_left)
+    hind_right = hind_right[:i]
+    hind_left = hind_left[:i]
+    front_right = front_right[:i]
+    front_left = front_left[:i]
     hind_left_mean = np.nanmean(hind_left)
     hind_right_mean = np.nanmean(hind_right)
     front_left_mean = np.nanmean(front_left)
