@@ -4,18 +4,14 @@ from contextlib import contextmanager
 import cv2
 import torch
 import deeplabcut
-from dlc_patches import apply_dlc_patches
 import multiprocessing as mp
 mp.set_start_method("spawn", force=True)
-
-# faster DLC inference with identical results, see dlc_patches.py
-apply_dlc_patches()
 
 # CPU threads for torch and OpenCV during DLC inference. the CPU work per frame
 # (decoding, preprocessing) is small, and with the default of one thread per
 # core, the thread pools oversubscribe the CPU (~20 cores busy) and starve the
-# thread that launches the GPU work. capping them made inference ~1.7x faster
-# with identical results
+# thread that launches the GPU work. with DLC 3.0.2, capping them made inference
+# ~1.5x faster (185 -> 275 fps on a 512x512 video) with identical results
 DLC_INFERENCE_CPU_THREADS = 1
 
 

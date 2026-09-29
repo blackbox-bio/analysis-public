@@ -475,7 +475,9 @@ def get_angle(v1, v2):
         np.linalg.norm(v1, axis=0) * np.linalg.norm(v2, axis=0)
     )
     angle = np.arccos(theta) / np.pi * 180
-    sign = np.sign(np.cross(v1, v2, axis=0))
+    # z component of the 2D cross product. written out because numpy 2 no longer
+    # supports np.cross on 2D vectors
+    sign = np.sign(v1[0] * v2[1] - v1[1] * v2[0])
     sign[sign == 0] = 1  # if cross product is 0, set sign to 1
     counterclockwise_angle = angle * sign
     return counterclockwise_angle
