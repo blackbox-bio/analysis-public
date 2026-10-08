@@ -91,7 +91,7 @@ def summary_v1(args: SummaryArgsV1):
     v1 API expects all features to be in a single folder. this function collects all .h5 files in the given folder and uses them
     """
     import os
-    from summary import generate_summary_generic
+    from summary import generate_summary_generic, write_summary_csv
 
     features_dir = args["features_dir"]
     summary_path = args["summary_path"]
@@ -104,7 +104,7 @@ def summary_v1(args: SummaryArgsV1):
 
     df = generate_summary_generic(features_files)
 
-    df.to_csv(summary_path, float_format="%.2f")
+    write_summary_csv(df, summary_path)
 
 
 class SummaryArgsV2(TypedDict):
@@ -116,14 +116,14 @@ def summary_v2(args: SummaryArgsV2):
     """
     v2 API expects a list of .h5 files. this function uses them directly
     """
-    from summary import generate_summary_generic
+    from summary import generate_summary_generic, write_summary_csv
 
     features_files = args["features_files"]
     summary_path = args["summary_path"]
 
     df = generate_summary_generic(features_files)
 
-    df.to_csv(summary_path, float_format="%.2f")
+    write_summary_csv(df, summary_path)
 
 
 class SummaryArgsV3(TypedDict):
@@ -136,7 +136,7 @@ def summary_v3(args: SummaryArgsV3):
     """
     v3 API is v2 with time bins
     """
-    from summary import generate_summaries_generic
+    from summary import generate_summaries_generic, write_summary_csv
 
     features_files = args["features_files"]
     summary_path = args["summary_path"]
@@ -144,7 +144,7 @@ def summary_v3(args: SummaryArgsV3):
 
     df = generate_summaries_generic(features_files, time_bins)
 
-    df.to_csv(summary_path, float_format="%.2f")
+    write_summary_csv(df, summary_path)
 
 
 class SkeletonArgs(TypedDict):

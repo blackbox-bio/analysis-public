@@ -1,5 +1,7 @@
 from typing import List, Tuple
 
+import pandas as pd
+
 from utils import *
 from palmreader_analysis import SummaryContext
 
@@ -38,6 +40,31 @@ def generate_summaries_generic(
     return df
 
 
+RATIO_DECIMALS = 4
+DEFAULT_DECIMALS = 2
+
+
+def _is_ratio_column(column: str) -> bool:
+    # relative_ covers the legacy relative columns, which have no "(ratio)" suffix.
+    # don't match on "ratio" alone: "bin duration (min)" contains it
+    return "relative_" in column or "_ratio" in column or "(ratio" in column
+
+
+def write_summary_csv(df: pd.DataFrame, summary_path):
+    """
+    Write a summary dataframe to csv, with ratio and relative columns at
+    RATIO_DECIMALS and all other float columns at DEFAULT_DECIMALS.
+    """
+    df = df.copy()
+
+    for column in filter(_is_ratio_column, df.columns):
+        df[column] = df[column].map(
+            lambda value: f"{value:.{RATIO_DECIMALS}f}" if pd.notna(value) else value
+        )
+
+    df.to_csv(summary_path, float_format=f"%.{DEFAULT_DECIMALS}f")
+
+
 def generate_summary_csv(analysis_folder, time_bins):
     """
     Generate summary csv from the processed recordings
@@ -51,4 +78,4 @@ def generate_summary_csv(analysis_folder, time_bins):
 
     df = generate_summaries_generic(features_files, time_bins)
 
-    df.to_csv(summary_dest, float_format="%.2f")
+    write_summary_csv(df, summary_dest)

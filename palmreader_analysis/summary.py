@@ -51,8 +51,8 @@ class SummaryContext:
             for mask in masks_to_apply:
                 columns.append(AverageOverallLuminanceColumn(measure, mask))
 
+                # per-paw averages are not reported: overall * relative recovers them
                 for paw in Paw:
-                    columns.append(AveragePawLuminanceColumn(paw, measure, mask))
                     columns.append(RelativePawLuminanceColumn(paw, measure, mask))
 
             for ratio_order in RatioOrder:
@@ -72,9 +72,6 @@ class SummaryContext:
             columns.append(PawLiftedTimeColumn(paw))
 
         columns.append(BothFrontPawsLiftedColumn())
-
-        for paw in Paw:
-            columns.append(LegacyPawLuminanceColumn(paw))
 
         columns.append(LegacyAllPawsLuminanceColumn())
 
@@ -450,39 +447,6 @@ class AverageOverallLuminanceColumn(SummaryColumn):
         ]
 
 
-class AveragePawLuminanceColumn(SummaryColumn):
-    def __init__(
-            self,
-            paw: Paw,
-            measure: LuminanceMeasure,
-            mask: MaskComputer = MaskComputer.NONE
-    ):
-        self.paw = paw
-        self.measure = measure
-        self.mask = mask
-
-    def _get_column_name(self) -> str:
-        return f"average{self.mask.column_infix()}_{self.paw.old_name()}_{self.measure.value} ({self.measure.units()})"
-
-    def summarize(self, ctx):
-        mask = self.mask.compute(ctx)
-        paw_luminance = PawLuminanceMeanComputation.compute_paw_luminance_average(ctx, mask)
-        ctx._data[self._get_column_name()] = paw_luminance.get_value(
-            self.paw, self.measure
-        )
-
-    def metadata(self):
-        return [
-            ColumnMetadata.make(
-                column=self._get_column_name(),
-                category=ColumnCategory.LUMINANCE_BASED,
-                tags=[self.paw.as_tag()],
-                displayname=f"Average{self.mask.displayname()} {self.paw.displayname()} {self.measure.displayname()}",
-                description=f"The average {self.measure.displayname()} of the {self.paw.displayname()}{self.mask.description_infix()}",
-            )
-        ]
-
-
 class RelativePawLuminanceColumn(SummaryColumn):
     def __init__(
             self,
@@ -711,31 +675,6 @@ class LegacyPawLuminanceComputation:
             ctx._cache[key] = paw_luminance
 
         return ctx._cache[key]
-
-
-class LegacyPawLuminanceColumn(SummaryColumn):
-    def __init__(self, paw: Paw):
-        self.paw = paw
-
-    def _get_column_name(self) -> str:
-        return f"legacy: average_{self.paw.old_name()}_luminance"
-
-    def summarize(self, ctx):
-        paw_luminance = LegacyPawLuminanceComputation.compute_paw_luminance_average(ctx)
-
-        ctx._data[self._get_column_name()] = paw_luminance.get_value(self.paw)
-
-    def metadata(self):
-        return [
-            ColumnMetadata.make(
-                column=self._get_column_name(),
-                category=ColumnCategory.LUMINANCE_BASED,
-                tags=[self.paw.as_tag()],
-                displayname=f"Legacy average {self.paw.displayname()} luminance",
-                description=f"The average luminance of the {self.paw.displayname()}",
-                legacy=True,
-            )
-        ]
 
 
 class LegacyAllPawsLuminanceColumn(SummaryColumn):
