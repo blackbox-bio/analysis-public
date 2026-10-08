@@ -4,7 +4,7 @@ import numpy as np
 from collections import defaultdict
 import h5py
 from cols_name_dicts import summary_col_name_dict
-from utils import both_front_paws_lifted, label_locomotion
+from utils import both_front_paws_lifted
 
 from .variants import (
     Paw,
@@ -45,7 +45,7 @@ class SummaryContext:
             columns.append(BehaviorDef(behavior))
 
         # Define the masks you want to iterate over
-        masks_to_apply = [MaskComputer.NONE, LocomotionMaskComputer(), NotLocomotionMaskComputer()]
+        masks_to_apply = [MaskComputer.NONE, LOCOMOTING_MASK, NOT_MOVING_MASK]
 
         for measure in LuminanceMeasure:
             for mask in masks_to_apply:
@@ -61,10 +61,10 @@ class SummaryContext:
                     HindPawRatioColumn(measure, ratio_order, StandingMaskComputer())
                 )
                 columns.append(
-                    HindPawRatioColumn(measure, ratio_order, LocomotionMaskComputer())
+                    HindPawRatioColumn(measure, ratio_order, LOCOMOTING_MASK)
                 )
                 columns.append(
-                    HindPawRatioColumn(measure, ratio_order, NotLocomotionMaskComputer())
+                    HindPawRatioColumn(measure, ratio_order, NOT_MOVING_MASK)
                 )
             columns.append(FrontToHindPawRatioColumn(measure))
 
@@ -145,6 +145,14 @@ class SummaryContext:
             self.name = list(hdf.keys())[0]
             for feature in hdf[self.name].keys():
                 self._features[feature] = np.array(hdf[self.name][feature])
+
+        # behavior-based columns read the per-frame labels saved during feature extraction
+        missing = [key for key in BEHAVIOR_LABEL_KEYS if key not in self._features]
+        if missing:
+            raise ValueError(
+                f"Features file '{features_file}' is missing {missing}; "
+                f"regenerate features with the current analysis version"
+            )
 
         # apply animal detection
         if "animal_detection" in self._features.keys():
@@ -357,33 +365,32 @@ class StandingMaskComputer(MaskComputer):
         return ctx._cache["standing_mask"]
 
 
-class LocomotionMaskComputer(MaskComputer):
-    def __init__(self):
-        super().__init__("locomoting")
+class BehaviorMaskComputer(MaskComputer):
+    """
+    Mask built from a per-frame behavior label saved in the features file (see BehaviorDef).
+    The label is already binned and trimmed with the rest of the features.
+    """
+
+    def __init__(self, feature_key: str, name: str):
+        super().__init__(name)
+        self.feature_key = feature_key
 
     def compute(self, ctx: SummaryContext) -> Mask:
-        if "locomoting_mask" not in ctx._cache:
-            displacement = ctx._features["displacement_px"]
-            fps = float(ctx._features["fps"])  # Cast the 0-d array to float
+        key = f"{self.name}_mask"
 
-            # Generate the locomotion mask using the external tool
-            locomotion_mask = label_locomotion(displacement, fps)
-            ctx._cache["locomoting_mask"] = Mask("locomoting", locomotion_mask)
+        if key not in ctx._cache:
+            ctx._cache[key] = Mask(
+                self.name, ctx._features[self.feature_key].astype(bool)
+            )
 
-        return ctx._cache["locomoting_mask"]
+        return ctx._cache[key]
 
 
-class NotLocomotionMaskComputer(MaskComputer):
-    def __init__(self):
-        super().__init__("not_locomoting")
+# features-file keys written by BehaviorDef, required by the behavior-based summary columns
+BEHAVIOR_LABEL_KEYS = ["locomotion", "not_moving", "left_turn", "right_turn"]
 
-    def compute(self, ctx: SummaryContext) -> Mask:
-        if "not_locomoting_mask" not in ctx._cache:
-            # The inverse of the locomotion mask
-            locomoting = LocomotionMaskComputer().compute(ctx)
-            ctx._cache["not_locomoting_mask"] = Mask("not_locomoting", ~locomoting.mask)
-
-        return ctx._cache["not_locomoting_mask"]
+LOCOMOTING_MASK = BehaviorMaskComputer("locomotion", "locomoting")
+NOT_MOVING_MASK = BehaviorMaskComputer("not_moving", "not_moving")
 
 
 
@@ -550,7 +557,7 @@ class HindPawRatioColumn(SummaryColumn):
                 category=ColumnCategory.LUMINANCE_BASED,
                 tags=[Paw.LEFT_HIND.as_tag(), Paw.RIGHT_HIND.as_tag()],
                 displayname=f"Average{self.mask.displayname()} {self.ratio_order.displayname()} hind paw {self.measure.displayname()} ratio",
-                description=f"The average ratio of {self.measure.displayname()}{self.mask.description_infix()} of the left and right hind paws, divided {self.ratio_order.displayname()}",
+                description=f"The ratio of the average {self.measure.displayname()} of the hind paws{self.mask.description_infix()}, computed as {self.ratio_order.displayname()}",
             )
         ]
 

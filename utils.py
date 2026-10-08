@@ -183,17 +183,21 @@ def cal_displacement(
 def label_locomotion(displacement_px, fps, reference_threshold=20, reference_fps=45, duration_s=1.0):
     """
     Label locomotion frames based on per-frame displacement, with threshold scaled by fps.
+    A frame is locomotion if its displacement exceeds the threshold and it belongs to a
+    run of such frames lasting at least duration_s.
 
     Parameters
     ----------
     displacement_px : np.ndarray or pd.Series
-        Per-frame displacement in pixels (e.g., from center of mass or body centroid).
+        Per-frame displacement in pixels from the rolling mean centroid location (output of cal_displacement).
     fps : float
         Frame rate of the recording.
     reference_threshold : float
-        Displacement threshold in pixels for locomotion at the reference_fps (default: 80 px at 45 fps).
+        Displacement threshold in pixels for locomotion at the reference_fps (default: 20 px at 45 fps).
     reference_fps : float
         The FPS at which the reference_threshold is defined (default: 45).
+    duration_s : float
+        Minimum duration in seconds of a continuous above-threshold run to count as locomotion (default: 1.0).
 
     Returns
     -------
