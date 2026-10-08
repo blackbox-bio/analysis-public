@@ -1,6 +1,4 @@
-<a id="readme-top"></a>
-
-<h1 align="center">BLACKBOX ANALYSIS READOUTS
+<h1 align="center">BLACKBOX POSTURAL AND WEIGHT-BEARING ANALYSIS
 <img src="readme_assets/images/BBB_logo.png" alt="Blackbox Bio Logo" height="30" align="absmiddle">
 </h1>
 
@@ -13,44 +11,26 @@
 </p>
 
 ***
-<!-- TABLE OF CONTENTS -->
-<details open>
-  <summary>Table of Contents</summary>
-  <ol>
-    <li><a href="#overview">Overview</a></li>
-    <li><a href="#analysis-pipeline">Analysis Pipeline</a></li>
-    <li><a href="#deeplabcut-body-part-labels">DeepLabCut Body Part Labels</a></li>
-    <li><a href="#global-readouts">Global Readouts</a></li>
-    <li><a href="#behavioral-readouts">Behavioral Readouts</a></li>
-    <li><a href="#anatomical-readouts--definitions">Anatomical Readouts & Definitions</a></li>
-    <li><a href="#behavioral-contexts">Behavioral contexts</a></li>
-    <li><a href="#plantar-readouts">Plantar Readouts</a></li>
-    <li><a href="#postural-readouts">Postural Readouts</a></li>
-    <li><a href="#tracking-quality-readouts">Tracking Quality Readouts</a></li>
-  </ol>
-</details>
 
-***
+When Palmreader analyzes an experiment, it writes a summary spreadsheet (`summary.csv`) with one row per recording, or per time bin when binning is used. This page defines every column in that spreadsheet: what is measured, which body part labels it uses, and how it is calculated. Readout names on this page match the column headers exactly.
 
-## Overview
+For setting up the Blackbox and recording experiments, see the Blackbox Operating Manual.
 
-This repository contains the analysis code that Palmreader runs on Blackbox recordings, and this document defines every readout it produces. Readout names below match the column headers of the summary spreadsheet. For operating the Blackbox instrument and recording experiments, see the Blackbox Operating Manual.
+> **NOTE:** New readouts are added regularly. If your summary contains a column that is not listed here, it was added in a newer Palmreader version than this page describes.
 
-New behavioral outputs are frequently added. Below is a non-exhaustive list of DeepLabCut pose labels and behavioral readouts that can be generated from Palmreader.
+## About the Analysis
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+Palmreader analyzes each recording in three steps:
 
-## Analysis Pipeline
+1. **Pose tracking.** DeepLabCut labels the animal's body parts in every frame of the transmitted-light (`TRANS`) video. See [Body Part Labels](#body-part-labels).
+2. **Feature extraction.** Palmreader combines the body part labels with the Intellitouch™ (`FTIR`) video to compute per-frame features: paw luminance, print size and pressure index, distances and angles between body parts, and behavior classifications. Per-frame features are saved for each recording in `features.h5`.
+3. **Summary.** The per-frame features are averaged, summed or counted over the recording (or time bin) to produce one row of `summary.csv`.
 
-Each recording is analyzed in three steps:
+Relative and ratio readouts are reported with 4 decimal places. All other readouts are reported with 2 decimal places.
 
-1. **Pose tracking:** DeepLabCut labels the body parts of the animal in every frame of the transmitted-light ("TRANS") video (see [DeepLabCut Body Part Labels](#deeplabcut-body-part-labels)).
-2. **Feature extraction:** per-frame features are computed from the pose labels and the Intellitouch™ ("FTIR") video, including paw luminance, print size and pressure index, body part distances and angles, and per-frame behavior classifications. These are saved for each recording in `features.h5`.
-3. **Summary:** per-frame features are summarized over each recording, or each time bin, into one row of the summary spreadsheet (`summary.csv`).
+## Body Part Labels
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-## DeepLabCut Body Part Labels
+Palmreader tracks 57 body part labels. The numbers in parentheses throughout this page refer to the label numbers below.
 
 | Skeleton | Rodent |
 |---|---|
@@ -96,171 +76,150 @@ Each recording is analyzed in three steps:
 | 28 | RFP distal 3rd digit | 57 | LHP distal 5th digit |
 | 29 | RFP distal 4th digit | | |
 
-To generate body part labels, Palmreader uses DeepLabCut (version 3.0.2)<sup>1,2</sup>, trained by labeling video frames of Blackbox-generated videos of mice and rats of various strains and colors. **When publishing Blackbox data scored using the Palmreader software suite, please cite the following source literature describing DeepLabCut<sup>1</sup> and the DLC Python package<sup>2</sup>:**
+The labels are generated with DeepLabCut (version 3.0.2), trained on Blackbox recordings of mice and rats of various strains and coat colors.
 
-1. Mathis A, et al.., Nature Neuroscience. 2018 doi: 10.1038/s41593-018-0209-y
-2. Nath T, Mathis A, et al., Nature Protocols. 2019 doi: 10.1038/s41596-019-0176-0
+> **NOTE:** When you publish Blackbox data analyzed with Palmreader, please cite DeepLabCut and the DeepLabCut Python package:
+>
+> 1. Mathis A, et al. Nature Neuroscience. 2018. doi: 10.1038/s41593-018-0209-y
+> 2. Nath T, Mathis A, et al. Nature Protocols. 2019. doi: 10.1038/s41596-019-0176-0
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+## Recording Readouts
 
-## Global Readouts
+**`total recording_time (min)`** is the length of the analyzed recording, starting from the first frame in which the animal is detected.
 
-**total recording_time (min)** is the duration of the recording analyzed, starting from the first frame in which the animal is detected.
+**`PV: bin start-end (min)`** is the time window of the recording that the row summarizes.
 
-**PV: bin start-end (min)** is the time window within the recording that each summary row is calculated from.
+**`bin duration (min)`** is the length of that time window.
 
-**bin duration (min)** is the total duration (in minutes) for the recording that each of the summary readout rows is calculated from.
+**`distance_traveled (pixel)`** is the total distance the animal moves: the sum of all frame-to-frame changes in the position of the body centroid. The body centroid is the average position of the sacrum (7), xyphoid (6), sternal notch (5), neck (4), left and right femur (16, 17) and left and right elbow (12, 13), weighted by tracking confidence.
 
-**distance_traveled (pixel)** represents the total linear distance moved by the animal. It is calculated by summing all frame-to-frame changes in location of the animal's body centroid across all video frames. The body centroid is the tracking-confidence-weighted average position of the sacrum (7), xyphoid (6), sternal notch (5), neck (4), left and right femur (16, 17) and left and right elbow (12, 13) labels.
+> **NOTE:** For mouse recordings on Blackbox R1, Camera A, 1 pixel ≈ 0.3 mm.
 
-Distance unit conversion calculator: (Blackbox R1, Camera A, mouse recording): 1 pixel = 0.3 mm
+**`time_spent_in_center (seconds)`** is the time the body centroid spends in the center square of a 3 × 3 grid over the field of view.
 
-**time_spent_in_center (seconds)** is the time the body centroid spends in the center square of a 3 x 3 grid dividing the field of view.
+## Behavior Readouts
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+Palmreader classifies every frame into the behaviors below using the body part labels. Each behavior is reported as time spent. Locomotion and not moving are also used as behavioral contexts for the plantar readouts (see [Behavioral Contexts](#behavioral-contexts)).
 
-## Behavioral Readouts
+All thresholds are defined at 45 frames per second and scaled automatically for other frame rates.
 
-Palmreader classifies each video frame into the behaviors below, using the DeepLabCut body part labels. These classifications are reported as time spent, and are also used as the behavioral contexts for the plantar readouts (see [Behavioral contexts](#behavioral-contexts)).
+**`time_spent_locomotion (seconds)`** is the time the animal spends walking. A frame counts as locomotion when the body centroid is more than 20 pixels from its average position over the preceding 0.5 seconds, and the animal stays above this threshold for at least 1 second.
 
-**time_spent_locomotion (seconds)**
-The time the animal spends walking. A frame is classified as locomotion when the body centroid is more than 20 pixels from its average location over the preceding 0.5 seconds (threshold defined at 45 frames per second and scaled for other frame rates), and the animal stays above this threshold for at least 1 second.
+**`time_spent_not_moving (seconds)`** is the time the animal spends still. A frame counts as not moving when the sacrum (7), xyphoid (6), sternal notch (5), neck (4), nose (1) and all four paws (14, 15, 20, 21) each move less than 0.5 pixels per frame, for at least 0.5 seconds.
 
-**time_spent_not_moving (seconds)**
-The time the animal spends still. A frame is classified as not moving when all of the following labels move less than 0.5 pixels per frame (defined at 45 frames per second and scaled for other frame rates): sacrum (7), xyphoid (6), sternal notch (5), neck (4), nose (1) and all four paws (14, 15, 20, 21). The animal must stay still for at least 0.5 seconds.
-
-**time_spent_left_turn (seconds)** and **time_spent_right_turn (seconds)**
-The time the animal spends turning its body to the left or right. A turn is detected when the body axis (from tail base (10) to nose (1)) rotates faster than 45 degrees per second for at least 0.4 seconds.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-## Anatomical Readouts & Definitions
-
-**Paw:**
-The four paws are named [LHP: left hindpaw, RHP: right hindpaw, LFP: left forepaw, and RFP: right forepaw] according to their anatomical positions.
-
-**Paw print size:**
-The paw print size (pixel area) measures the area of the contact of a given paw in each time frame. The pixel area is the number of pixels in the FTIR signal induced by a given paw above a pixel intensity threshold.
-
-**Paw luminance:**
-The paw luminance (pixel intensity) measures the sum of all pixel intensity signals induced by a given paw in each time frame.
-
-**Pressure Index:**
-The paw pressure index (pixel intensity/area) measures the "pressure" of a given paw in each time frame, calculated as the paw luminance divided by the paw print size.
-
-> **Formulary for luminance readout labels (below):**
-> `{paw}` is a placeholder that can take one of the four paws (e.g., LHP for left hind paw).
-> `{measure}` can take one of the three measures [print_size, luminance, pressure-index].
-> `{context}` can take one of the behavioral contexts [none (whole recording), locomoting, not_moving]; see [Behavioral contexts](#behavioral-contexts).
-
-**Average {paw} {measure}:**
-The average {measure} of each {paw} across the time. Per-paw averages are not reported as separate readouts; they can be recovered as the overall {measure} multiplied by the relative {paw} {measure}.
-
-**Overall {measure}:**
-The overall {measure} is the sum of the average {measure} of all four paws.
-
-**Relative {paw} {measure}:**
-The average {measure} of each {paw} normalized by the overall {measure}. The four relative values of a {measure} sum to 1.
-
-- **Ratio {paw 1} {paw 2} {measure}:**
-  Ratios are calculated from averages: the average {paw 1} {measure} divided by the average {paw 2} {measure}. Hind paw ratios are reported in both directions, right over left (r/l) and left over right (l/r), so the injured paw can be placed in the numerator.
-- For front-to-hind ratios, the {front} is the sum of both front paws, and the {hind} is the sum of both hind paws.
-- For standing measures, the animal is classified as standing if neither of the animal's front paws are contacting the floor.
-- **{paw} lifted time:**
-  The lifted time (seconds) of each {paw} is calculated by summing up the time when the given {paw} is not contacting the floor.
-
-Relative and ratio readouts are reported with 4 decimal places; all other readouts are reported with 2 decimal places.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-## Behavioral contexts
-
-In addition to the whole recording, the overall, relative and hind paw ratio readouts are also calculated within two behavioral contexts, using only the video frames classified as that behavior (see [Behavioral Readouts](#behavioral-readouts)):
-
-- **locomoting:** frames in which the animal is walking. Readout names contain `_locomoting_`.
-- **not_moving:** frames in which the animal is still. Readout names contain `_not_moving_`.
-
-Weight bearing during locomotion and at rest can differ after injury. For example, an animal may guard an injured paw while resting but load it more evenly while walking. If an animal spends little or no time in a behavior during a recording or time bin, readouts for that context are based on few frames and are less reliable, or are left empty if the behavior does not occur.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+**`time_spent_left_turn (seconds)`** and **`time_spent_right_turn (seconds)`** are the time the animal spends turning its body left or right. A turn is detected when the body axis, from tail base (10) to nose (1), rotates faster than 45 degrees per second for at least 0.4 seconds.
 
 ## Plantar Readouts
 
-**average_overall_print_size (pixel area)** represents the total paw contact area of the animal: the sum of the average print size of all four paws across all timepoints.
+Plantar readouts measure how each paw contacts the floor, using the Intellitouch™ (FTIR) signal. They are the main readouts for weight bearing and paw guarding.
 
-**average_overall_luminance (pixel intensity)** is the sum of the average luminance of all four paws.
+### Plantar Measures
 
-**average_overall_pressure-index (pixel intensity/area)** is the sum of the average pressure index of all four paws.
+Each plantar readout is based on one of three per-frame measures, computed for each paw:
 
-The plantar readouts below are reported for each {measure} [print_size, luminance, pressure-index]. Units: print_size in pixel area, luminance in pixel intensity, pressure-index in pixel intensity/area.
-
-| Readout | Contexts reported | Description |
+| Measure | Unit | Definition |
 |---|---|---|
-| average_overall_{measure} | whole recording, locomoting, not_moving | Sum of the average {measure} of all four paws |
-| relative_{paw}_{measure} (ratio) | whole recording, locomoting, not_moving | Average {measure} of {paw} divided by the overall {measure} |
-| average_hind_paw_{measure}_ratio (r/l) and (l/r) | whole recording, standing, locomoting, not_moving | Average right hind paw {measure} divided by the average left hind paw {measure} (r/l), or the reverse (l/r) |
-| average_front_to_hind_paw_{measure}_ratio | whole recording | Sum of the average front paw {measure} divided by the sum of the average hind paw {measure} |
+| `print_size` | pixel area | Contact area: the number of FTIR pixels from the paw above the intensity threshold |
+| `luminance` | pixel intensity | Total contact signal: the sum of the intensity of all FTIR pixels from the paw |
+| `pressure-index` | pixel intensity/area | Contact signal per unit area: `luminance` divided by `print_size` |
 
-Context-specific readouts insert the context name after `average_` or `relative_`. For example:
+`luminance` increases both with how hard the paw presses and with how much of the paw touches the floor. `pressure-index` removes the effect of contact area. A lifted paw contributes 0 to `print_size` and `luminance` in that frame.
 
-- average_overall_luminance (pixel intensity)
-- average_not_moving_overall_luminance (pixel intensity)
-- relative_LHP_luminance (ratio)
-- relative_locomoting_LHP_luminance (ratio)
-- average_hind_paw_luminance_ratio (l/r)
-- average_standing_hind_paw_luminance_ratio (l/r)
-- average_locomoting_hind_paw_luminance_ratio (l/r)
-- average_not_moving_hind_paw_luminance_ratio (l/r)
+The paws are named by anatomical position: **LHP** (left hind paw), **RHP** (right hind paw), **LFP** (left fore paw) and **RFP** (right fore paw).
 
-Paw lifted time readouts:
+### Readout Definitions
 
-- LHP_paw_lifted_time (seconds)
-- RHP_paw_lifted_time (seconds)
-- LFP_paw_lifted_time (seconds)
-- RFP_paw_lifted_time (seconds)
-- both_front_paws_lifted (seconds)
+In the readout names below, `{measure}` is one of the three measures, `{paw}` is one of the four paws, and the unit follows the measure.
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+**`average_overall_{measure}`** is the sum of the average `{measure}` of all four paws. For example, `average_overall_print_size (pixel area)` is the animal's total paw contact area.
+
+**`relative_{paw}_{measure} (ratio)`** is the share of the overall `{measure}` carried by one paw: the paw's average `{measure}` divided by `average_overall_{measure}`. The four relative values of a measure sum to 1.
+
+**`average_hind_paw_{measure}_ratio (r/l)`** and **`(l/r)`** compare the two hind paws: the average RHP `{measure}` divided by the average LHP `{measure}` (r/l), or the reverse (l/r). Both directions are reported so you can always put the injured paw in the numerator.
+
+**`average_front_to_hind_paw_{measure}_ratio`** is the summed average `{measure}` of both front paws divided by the summed average of both hind paws.
+
+**`average_standing_hind_paw_{measure}_ratio (r/l)`** and **`(l/r)`** are the hind paw ratios calculated only over frames in which the animal is standing on its hind paws, that is, neither front paw is touching the floor.
+
+> **NOTE:** All ratios are ratios of averages: each paw is averaged over the frames first, then the averages are divided. Per-paw averages are not reported as separate columns. To recover one, multiply the overall readout by the paw's relative readout.
+
+### Paw Lifted Time
+
+**`{paw}_paw_lifted_time (seconds)`** is the total time the paw is not touching the floor. It is reported for `LHP`, `RHP`, `LFP` and `RFP`.
+
+**`both_front_paws_lifted (seconds)`** is the total time neither front paw is touching the floor.
+
+### Interpreting Plantar Readouts
+
+- **Weight bearing on an injured paw.** Use the injured paw's `relative_{paw}_{measure} (ratio)`, or the hind paw ratio with the injured paw on top (for a left injury, `(l/r)`). A hind paw ratio below 1, or a lower relative value than in controls or at baseline, means the animal puts less weight on the injured paw. Ratios are easier to compare between animals than raw `luminance`, which also depends on body weight.
+- **`luminance` or `pressure-index`.** `luminance` drops both when the animal presses more lightly and when it touches the floor with less of the paw. `pressure-index` follows only how hard it presses, and can be less noisy between recordings.
+- **Guarding.** A longer `{paw}_paw_lifted_time (seconds)` for the injured paw than for the opposite paw indicates the animal is keeping the injured paw off the floor.
+- **Rearing.** `both_front_paws_lifted (seconds)` is the time spent rearing or standing on the hind paws.
+
+### Behavioral Contexts
+
+The overall, relative and hind paw ratio readouts are calculated over the whole recording and again within two behavioral contexts, using only the frames classified as that behavior (see [Behavior Readouts](#behavior-readouts)). The context name follows `average_` or `relative_` in the readout name:
+
+| Context | Frames used | Example readouts |
+|---|---|---|
+| whole recording | all frames | `average_overall_luminance (pixel intensity)`<br>`relative_LHP_luminance (ratio)`<br>`average_hind_paw_luminance_ratio (l/r)` |
+| locomoting | frames in which the animal is walking | `average_locomoting_overall_luminance (pixel intensity)`<br>`relative_locomoting_LHP_luminance (ratio)`<br>`average_locomoting_hind_paw_luminance_ratio (l/r)` |
+| not moving | frames in which the animal is still | `average_not_moving_overall_luminance (pixel intensity)`<br>`relative_not_moving_LHP_luminance (ratio)`<br>`average_not_moving_hind_paw_luminance_ratio (l/r)` |
+
+Weight bearing while walking and while at rest can change differently after an injury. For example, an animal may guard an injured paw while resting but load it more evenly while walking.
+
+> **NOTE:** Context readouts are only as reliable as the number of frames behind them. If an animal spends little time in a behavior during a recording or time bin, its readouts for that context are based on few frames. If the behavior does not occur at all, those readouts are left empty. Check `time_spent_locomotion (seconds)` and `time_spent_not_moving (seconds)` before interpreting context readouts.
 
 ## Postural Readouts
 
-| | |
-|---|---|
-| ![femoral_distance](readme_assets/images/readouts/femoral_distance.png) | **femur_width** (pixel)<br>The average pixel distance between the left femur (17) and right femur (16) across all time points. |
-| ![heel_distance](readme_assets/images/readouts/heel_distance.png) | **heel_distance** (pixel)<br>The average pixel distance between the left (19) and right (18) heels across all time points. |
-| ![hind_paws_distance](readme_assets/images/readouts/hind_paws_distance.png) | **hind_paws_distance** (pixel)<br>The average pixel distance between the left (21) and right (20) hind paws across all timepoints. |
-| ![elbow_distance](readme_assets/images/readouts/elbow_distance.png) | **elbow_width** (pixel)<br>The average pixel distance between the left (13) and right (12) elbow joints across all timepoints. |
-| ![front_paws_distance](readme_assets/images/readouts/front_paws_distance.png) | **front_paws_distance** (pixel)<br>The average pixel distance between the left (15) and right (14) front paws across all timepoints. |
-| ![cheek_distance](readme_assets/images/readouts/cheek_distance.png) | **cheek_distance** (pixel)<br>The average pixel distance between the left (3) and right (2) cheeks across all timepoints. |
-| ![tailbase_tailtip_distance](readme_assets/images/readouts/tailbase_tailtip_distance.png) | **tailbase_tailtip_distance** (pixel)<br>The average pixel distance between the tailbase (10) and the tailtip (11) across all timepoints. |
-| ![sacral_tailbase_distance](readme_assets/images/readouts/sacral_tailbase_distance.png) | **sacrum_tailbase_distance** (pixel)<br>The average pixel distance between the sacrum (7) and the tailbase (10) labels across all timepoints. |
-| ![sacral_xyphoid_distance](readme_assets/images/readouts/sacral_xyphoid_distance.png) | **sacrum_xyphoid_distance** (pixel)<br>The average pixel distance between the sacrum (7) and the xyphoid process (caudal sternum) (6) across all timepoints. |
-| ![suprasternal_xyphoid_distance](readme_assets/images/readouts/suprasternal_xyphoid_distance.png) | **xyphoid_sternal-notch_distance** (pixel)<br>The average pixel distance between the suprasternal notch (5) and the xyphoid process (6) (the rostral and caudal ends of sternum, respectively) across all timepoints. |
-| ![suprasternal_neck_distance](readme_assets/images/readouts/suprasternal_neck_distance.png) | **sternal-notch_neck_distance** (pixel)<br>The average pixel distance between the suprasternal notch (5) and the neck (4) midpoint (approximating the position of the thyroid cartilage) across all timepoints. |
-| ![neck_snout_distance](readme_assets/images/readouts/neck_snout_distance.png) | **neck_snout_distance** (pixel)<br>The average pixel distance between the midpoint of the neck (4) (i.e., thyroid cartilage) and the tip of the snout across all timepoints. |
+Postural readouts describe the animal's body shape using distances and angles between body part labels. Each is averaged over all frames.
 
-The following angle readouts represent the orientation of the two vectors defined by the centerline of the corresponding structures. Each angle readout is reported as the average across all timepoints, and as a separate `{angle} standard deviation (degree)` readout giving the standard deviation of the angle across all timepoints.
+### Distances
 
 | | |
 |---|---|
-| ![chest_head_angle](readme_assets/images/readouts/chest_head_angle.png) | **chest_head_angle** (degree)<br>Where chest is a vector formed along the sternal centerline from suprasternal (5) to xyphoid (6), and head is a vector between the neck (4) and snout (1), the chest_head angle is the inclination that forms at their intersection. Leftward (counterclockwise movement) of the head produces a positive value, while a rightward (clockwise) turn of the head results in a negative value. |
-| ![hip_chest_angle](readme_assets/images/readouts/hip_chest_angle.png) | **hip_chest_angle** (degree)<br>Here, hip is a vector formed by the sacrum (7) and tailbase (10) labels, and chest is the sternal centerline vector formed between suprasternal (5) and xyphoid (6). The intersection of these vectors forms the hip_chest angle. Turning of the chest leftward (counterclockwise), produces a positive hip_chest angle value, and rightward turn of the chest produces a negative value. |
-| ![tail_hip_angle](readme_assets/images/readouts/tail_hip_angle.png) | **tail_hip_angle** (degree)<br>For this angle, tail is defined by a vector between the tailbase (10) and tailtip (11) labels, and hip is a vector formed by the sacrum (7) and tailbase (10) labels. Turning of the tail leftward (counterclockwise), produces a positive tail_hip angle value, and rightward turn of the tail produces a negative value. |
-| ![LHP_paw_angle](readme_assets/images/readouts/LHP_paw_angle.png) | **LHP_paw-angle** (degree)<br>This angle is defined by the intersection of a vector from tailbase (10) to xyphoid (6), and a vector from left heel (19) to the left hindpaw centroid (21). Turning of the left hindpaw leftward (counterclockwise), produces a positive LHP paw angle value, and rightward turn of the paw produces a negative value. |
-| ![RHP_paw_angle](readme_assets/images/readouts/RHP_paw_angle.png) | **RHP_paw-angle** (degree)<br>This angle is defined by the intersection of a vector from tailbase (10) to xyphoid (6), and a vector from right heel (18) to the right hindpaw centroid (20). Turning of the right hindpaw rightward (clockwise), produces a positive RHP paw angle value, and leftward turn of the paw produces a negative value. |
-| ![sacral_tailbase_LHP_angle](readme_assets/images/readouts/sacral_tailbase_LHP_angle.png) | **LHP_limb-angle** (degree)<br>This angle is defined by the intersection of a vector from tailbase (10) to sacrum (7), and a vector from tailbase (10) to the left hindpaw centroid (21). |
-| ![sacral_tailbase_RHP_angle](readme_assets/images/readouts/sacral_tailbase_RHP_angle.png) | **RHP_limb-angle** (degree)<br>This angle is defined by the intersection of a vector from tailbase (10) to sacrum (7), and a vector from tailbase (10) to the right hindpaw centroid (20). |
-| ![LHP_toe_spread](readme_assets/images/readouts/LHP_toe_spread.png) | **LHP_toe-spread** (pixel)<br>This readout is the distance between the LHP distal 1st digit (53) to LHP distal 5th digit (57). |
-| ![RHP_toe_spread](readme_assets/images/readouts/RHP_toe_spread.png) | **RHP_toe-spread** (pixel)<br>This value represents the distance between the RHP distal 1st digit (43) to RHP distal 5th digit (47). |
-| ![left_hind_paw_length](readme_assets/images/readouts/left_hind_paw_length.png) | **LHP_paw-length** (pixel)<br>This measurement is the distance between the left heel (19) and the LHP distal 3rd digit (55). A change in paw length occurs upon dorsiflexion of the paw, which reduces the apparent distance between the heel (19) and the distal 3rd digit (55), such as when the heel is lifted while the toes are stationary against the glass. |
-| ![right_hind_paw_length](readme_assets/images/readouts/right_hind_paw_length.png) | **RHP_paw-length** (pixel)<br>This measurement is the distance between the right heel (18) and the RHP distal 3rd digit (45). A change in paw length occurs upon dorsiflexion of the paw, which reduces the apparent distance between the heel (18) and the distal 3rd digit (45), such as when the heel is lifted while the toes are stationary against the glass. |
+| <img src="readme_assets/images/readouts/femoral_distance.png" alt="femur_width" width="240"> | **`femur_width`** (pixel)<br>Distance between the left (17) and right (16) femur. |
+| <img src="readme_assets/images/readouts/heel_distance.png" alt="heel_distance" width="240"> | **`heel_distance`** (pixel)<br>Distance between the left (19) and right (18) heels. |
+| <img src="readme_assets/images/readouts/hind_paws_distance.png" alt="hind_paws_distance" width="240"> | **`hind_paws_distance`** (pixel)<br>Distance between the left (21) and right (20) hind paws:<br>the hind paw stance width. |
+| <img src="readme_assets/images/readouts/elbow_distance.png" alt="elbow_width" width="240"> | **`elbow_width`** (pixel)<br>Distance between the left (13) and right (12) elbows. |
+| <img src="readme_assets/images/readouts/front_paws_distance.png" alt="front_paws_distance" width="240"> | **`front_paws_distance`** (pixel)<br>Distance between the left (15) and right (14) front paws:<br>the front paw stance width. |
+| <img src="readme_assets/images/readouts/cheek_distance.png" alt="cheek_distance" width="240"> | **`cheek_distance`** (pixel)<br>Distance between the left (3) and right (2) cheeks. |
+| <img src="readme_assets/images/readouts/tailbase_tailtip_distance.png" alt="tailbase_tailtip_distance" width="240"> | **`tailbase_tailtip_distance`** (pixel)<br>Distance between the tail base (10) and tail tip (11).<br>A curled tail gives a shorter distance. |
+| <img src="readme_assets/images/readouts/sacral_tailbase_distance.png" alt="sacrum_tailbase_distance" width="240"> | **`sacrum_tailbase_distance`** (pixel)<br>Distance between the sacrum (7) and tail base (10). |
+| <img src="readme_assets/images/readouts/sacral_xyphoid_distance.png" alt="sacrum_xyphoid_distance" width="240"> | **`sacrum_xyphoid_distance`** (pixel)<br>Distance between the sacrum (7) and the xyphoid process,<br>the caudal end of the sternum (6).<br>A hunched or curled body gives a shorter distance. |
+| <img src="readme_assets/images/readouts/suprasternal_xyphoid_distance.png" alt="xyphoid_sternal-notch_distance" width="240"> | **`xyphoid_sternal-notch_distance`** (pixel)<br>Distance between the suprasternal notch (5) and the<br>xyphoid process (6): the length of the sternum. |
+| <img src="readme_assets/images/readouts/suprasternal_neck_distance.png" alt="sternal-notch_neck_distance" width="240"> | **`sternal-notch_neck_distance`** (pixel)<br>Distance between the suprasternal notch (5) and the neck<br>midpoint (4), which approximates the position of<br>the thyroid cartilage. |
+| <img src="readme_assets/images/readouts/neck_snout_distance.png" alt="neck_snout_distance" width="240"> | **`neck_snout_distance`** (pixel)<br>Distance between the neck midpoint (4) and the tip of the snout (1). |
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+### Angles
+
+Each angle is formed by two vectors along the centerlines of the named body segments. Each angle is reported as the average over all frames, plus a matching `{angle} standard deviation (degree)` readout that shows how much the angle varies. Left and right are the animal's own left and right.
+
+| | |
+|---|---|
+| <img src="readme_assets/images/readouts/chest_head_angle.png" alt="chest_head_angle" width="240"> | **`chest_head_angle`** (degree)<br>Head vector: neck (4) → snout (1)<br>Chest vector: xyphoid (6) → suprasternal notch (5)<br>0 when the head is in line with the chest.<br>Head turned to the animal's right: positive; to the left: negative. |
+| <img src="readme_assets/images/readouts/hip_chest_angle.png" alt="hip_chest_angle" width="240"> | **`hip_chest_angle`** (degree)<br>Chest vector: xyphoid (6) → suprasternal notch (5)<br>Hip vector: tail base (10) → sacrum (7)<br>0 when the chest is in line with the hips.<br>Chest bent to the animal's right: positive; to the left: negative. |
+| <img src="readme_assets/images/readouts/tail_hip_angle.png" alt="tail_hip_angle" width="240"> | **`tail_hip_angle`** (degree)<br>Hip vector: tail base (10) → sacrum (7)<br>Tail vector: tail tip (11) → tail base (10)<br>0 when the tail is in line with the hips.<br>Tail tip swung to the animal's left: positive; to the right: negative. |
+| <img src="readme_assets/images/readouts/LHP_paw_angle.png" alt="LHP_paw-angle" width="240"> | **`LHP_paw-angle`** (degree)<br>Body vector: tail base (10) → xyphoid (6)<br>Paw vector: left heel (19) → left hind paw centroid (21)<br>Paw pointing outward, away from the body: positive.<br>A larger value means a more outward-pointing paw. |
+| <img src="readme_assets/images/readouts/RHP_paw_angle.png" alt="RHP_paw-angle" width="240"> | **`RHP_paw-angle`** (degree)<br>Body vector: tail base (10) → xyphoid (6)<br>Paw vector: right heel (18) → right hind paw centroid (20)<br>Paw pointing outward, away from the body: positive.<br>A larger value means a more outward-pointing paw. |
+| <img src="readme_assets/images/readouts/sacral_tailbase_LHP_angle.png" alt="LHP_limb-angle" width="240"> | **`LHP_limb-angle`** (degree)<br>Vector 1: tail base (10) → sacrum (7)<br>Vector 2: tail base (10) → left hind paw centroid (21)<br>A larger value means the paw is placed farther out<br>from the body midline. |
+| <img src="readme_assets/images/readouts/sacral_tailbase_RHP_angle.png" alt="RHP_limb-angle" width="240"> | **`RHP_limb-angle`** (degree)<br>Vector 1: tail base (10) → right hind paw centroid (20)<br>Vector 2: tail base (10) → sacrum (7)<br>A larger value means the paw is placed farther out<br>from the body midline. |
+
+> **NOTE:** The body angles (`chest_head_angle`, `hip_chest_angle` and `tail_hip_angle`) average close to 0 for an animal that bends equally to both sides. A mean that stays away from 0 means the animal consistently bends to one side. The standard deviation readouts show how much the animal bends side to side.
+
+### Paw Shape
+
+| | |
+|---|---|
+| <img src="readme_assets/images/readouts/LHP_toe_spread.png" alt="LHP_toe-spread" width="240"> | **`LHP_toe-spread`** (pixel)<br>Distance between LHP distal 1st digit (53)<br>and LHP distal 5th digit (57).<br>A smaller value means the toes are held closer together. |
+| <img src="readme_assets/images/readouts/RHP_toe_spread.png" alt="RHP_toe-spread" width="240"> | **`RHP_toe-spread`** (pixel)<br>Distance between RHP distal 1st digit (43)<br>and RHP distal 5th digit (47).<br>A smaller value means the toes are held closer together. |
+| <img src="readme_assets/images/readouts/left_hind_paw_length.png" alt="LHP_paw-length" width="240"> | **`LHP_paw-length`** (pixel)<br>Distance between the left heel (19) and LHP distal 3rd digit (55).<br>The paw looks shorter when the heel is lifted while the toes stay<br>on the floor, so a smaller value can mean the animal is avoiding<br>putting weight on the heel. |
+| <img src="readme_assets/images/readouts/right_hind_paw_length.png" alt="RHP_paw-length" width="240"> | **`RHP_paw-length`** (pixel)<br>Distance between the right heel (18) and RHP distal 3rd digit (45).<br>The paw looks shorter when the heel is lifted while the toes stay<br>on the floor, so a smaller value can mean the animal is avoiding<br>putting weight on the heel. |
 
 ## Tracking Quality Readouts
 
-**average_{paw}_tracking_likelihood** is the average DeepLabCut confidence (0 to 1) for the label of each {paw} across all timepoints. Low values indicate the paw was often hidden, poorly lit, or hard to identify, which can affect the accuracy of the plantar readouts for that paw.
+**`average_{paw}_tracking_likelihood`** is the average DeepLabCut confidence, from 0 to 1, for the paw's label across all frames. Low values mean the paw was often hidden, poorly lit or hard to identify, which makes that paw's plantar readouts less accurate.
 
-**paws_tracking_quality_control_flag** is set to 1 when the average tracking likelihood of either hind paw is below 0.4, or of either front paw is below 0.6, and is 0 otherwise. Recordings flagged with 1 should be reviewed (for example, by checking the labeled video) before their plantar readouts are interpreted.
+**`paws_tracking_quality_control_flag`** is 1 when the average tracking likelihood is below 0.4 for either hind paw or below 0.6 for either front paw, and 0 otherwise.
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+> **NOTE:** Review recordings flagged with 1, for example by watching the labeled video, before interpreting their plantar readouts.
