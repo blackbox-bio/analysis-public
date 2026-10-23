@@ -29,7 +29,7 @@ from enum import Enum
 from .features import FeaturesContext, Feature
 from .summary import SummaryColumn
 from .variants import ColumnMetadata, ColumnCategory
-from .warnings import WarningContext
+from palmreaderpy import WarningContext
 
 
 class DistanceDeltaDef(Feature, SummaryColumn):

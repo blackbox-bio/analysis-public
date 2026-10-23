@@ -5,6 +5,7 @@ from collections import defaultdict
 import h5py
 from cols_name_dicts import summary_col_name_dict
 from utils import both_front_paws_lifted
+from palmreaderpy import FrameRange, TimeColumns, detection_start_frame, resolve_time_bin
 
 from .variants import (
     Paw,
@@ -124,8 +125,7 @@ class SummaryContext:
     _features: Dict[str, Union[h5py.Group, h5py.Dataset, h5py.Datatype, Any]]
     _cache: Dict[str, Any]
 
-    _start_time: float
-    _end_time: float
+    _frame_range: FrameRange
 
     def __init__(self, features_file: str, time_bin: Tuple[float, float]):
         self._data = {}
@@ -151,61 +151,26 @@ class SummaryContext:
                 f"regenerate features with the current analysis version"
             )
 
-        # apply animal detection
+        # resolve the time bin. minute 0 is the first frame with the animal
+        # detected; the rules live in palmreaderpy so the gait and ethogram
+        # summaries bin exactly the same way
+        frame_count = int(self._features["frame_count"])
+        fps = float(self._features["fps"])
+
         if "animal_detection" in self._features.keys():
-            animal_detection = self._features["animal_detection"]
-            frame_count = self._features["frame_count"]
-            fps = self._features["fps"]
-
-            start_frame = 0
-            end_frame = frame_count
-
-            for i in range(frame_count):
-                if animal_detection[i] == 1:
-                    start_frame = i
-                    break
-
-            self._apply_bin(start_frame, end_frame)
-
-            self._features["frame_count"] = end_frame - start_frame
-
-        # apply binning
-        frame_count = self._features["frame_count"]
-        fps = self._features["fps"]
-
-        bin_start, bin_end = time_bin
-
-        start_frame = int(bin_start * 60 * fps)
-
-        if bin_end == -1:
-            end_frame = frame_count
+            detection_start = detection_start_frame(
+                self._features["animal_detection"], frame_count
+            )
         else:
-            end_frame = int(bin_end * 60 * fps)
+            detection_start = 0
 
-        # Palmreader does not allow any of these conditions to happen
-        if start_frame >= frame_count:
-            raise ValueError(
-                f"Invalid time bin: bin start is after the end of the video"
-            )
-        if start_frame < 0:
-            start_frame = 0
-        if end_frame > frame_count:
-            end_frame = frame_count
-        if end_frame < 0:
-            raise ValueError(
-                f"Invalid time bin: bin end is before the start of the video"
-            )
-        if end_frame <= start_frame:
-            raise ValueError(
-                f"Invalid time bin: bin end is before the start of the bin (bin duration is zero)"
-            )
+        # raises ValueError for bins Palmreader would not allow
+        self._frame_range = resolve_time_bin(time_bin, frame_count, fps, detection_start)
 
-        self._apply_bin(start_frame, end_frame)
+        self._apply_bin(self._frame_range.start, self._frame_range.end)
 
-        # N.B. the old version stored these in the features object but we don't
-        # need to do that
-        self._start_time = start_frame / fps / 60
-        self._end_time = end_frame / fps / 60
+        # from here on, frame_count is the length after animal detection
+        self._features["frame_count"] = self._frame_range.recorded_frames
 
     def _apply_bin(self, start_frame: int, end_frame: int):
         for key in self._features.keys():
@@ -236,18 +201,12 @@ class TimeInformationColumns(SummaryColumn):
     This is a special column definition that computes multiple columns. It is the only column that does this. It does this because it provides binning-related information that is not strictly scientific and will be produced in every summary CSV.
     """
 
-    TOTAL_RECORDING_TIME = "total recording_time (min)"
-    BIN_START_END = "PV: bin start-end (min)"
-    BIN_DURATION = "bin duration (min)"
+    TOTAL_RECORDING_TIME = TimeColumns.TOTAL_RECORDING_TIME
+    BIN_START_END = TimeColumns.BIN_START_END
+    BIN_DURATION = TimeColumns.BIN_DURATION
 
     def summarize(self, ctx):
-        ctx._data[TimeInformationColumns.TOTAL_RECORDING_TIME] = (
-            ctx._features["frame_count"] / ctx._features["fps"] / 60
-        )
-        ctx._data[TimeInformationColumns.BIN_START_END] = (
-            f"{ctx._start_time:.2f} - {ctx._end_time:.2f}"
-        )
-        ctx._data[TimeInformationColumns.BIN_DURATION] = ctx._end_time - ctx._start_time
+        ctx._data.update(ctx._frame_range.time_columns())
 
     def metadata(self):
         return [

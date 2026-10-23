@@ -1,5 +1,5 @@
 import pandas as pd
-from palmreader_analysis.events import Palmreader
+from palmreaderpy import Palmreader
 import numpy as np
 
 def _listify(iterable):

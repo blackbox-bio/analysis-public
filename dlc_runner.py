@@ -1,4 +1,4 @@
-from palmreader_analysis.events import PalmreaderProgress
+from palmreaderpy import PalmreaderProgress
 import os
 from contextlib import contextmanager
 import cv2

@@ -8,7 +8,7 @@ import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from .utils import summary_qc
-from palmreader_analysis.events import Palmreader
+from palmreaderpy import Palmreader
 
 def _plot_confidence_ellipse(ax, x, y, n_std=2.0, **kwargs):
     import matplotlib.transforms as transforms

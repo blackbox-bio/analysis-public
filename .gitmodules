@@ -1,0 +1,3 @@
+[submodule "palmreaderpy"]
+	path = palmreaderpy
+	url = git@github.com:blackbox-bio/palmreaderpy.git
