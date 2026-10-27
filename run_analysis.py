@@ -14,12 +14,12 @@ sys.path.append("./preprocess/")
 
 def parse_time_bins(bin_str):
     """
-    Parse a string like "0,-1 3,5 3,-1" into ((0, -1), (3, 5), (3, -1))
+    Parse a string like "0,-1 3,5 3,-1" into ((0.0, -1.0), (3.0, 5.0), (3.0, -1.0)). Minutes may be fractional, e.g. "0,2.5"
     """
     bins = []
     for part in bin_str.split():
         start, end = part.split(",")
-        bins.append((int(start), int(end)))
+        bins.append((float(start), float(end)))
     return tuple(bins)
 
 def main():
