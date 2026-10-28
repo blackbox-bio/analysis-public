@@ -375,8 +375,10 @@ def label_turning(
     turning_labels : np.ndarray
         Array of same length as frames:
         - 0 = not turning
-        - 2 = left turn (ang_vel < -threshold)
-        - 3 = right turn (ang_vel > threshold)
+        - 2 = left turn (ang_vel > threshold)
+        - 3 = right turn (ang_vel < -threshold)
+        ang_vel is the tailbase -> snout heading rate in image coordinates (y down). Positive is
+        clockwise on screen, which is a left turn because the camera films the animal from below.
     """
     # Get angular velocity in deg/frame
     ang_vel = get_angular_velocity(label, bp1=bp1, bp2=bp2, filter_size=smooth_sigma)
