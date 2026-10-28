@@ -41,10 +41,11 @@ def summary_viz_preprocess(df, rows_to_include, columns_to_include, group_variab
 
     df_plot: the processed df for report
     """
-    columns_to_include.append(group_variable)
-    df_plot = df[columns_to_include]
+    # the group variable once, even if it was also picked as a column; the caller's list is left as is
+    columns = [col for col in columns_to_include if col != group_variable] + [group_variable]
+    df_plot = df[columns]
     df_plot = df_plot[rows_to_include]
-    df_plot = df_plot.dropna(subset=[col for col in columns_to_include if col != group_variable], how="all")
+    df_plot = df_plot.dropna(subset=[col for col in columns if col != group_variable], how="all")
 
     return df_plot
 
@@ -135,11 +136,7 @@ def generate_bar_plots(df, group_variable: str, dest_path, sort_by_significance=
     If `sort_by_significance` is True, the columns will be ranked by significance between groups.
     """
 
-    # Rank columns by significance
-    if sort_by_significance:
-        sorted_columns = rank_columns_by_significance(df, group_variable)
-    else:
-        sorted_columns = df.select_dtypes(include="number").columns
+    sorted_columns = _plot_columns(df, group_variable, sort_by_significance)
 
     joined = None
 
@@ -205,6 +202,7 @@ def generate_bar_plots(df, group_variable: str, dest_path, sort_by_significance=
         plot.get_axes()[0].set_xlabel(group_label)
 
         img = _plot_to_cv2_image(plot)
+        plt.close(plot)
         joined = _horizontal_concat_step(joined, img)
 
     cv.imwrite(dest_path, joined)
@@ -219,15 +217,11 @@ def generate_PairGrid_plot(
         dest_path: str,
         sort_by_significance=False,
 ):
-    # Rank columns by significance
-    if sort_by_significance:
-        sorted_columns = rank_columns_by_significance(df, group_variable)
-    else:
-        sorted_columns = df.select_dtypes(include="number").columns
+    sorted_columns = _plot_columns(df, group_variable, sort_by_significance)
 
     group_label = _get_group_label(group_variable)
 
-    g = sns.PairGrid(df, hue=group_variable, diag_sharey=False)
+    g = sns.PairGrid(df, vars=sorted_columns, hue=group_variable, diag_sharey=False)
 
     diag = get_plot_fn(diag_kind)
     upper = get_plot_fn(upper_kind)
@@ -245,6 +239,43 @@ def generate_PairGrid_plot(
             axis.set_ylabel(axis.get_ylabel(), rotation=80, labelpad=25)
 
     g.savefig(dest_path, dpi=300)
+    plt.close(g.figure)
+
+def _plot_columns(df, group_variable, sort_by_significance):
+    """
+    The numeric readouts to plot, ranked by significance if asked. The group variable is the axis
+    or hue, not a readout, so it's never plotted against itself.
+    """
+    if sort_by_significance:
+        columns = rank_columns_by_significance(df, group_variable)
+    else:
+        columns = df.select_dtypes(include="number").columns
+
+    columns = [column for column in columns if column != group_variable]
+    if not columns:
+        raise ValueError("None of the selected readouts are numeric, so there is nothing to plot")
+    return columns
+
+
+def _clustermap(data, **kwargs):
+    """
+    sns.clustermap with Ward linkage, clustering only the axes with at least two entries (linkage
+    of a single row or column raises, e.g. with one group, one recording or one readout).
+    """
+    return sns.clustermap(
+        data,
+        row_cluster=data.shape[0] > 1,
+        col_cluster=data.shape[1] > 1,
+        metric="euclidean",
+        method="ward",
+        **kwargs,
+    )
+
+
+def _reordered(dendrogram, n):
+    """Display order of a clustermap axis: the dendrogram's, or unchanged if it wasn't clustered."""
+    return dendrogram.reordered_ind if dendrogram is not None else list(range(n))
+
 
 def _listify(iterable):
     return "- " + '\n- '.join(map(str, iterable))
@@ -276,20 +307,23 @@ def generate_cluster_heatmap(
         non_numerical_columns = non_numerical_columns.drop(group_variable)
 
     if len(non_numerical_columns) > 0:
-        Palmreader.warning("Some readouts have non-numerical values and have been omitted.", f"The following columns have been ommitted:\n{_listify(non_numerical_columns)}")
+        Palmreader.warning("Some readouts have non-numerical values and have been omitted.", f"The following columns have been omitted:\n{_listify(non_numerical_columns)}")
         print(f"Warning: The following summary readouts have non-numerical values: {non_numerical_columns}.")
         print("These columns will be excluded from the cluster heatmap plot.")
 
         df = df.drop(columns=non_numerical_columns)
 
-    # check and drop 'total recording_time (min)' column if it exists
-    if "total recording_time (min)" in df.columns:
-        df = df.drop(columns="total recording_time (min)")
+    # inf (e.g. a ratio with a zero denominator in summaries made before that was guarded) breaks
+    # z-scoring and clustering: treat it as a missing value, so the column is reported and omitted below
+    df = df.replace([np.inf, -np.inf], np.nan)
+
+    # check and drop the time columns: they describe the recording and bin, they aren't readouts
+    df = df.drop(columns=[c for c in ("total recording_time (min)", "bin duration (min)") if c in df.columns])
 
     # check for feature columns that have missing values
     missing_values = df.columns[df.isnull().any()]
     if len(missing_values) > 0:
-        Palmreader.warning(f"Some readouts have missing values and have been omitted.", f"The following columns have been ommitted:\n{_listify(missing_values)}")
+        Palmreader.warning(f"Some readouts have missing values and have been omitted.", f"The following columns have been omitted:\n{_listify(missing_values)}")
         print(f"Warning: The following summary readouts have missing values: {missing_values}.")
         print("These columns will be excluded from the cluster heatmap plot.")
 
@@ -310,7 +344,7 @@ def generate_cluster_heatmap(
             print("The grouping mode will be changed to 'individual' for the cluster heatmap plot.")
 
     if len(constant_values) > 0:
-        Palmreader.warning(f"Some readouts have constant values and have been omitted.", f"The following columns have been ommitted:\n{_listify(constant_values)}")
+        Palmreader.warning(f"Some readouts have constant values and have been omitted.", f"The following columns have been omitted:\n{_listify(constant_values)}")
         print(f"Warning: The following summary readouts have constant values: {constant_values}.")
         print("These columns will be excluded from the cluster heatmap plot.")
 
@@ -318,6 +352,8 @@ def generate_cluster_heatmap(
 
     # Step 1: Apply Z-score normalization to each feature column (excluding the group variable)
     feature_cols = df.columns.drop(group_variable)
+    if len(feature_cols) == 0:
+        raise ValueError("No readouts are left to plot after omitting non-numerical, missing and constant ones")
     df_zscore = df[feature_cols].apply(zscore, axis=0)
     df_zscore[group_variable] = df[group_variable]  # Add back the group variable
 
@@ -361,7 +397,7 @@ def generate_cluster_heatmap(
                 p_values.append(np.nan)
 
         if len(bad_features) > 0:
-            Palmreader.warning("AOVA failed for some features", f"ANOVA failed for the following features:\n{_listify(bad_features)}")
+            Palmreader.warning("ANOVA failed for some features", f"ANOVA failed for the following features:\n{_listify(bad_features)}")
 
         # Adjust p-values
         p_values = np.array(p_values, dtype=np.float64)
@@ -393,7 +429,7 @@ def generate_cluster_heatmap(
             max(10,len(df_mean_zscore.columns) / 5)
         )
 
-        g = sns.clustermap(
+        g = _clustermap(
             df_mean_zscore.T,
             cmap="inferno",
             center=0,
@@ -401,13 +437,11 @@ def generate_cluster_heatmap(
             fmt="",
             cbar_kws={"label": "Mean Z-score"},
             cbar_pos=(1.05, 0.2, 0.03, 0.6),
-            metric="euclidean",
-            method="ward",
             figsize= fig_size,
         )
 
         # Extract feature order for subsequent plotting
-        row_order = g.dendrogram_row.reordered_ind
+        row_order = _reordered(g.dendrogram_row, len(df_mean_zscore.columns))
         ordered_features = df_mean_zscore.columns[row_order]
 
         # Customize plot
@@ -423,21 +457,26 @@ def generate_cluster_heatmap(
     elif grouping_mode == "individual":
         # Generate group-level order of features for consistency
         df_mean_zscore = df_zscore.groupby(group_variable).mean()
+        # only the feature order is used, so the groups aren't clustered (with one group they can't be)
         g = sns.clustermap(
             df_mean_zscore.T,
             cmap="inferno",
             center=0,
+            row_cluster=len(df_mean_zscore.columns) > 1,
+            col_cluster=False,
             metric="euclidean",
             method="ward",
         )
-        row_order = g.dendrogram_row.reordered_ind
+        row_order = _reordered(g.dendrogram_row, len(df_mean_zscore.columns))
         ordered_features = df_mean_zscore.columns[row_order]
+        plt.close(g.fig)
 
         # Prepare the individual-level dataframe and color mapping
         df_individual = df_zscore[ordered_features].copy()
         df_individual[group_variable] = df_zscore[group_variable]
         lut = dict(zip(df[group_variable].unique(), sns.color_palette("husl", len(df[group_variable].unique()))))
-        group_colors = df_individual[group_variable].map(lut)
+        # the series name labels the color bar: no "PV:" prefix, like the legend
+        group_colors = df_individual[group_variable].map(lut).rename(_get_group_label(group_variable))
         df_individual.drop(columns=[group_variable], inplace=True)
 
         # Create the individual-level heatmap with clustering
@@ -447,23 +486,23 @@ def generate_cluster_heatmap(
             max(10, len(df_individual.columns) / 5)
         )
 
-        g_ind = sns.clustermap(
+        g_ind = _clustermap(
             df_individual.T,
             cmap="inferno",
             center=0,
             cbar_kws={"label": "Z-score"},
             cbar_pos=(1.05, 0.2, 0.03, 0.6),
             col_colors=group_colors,
-            metric="euclidean",
-            method="ward",
             figsize=fig_size,
         )
-        g_ind.ax_heatmap.set_yticks(np.arange(len(ordered_features)) + 0.5)
-        g_ind.ax_heatmap.set_yticklabels(ordered_features, rotation=0, fontsize=10)
+        # the individual-level clustering reorders the features again: label rows in that order
+        row_order = _reordered(g_ind.dendrogram_row, len(df_individual.columns))
+        g_ind.ax_heatmap.set_yticks(np.arange(len(row_order)) + 0.5)
+        g_ind.ax_heatmap.set_yticklabels(df_individual.columns[row_order], rotation=0, fontsize=10)
         # g_ind.ax_heatmap.set_xticklabels(g_ind.ax_heatmap.get_xmajorticklabels(), rotation=45, fontsize=10, ha="right")
 
         # get the new sample order
-        col_order = g_ind.dendrogram_col.reordered_ind
+        col_order = _reordered(g_ind.dendrogram_col, len(df_individual))
         # reorder the index and the colors to match
 
         # Align the x-axis labels
@@ -475,13 +514,14 @@ def generate_cluster_heatmap(
 
         # reorder colors
         group_colors = group_colors.iloc[col_order]
-        g_ind.ax_col_dendrogram.collections[0].set_color(group_colors)
+        if g_ind.dendrogram_col is not None:
+            g_ind.ax_col_dendrogram.collections[0].set_color(group_colors)
 
         # Add legend for group colors
         for label in df[group_variable].unique():
             g_ind.ax_col_dendrogram.bar(0, 0, color=lut[label], label=label, linewidth=0)
         g_ind.ax_col_dendrogram.legend(
-            title=group_variable,
+            title=_get_group_label(group_variable),
             bbox_to_anchor = (1.3,1),
             loc="upper right",
             # ncol=len(df[group_variable].unique())
