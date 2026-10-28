@@ -128,3 +128,14 @@ def test_summary_v3_bin_past_end_is_an_empty_row(tmp_path):
 
     time_columns = ["total recording_time (min)", "PV: bin start-end (min)", "bin duration (min)"]
     assert past_end.drop(time_columns).isna().all()
+
+
+def test_ratios_with_zero_denominator_are_nan():
+    import numpy as np
+    from palmreader_analysis.variants import RatioOrder, safe_ratio
+
+    assert safe_ratio(np.float64(2.0), np.float64(4.0)) == 0.5
+    assert np.isnan(safe_ratio(np.float64(2.0), np.float64(0.0)))
+    assert np.isnan(safe_ratio(np.float64(0.0), np.float64(0.0)))
+    assert np.isnan(RatioOrder.LEFT_OVER_RIGHT.divide(left=np.float64(1.0), right=np.float64(0.0)))
+    assert RatioOrder.RIGHT_OVER_LEFT.divide(left=np.float64(4.0), right=np.float64(1.0)) == 0.25

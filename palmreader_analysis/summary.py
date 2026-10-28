@@ -11,6 +11,7 @@ from .variants import (
     Paw,
     LuminanceMeasure,
     RatioOrder,
+    safe_ratio,
     ColumnMetadata,
     ColumnCategory,
     all_paws_tags,
@@ -512,7 +513,7 @@ class FrontToHindPawRatioColumn(SummaryColumn):
         front = left_front + right_front
         hind = left_hind + right_hind
 
-        ctx._data[self._get_column_name()] = front / hind
+        ctx._data[self._get_column_name()] = safe_ratio(front, hind)
 
     def metadata(self):
         return [
@@ -677,7 +678,7 @@ class LegacyRelativePawLuminanceColumn(SummaryColumn):
         paw_luminance = LegacyPawLuminanceComputation.compute_paw_luminance_average(ctx)
 
         ctx._data[self._get_column_name()] = (
-            paw_luminance.get_value(self.paw) / paw_luminance.get_sum()
+            safe_ratio(paw_luminance.get_value(self.paw), paw_luminance.get_sum())
         )
 
     def metadata(self):
@@ -748,7 +749,7 @@ class LegacyFrontToHindRatioColumn(SummaryColumn):
         front = left_front + right_front
         hind = left_hind + right_hind
 
-        ctx._data[LegacyFrontToHindRatioColumn.COLUMN_NAME] = front / hind
+        ctx._data[LegacyFrontToHindRatioColumn.COLUMN_NAME] = safe_ratio(front, hind)
 
     def metadata(self):
         return [

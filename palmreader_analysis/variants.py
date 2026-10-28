@@ -1,6 +1,8 @@
 from enum import Enum
 from typing import TypedDict, Union, List, Literal
 
+import numpy as np
+
 
 class Side(Enum):
     LEFT = "left"
@@ -92,6 +94,16 @@ class LuminanceMeasure(Enum):
             raise ValueError(f"Invalid measure: {self}")
 
 
+def safe_ratio(numerator, denominator):
+    """
+    numerator / denominator, or NaN when the denominator is zero or not finite, so a paw with no
+    signal gives an empty summary cell instead of inf (which breaks z-scoring and clustering).
+    """
+    if denominator == 0 or not np.isfinite(denominator):
+        return np.nan
+    return numerator / denominator
+
+
 class RatioOrder(Enum):
     RIGHT_OVER_LEFT = "right_over_left"
     LEFT_OVER_RIGHT = "left_over_right"
@@ -106,9 +118,9 @@ class RatioOrder(Enum):
 
     def divide(self, left, right):
         if self == RatioOrder.RIGHT_OVER_LEFT:
-            return right / left
+            return safe_ratio(right, left)
         elif self == RatioOrder.LEFT_OVER_RIGHT:
-            return left / right
+            return safe_ratio(left, right)
         else:
             raise ValueError(f"Invalid direction: {self}")
 
