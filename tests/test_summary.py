@@ -95,3 +95,36 @@ def test_summary_v3_single_binned(tmp_path):
         SINGLE_BINNED,
         dest_path,
     )
+
+
+def test_summary_v3_bin_past_end_is_an_empty_row(tmp_path):
+    import pandas as pd
+
+    sample = get_sample_data()[0]
+
+    dest_path = tmp_path / "summary.csv"
+
+    summary_v3(
+        {
+            "features_files": [sample.features_h5],
+            "summary_path": dest_path,
+            # the sample is shorter than 999 minutes
+            "time_bins": [(0, 2), (999, 1000)],
+        }
+    )
+
+    df = pd.read_csv(dest_path, index_col=0)
+    expected = pd.read_csv(SINGLE_BINNED, index_col=0)
+
+    assert len(df) == 2
+    assert list(df.columns) == list(expected.columns)
+
+    inside, past_end = df.iloc[0], df.iloc[1]
+    pd.testing.assert_series_equal(inside, expected.iloc[0])
+
+    assert past_end["PV: bin start-end (min)"] == "999.00 - 1000.00"
+    assert past_end["bin duration (min)"] == 0
+    assert past_end["total recording_time (min)"] == inside["total recording_time (min)"]
+
+    time_columns = ["total recording_time (min)", "PV: bin start-end (min)", "bin duration (min)"]
+    assert past_end.drop(time_columns).isna().all()

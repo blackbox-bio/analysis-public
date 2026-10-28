@@ -4,6 +4,7 @@ import pandas as pd
 
 from utils import *
 from palmreader_analysis import SummaryContext
+from palmreader_analysis.summary import TimeInformationColumns
 
 
 def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
@@ -14,6 +15,10 @@ def generate_summary_generic(features_files: List[str], time_bin=(0, -1)):
 
     for context in contexts:
         for column in SummaryContext.get_all_columns():
+            # a bin past the end of this recording has no frames to summarize:
+            # only the time columns, every value stays empty
+            if context.past_end and not isinstance(column, TimeInformationColumns):
+                continue
             column.summarize(context)
 
         # TODO: remove this once the name map is done at the computation level

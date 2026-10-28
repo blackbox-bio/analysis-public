@@ -164,13 +164,22 @@ class SummaryContext:
         else:
             detection_start = 0
 
-        # raises ValueError for bins Palmreader would not allow
+        # raises ValueError for bins Palmreader would not allow. A bin starting
+        # after this recording ends is an empty range (see `past_end`)
         self._frame_range = resolve_time_bin(time_bin, frame_count, fps, detection_start)
 
         self._apply_bin(self._frame_range.start, self._frame_range.end)
 
         # from here on, frame_count is the length after animal detection
         self._features["frame_count"] = self._frame_range.recorded_frames
+
+    @property
+    def past_end(self) -> bool:
+        """
+        True if the bin starts after this recording ends. Its row only gets the
+        time columns; every other column is left empty (NaN).
+        """
+        return self._frame_range.past_end
 
     def _apply_bin(self, start_frame: int, end_frame: int):
         for key in self._features.keys():
