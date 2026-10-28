@@ -1,7 +1,7 @@
 from io import BytesIO
 import numpy as np
 import seaborn as sns
-from scipy.stats import ttest_ind, f_oneway
+from scipy.stats import f_oneway
 import matplotlib.pyplot as plt
 import cv2 as cv
 from enum import Enum
@@ -49,35 +49,55 @@ def summary_viz_preprocess(df, rows_to_include, columns_to_include, group_variab
     return df_plot
 
 
-def rank_columns_by_significance(df, group_variable):
-    # Dictionary to store p-values for each numerical column
+def column_significance(df, group_variable):
+    """
+    One-way ANOVA across the groups of `group_variable` for each numeric column (the test the
+    cluster heatmap uses), with Bonferroni-adjusted p-values. Returns {column: (p_adjusted, p)}.
+    Columns that can't be tested (the group variable itself, fewer than two groups with data,
+    or no variance within the groups) get NaN.
+    """
+    groups = [g for _, g in df.groupby(group_variable)]
+
     p_values = {}
-
-    # Group DataFrame by the specified column
-    grouped = df.groupby(group_variable)
-
-    # Iterate over numerical columns
     for column in df.select_dtypes(include="number"):
-        # List to store p-values for each column
-        column_p_values = []
+        if column == group_variable:
+            p_values[column] = np.nan
+            continue
 
-        # Iterate over groups and conduct statistical test
-        for group_name, group_data in grouped:
-            other_groups_data = grouped.get_group(group_name)[column]
-            p_value = (
-                ttest_ind(group_data[column], other_groups_data)[1]
-                if len(grouped) == 2
-                else f_oneway(group_data[column], other_groups_data)[1]
-            )
-            column_p_values.append(p_value)
+        samples = [g[column].dropna() for g in groups]
+        samples = [s for s in samples if len(s) > 0]
 
-        # Store the maximum p-value as the significance measure
-        p_values[column] = max(column_p_values)
+        p_value = np.nan
+        if len(samples) >= 2 and sum(len(s) for s in samples) > len(samples):
+            with np.errstate(all="ignore"):
+                p_value = f_oneway(*samples)[1]
+        p_values[column] = p_value
 
-    # Sort columns by significance (ascending order)
-    sorted_columns = sorted(p_values, key=p_values.get)
+    raw = np.array(list(p_values.values()), dtype=np.float64)
+    adjusted = np.full_like(raw, np.nan)
+    valid = ~np.isnan(raw)
+    if valid.any():
+        adjusted[valid] = multipletests(raw[valid], method="bonferroni")[1]
 
-    return sorted_columns
+    return {column: (adjusted[i], raw[i]) for i, column in enumerate(p_values)}
+
+
+def rank_columns_by_significance(df, group_variable):
+    """
+    Numeric columns ordered by how strongly they differ between the groups of `group_variable`:
+    ascending Bonferroni-adjusted ANOVA p-value, ties (e.g. several at 1.0) broken by the raw
+    p-value. Columns that can't be tested come last, in their original order.
+    """
+    significance = column_significance(df, group_variable)
+
+    def sort_key(column):
+        p_adjusted, p = significance[column]
+        if np.isnan(p):
+            return (1, 0.0, 0.0)
+        return (0, p_adjusted, p)
+
+    # sorted() is stable, so equal keys keep the original column order
+    return sorted(significance, key=sort_key)
 
 
 def _plot_to_cv2_image(plot):
