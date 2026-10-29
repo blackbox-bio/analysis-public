@@ -3,13 +3,10 @@ from process import *
 from summary import *
 from dlc_runner import *
 import concurrent.futures
-import sys
 import warnings
 import os
 import argparse
 from report.openfield_occupancy import plot_open_field_occupancy_map
-
-sys.path.append("./preprocess/")
 
 
 def parse_time_bins(bin_str):
