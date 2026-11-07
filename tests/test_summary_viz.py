@@ -206,3 +206,133 @@ def test_pairgrid_uses_significance_order(tmp_path, monkeypatch):
 
     assert seen["vars"] == ["strong", "weak", "none"]
     assert plt.get_fignums() == []
+
+
+# ---- SVG and the stats table (TEAM 1.8) ----
+from summary_viz import STATS_COLUMNS, column_anova
+
+
+def _stats(path):
+    # empty cells (no test result) read as NaN
+    return pd.read_csv(path, dtype={"df": str, "groups": str})
+
+
+def test_bar_plots_stats_table_follows_the_plot(tmp_path):
+    df = _table(3)[["PV: group", "none", "strong", "weak", "constant"]]
+
+    generate_bar_plots(df, "PV: group", str(tmp_path / "bars.png"), True, str(tmp_path / "stats.csv"))
+
+    stats = _stats(tmp_path / "stats.csv")
+    assert list(stats.columns) == STATS_COLUMNS
+    # the plotted order: by significance, untestable last
+    assert list(stats["feature"]) == ["strong", "weak", "none", "constant"]
+    assert set(stats["test"]) == {"one-way ANOVA"}
+
+    strong = stats.iloc[0]
+    expected = f_oneway(*[g["strong"] for _, g in df.groupby("PV: group")])
+    assert strong["statistic"] == pytest.approx(expected.statistic)
+    assert strong["p"] == pytest.approx(expected.pvalue)
+    # three tested columns
+    assert strong["adjusted p (Bonferroni)"] == pytest.approx(min(1.0, expected.pvalue * 3))
+    assert strong["df"] == "2, 27"
+    assert strong["groups"] == "g0 (n=10); g1 (n=10); g2 (n=10)"
+
+    # a constant column has no test result
+    constant = stats.iloc[-1]
+    assert np.isnan(constant["p"]) and np.isnan(constant["adjusted p (Bonferroni)"])
+
+
+def test_bar_plots_stats_count_each_columns_own_values(tmp_path):
+    df = _table(2)[["PV: group", "strong", "mostly_missing"]]
+    df.loc[0, "strong"] = np.nan
+
+    generate_bar_plots(df, "PV: group", str(tmp_path / "bars.png"), False, str(tmp_path / "stats.csv"))
+
+    stats = _stats(tmp_path / "stats.csv").set_index("feature")
+    assert stats.loc["strong", "groups"] == "g0 (n=9); g1 (n=10)"
+    assert stats.loc["strong", "df"] == "1, 17"
+    # one value in one group: no test, and no degrees of freedom
+    assert pd.isna(stats.loc["mostly_missing", "df"])
+    assert stats.loc["mostly_missing", "groups"] == "g0 (n=1); g1 (n=0)"
+
+
+def test_bar_plots_svg_is_one_figure_of_panels(tmp_path, monkeypatch):
+    df = _table(2)[["PV: group", "none", "strong", "weak"]]
+    saved = []
+    real = plt.Figure.savefig
+    monkeypatch.setattr(plt.Figure, "savefig", lambda fig, *a, **kw: saved.append(fig) or real(fig, *a, **kw))
+    plt.close("all")
+
+    generate_bar_plots(df, "PV: group", str(tmp_path / "bars.svg"))
+
+    svg = (tmp_path / "bars.svg").read_text()
+    assert svg.lstrip().startswith("<?xml") and "<svg" in svg
+    (fig,) = saved
+    titles = [ax.get_title() for ax in fig.get_axes()]
+    assert titles == [f"{c} grouped by group" for c in ["none", "strong", "weak"]]
+    # each panel the size of one PNG panel
+    width, height = plt.rcParams["figure.figsize"]
+    assert tuple(fig.get_size_inches()) == pytest.approx((3 * width, height))
+    assert plt.get_fignums() == []
+
+
+def test_bar_plots_png_is_still_concatenated(tmp_path):
+    import cv2 as cv
+
+    df = _table(2)[["PV: group", "none", "strong"]]
+    generate_bar_plots(df, "PV: group", str(tmp_path / "bars.png"))
+
+    image = cv.imread(str(tmp_path / "bars.png"))
+    width, height = plt.rcParams["figure.figsize"]
+    assert image.shape[:2] == (round(height * 300), round(2 * width * 300))
+
+
+@pytest.mark.parametrize("mode", ["group", "individual"])
+def test_heatmap_svg(tmp_path, mode):
+    generate_cluster_heatmap(_recordings(), "PV: group", str(tmp_path / "h.svg"), mode)
+    assert "<svg" in (tmp_path / "h.svg").read_text()[:1000]
+
+
+def test_heatmap_stats_table_matches_the_markers(tmp_path, grids):
+    df = _recordings()
+    generate_cluster_heatmap(df, "PV: group", str(tmp_path / "h.png"), "group", str(tmp_path / "stats.csv"))
+
+    stats = _stats(tmp_path / "stats.csv")
+    assert list(stats.columns) == STATS_COLUMNS
+    final = grids[-1]
+    # one row per heatmap row, in its order
+    assert list(stats["feature"]) == list(final.data2d.index)
+    assert set(stats["df"]) == {"2, 15"}
+    assert set(stats["groups"]) == {"g0 (n=6); g1 (n=6); g2 (n=6)"}
+
+    # z-scoring doesn't change F, so the raw data's ANOVA gives the same numbers
+    for _, row in stats.iterrows():
+        expected = f_oneway(*[g[row["feature"]] for _, g in df.groupby("PV: group")])
+        assert row["statistic"] == pytest.approx(expected.statistic)
+        assert row["p"] == pytest.approx(expected.pvalue)
+        assert row["adjusted p (Bonferroni)"] == pytest.approx(min(1.0, expected.pvalue * len(stats)))
+
+    # the stars in the heatmap are the table's adjusted p-values
+    stars = [t.get_text() for t in final.ax_heatmap.texts][:: final.data2d.shape[1]]
+    for star, p in zip(stars, stats["adjusted p (Bonferroni)"]):
+        assert star == ("***" if p < 0.001 else "**" if p < 0.01 else "*" if p < 0.05 else "")
+
+
+@pytest.mark.parametrize("n_groups,mode", [(3, "individual"), (1, "group")])
+def test_heatmap_individual_writes_no_stats(tmp_path, n_groups, mode):
+    # individual mode, asked for or switched to with one group, runs no test
+    generate_cluster_heatmap(
+        _recordings(n_groups=n_groups), "PV: group", str(tmp_path / "h.png"), mode, str(tmp_path / "stats.csv")
+    )
+    assert (tmp_path / "h.png").exists()
+    assert not (tmp_path / "stats.csv").exists()
+
+
+def test_column_anova_matches_column_significance():
+    df = _table(3)
+    anova = column_anova(df, "PV: group")
+    sig = column_significance(df, "PV: group")
+    for column, (p_adjusted, p) in sig.items():
+        assert np.isnan(p) == np.isnan(anova[column]["p"])
+        if not np.isnan(p):
+            assert (anova[column]["p_adjusted"], anova[column]["p"]) == (p_adjusted, p)

@@ -1,5 +1,6 @@
 from io import BytesIO
 import numpy as np
+import pandas as pd
 import seaborn as sns
 from scipy.stats import f_oneway
 import matplotlib.pyplot as plt
@@ -50,37 +51,89 @@ def summary_viz_preprocess(df, rows_to_include, columns_to_include, group_variab
     return df_plot
 
 
-def column_significance(df, group_variable):
+def _anova(samples):
+    """
+    One-way ANOVA over the non-empty samples: (F, df between, df within, p). All NaN when it can't
+    be run: fewer than two samples, or no degrees of freedom left within them.
+    """
+    samples = [s for s in samples if len(s) > 0]
+    n = sum(len(s) for s in samples)
+    if len(samples) < 2 or n <= len(samples):
+        return np.nan, np.nan, np.nan, np.nan
+
+    with np.errstate(all="ignore"):
+        statistic, p_value = f_oneway(*samples)
+    return statistic, len(samples) - 1, n - len(samples), p_value
+
+
+def column_anova(df, group_variable):
     """
     One-way ANOVA across the groups of `group_variable` for each numeric column (the test the
-    cluster heatmap uses), with Bonferroni-adjusted p-values. Returns {column: (p_adjusted, p)}.
-    Columns that can't be tested (the group variable itself, fewer than two groups with data,
-    or no variance within the groups) get NaN.
+    cluster heatmap uses), with Bonferroni-adjusted p-values. Returns {column: AnovaResult}, the
+    keyword arguments of `stats_row`. Columns that can't be tested (the group variable itself,
+    fewer than two groups with data, or no variance within the groups) get NaN.
     """
-    groups = [g for _, g in df.groupby(group_variable)]
+    groups = [(name, g) for name, g in df.groupby(group_variable)]
 
-    p_values = {}
+    results = {}
     for column in df.select_dtypes(include="number"):
+        samples = [g[column].dropna() for _, g in groups]
         if column == group_variable:
-            p_values[column] = np.nan
-            continue
+            statistic, df_between, df_within, p_value = np.nan, np.nan, np.nan, np.nan
+        else:
+            statistic, df_between, df_within, p_value = _anova(samples)
+        results[column] = {
+            "statistic": statistic,
+            "df_between": df_between,
+            "df_within": df_within,
+            "p": p_value,
+            "groups": [(name, len(s)) for (name, _), s in zip(groups, samples)],
+        }
 
-        samples = [g[column].dropna() for g in groups]
-        samples = [s for s in samples if len(s) > 0]
-
-        p_value = np.nan
-        if len(samples) >= 2 and sum(len(s) for s in samples) > len(samples):
-            with np.errstate(all="ignore"):
-                p_value = f_oneway(*samples)[1]
-        p_values[column] = p_value
-
-    raw = np.array(list(p_values.values()), dtype=np.float64)
+    raw = np.array([r["p"] for r in results.values()], dtype=np.float64)
     adjusted = np.full_like(raw, np.nan)
     valid = ~np.isnan(raw)
     if valid.any():
         adjusted[valid] = multipletests(raw[valid], method="bonferroni")[1]
+    for i, result in enumerate(results.values()):
+        result["p_adjusted"] = adjusted[i]
 
-    return {column: (adjusted[i], raw[i]) for i, column in enumerate(p_values)}
+    return results
+
+
+def column_significance(df, group_variable):
+    """
+    `column_anova`'s p-values only: {column: (p_adjusted, p)}.
+    """
+    return {column: (r["p_adjusted"], r["p"]) for column, r in column_anova(df, group_variable).items()}
+
+
+# The stats table's columns (TEAM 1.8): one row per readout of the graph, in the graph's order
+STATS_COLUMNS = ["feature", "test", "statistic", "df", "p", "adjusted p (Bonferroni)", "groups"]
+
+
+def stats_row(feature, statistic, df_between, df_within, p, p_adjusted, groups):
+    """
+    One row of the stats table. `groups` is [(group, n)]; untested values are NaN, written empty.
+    """
+    return {
+        "feature": feature,
+        "test": "one-way ANOVA",
+        "statistic": statistic,
+        "df": "" if np.isnan(df_between) else f"{int(df_between)}, {int(df_within)}",
+        "p": p,
+        "adjusted p (Bonferroni)": p_adjusted,
+        "groups": "; ".join(f"{name} (n={n})" for name, n in groups),
+    }
+
+
+def write_stats_table(rows, stats_path):
+    pd.DataFrame(rows, columns=STATS_COLUMNS).to_csv(stats_path, index=False)
+
+
+def _is_svg(dest_path):
+    """The output format follows `dest_path`'s extension: SVG for `.svg`, PNG otherwise."""
+    return str(dest_path).lower().endswith(".svg")
 
 
 def rank_columns_by_significance(df, group_variable):
@@ -126,86 +179,109 @@ def _get_group_label(group_variable):
     return group_variable[4:] if group_variable.startswith("PV:") else group_variable
 
 
-def generate_bar_plots(df, group_variable: str, dest_path, sort_by_significance=False):
+def _bar_plot_panel(ax, df, group_variable: str, column: str, group_label: str):
+    """
+    One panel of the bar plots: `column`'s group means ± SE with each animal overlaid, on `ax`.
+    """
+    # sns.boxplot(
+    #     x=group_variable,
+    #     y=column,
+    #     data=df,
+    #     # fill = False,
+    #     # split = True,
+    #     # legend = 'auto',
+    #     # dodge=True,
+    # )
+    # ax = sns.barplot(
+    #     x=group_variable,
+    #     y=column,
+    #     data=df,
+    #     edgecolor="black",
+    #     linewidth=2,
+    #     fill=False,
+    #     errorbar="se",
+    #     capsize=0.1,
+    # )
+    sns.pointplot(
+        x=group_variable,
+        y=column,
+        data=df,
+        hue=group_variable,
+        # markers="_",
+        # scale=0.5,
+        # markersize=10,
+        errorbar="se",
+        capsize=0.1,
+        ax=ax,
+    )
+
+    sns.stripplot(
+        x=group_variable,
+        y=column,
+        data=df,
+        # color="black",
+        hue=group_variable,
+        # dodge=True,
+        alpha=0.4,
+        jitter=True,
+        legend=False,
+        ax=ax,
+    )
+
+    ax.set_facecolor("none")
+    # Remove the legend
+    if ax.get_legend() is not None:
+        ax.get_legend().remove()
+
+    ax.set_title(f"{column} grouped by {group_label}", wrap=True)
+
+    # remove PV: from the x-axis label
+    ax.set_xlabel(group_label)
+
+
+def generate_bar_plots(df, group_variable: str, dest_path, sort_by_significance=False, stats_path=None):
     """
     Generate a bar plot for each column in `df` grouped by `group_variable`.
 
     This function will independently generate a graph for each column then concatenate them horizontally,
-    saving the result to `dest_path`.
+    saving the result to `dest_path`: a PNG, or an SVG when `dest_path` ends in `.svg`.
 
     If `sort_by_significance` is True, the columns will be ranked by significance between groups.
+
+    If `stats_path` is given, the stats table (one ANOVA per plotted column, in the plotted order) is
+    written there as CSV.
     """
 
     sorted_columns = _plot_columns(df, group_variable, sort_by_significance)
 
-    joined = None
-
     group_label = _get_group_label(group_variable)
 
-    # Generate individual bar plots for each numerical column
-    for column in sorted_columns:
-        plt.figure()
+    if _is_svg(dest_path):
+        # matplotlib only: one figure, a subfigure per column, each the size of a single plot, so
+        # the panels sit side by side as the concatenated PNG's do
+        width, height = plt.rcParams["figure.figsize"]
+        fig = plt.figure(figsize=(width * len(sorted_columns), height))
+        for subfig, column in zip(fig.subfigures(1, len(sorted_columns), squeeze=False)[0], sorted_columns):
+            _bar_plot_panel(subfig.add_subplot(), df, group_variable, column, group_label)
+        fig.savefig(dest_path, format="svg")
+        plt.close(fig)
+    else:
+        joined = None
 
-        # sns.boxplot(
-        #     x=group_variable,
-        #     y=column,
-        #     data=df,
-        #     # fill = False,
-        #     # split = True,
-        #     # legend = 'auto',
-        #     # dodge=True,
-        # )
-        # ax = sns.barplot(
-        #     x=group_variable,
-        #     y=column,
-        #     data=df,
-        #     edgecolor="black",
-        #     linewidth=2,
-        #     fill=False,
-        #     errorbar="se",
-        #     capsize=0.1,
-        # )
-        ax = sns.pointplot(
-            x=group_variable,
-            y=column,
-            data=df,
-            hue=group_variable,
-            # markers="_",
-            # scale=0.5,
-            # markersize=10,
-            errorbar="se",
-            capsize=0.1,
-        )
+        # Generate individual bar plots for each numerical column
+        for column in sorted_columns:
+            plot = plt.figure()
+            _bar_plot_panel(plot.gca(), df, group_variable, column, group_label)
 
-        sns.stripplot(
-            x=group_variable,
-            y=column,
-            data=df,
-            # color="black",
-            hue=group_variable,
-            # dodge=True,
-            alpha=0.4,
-            jitter=True,
-            legend=False,
-            ax=ax,
-        )
+            img = _plot_to_cv2_image(plot)
+            plt.close(plot)
+            joined = _horizontal_concat_step(joined, img)
 
-        ax.set_facecolor("none")
-        # Remove the legend
-        if ax.get_legend() is not None:
-            ax.get_legend().remove()
+        cv.imwrite(dest_path, joined)
 
-        plt.title(f"{column} grouped by {group_label}", wrap=True)
-
-        plot = plt.gcf()
-        # remove PV: from the x-axis label
-        plot.get_axes()[0].set_xlabel(group_label)
-
-        img = _plot_to_cv2_image(plot)
-        plt.close(plot)
-        joined = _horizontal_concat_step(joined, img)
-
-    cv.imwrite(dest_path, joined)
+    if stats_path is not None:
+        anova = column_anova(df, group_variable)
+        write_stats_table([stats_row(column, **anova[column]) for column in sorted_columns], stats_path)
 
 
 def generate_PairGrid_plot(
@@ -284,7 +360,8 @@ def generate_cluster_heatmap(
         df,
         group_variable: str,
         dest_path: str,
-        grouping_mode: str = "group" # "individual"
+        grouping_mode: str = "group", # "individual"
+        stats_path: str = None,
 ):
     """
     Generate a cluster-heatmap plot based on grouping mode.
@@ -295,9 +372,13 @@ def generate_cluster_heatmap(
     group_variable : str
         The column name of the group variable (e.g., treatment group).
     dest_path : str
-        The file path to save the heatmap plot.
+        The file path to save the heatmap plot: a PNG, or an SVG when it ends in `.svg`.
     grouping_mode : str, optional
         Plot type: "group" for group-level cluster-heatmap, "individual" for individual-level heatmap.
+    stats_path : str, optional
+        Where to write the stats table (CSV): the ANOVA behind the significance markers, one row per
+        tested readout in the heatmap's row order. Only the group-level heatmap runs a test, so the
+        individual-level one (asked for, or switched to with one group) writes no table.
     """
 
     # check for feature columns that have non-numerical values
@@ -384,16 +465,19 @@ def generate_cluster_heatmap(
 
         # Run ANOVA for significance and adjust p-values
         p_values = []
+        statistics = []
         bad_features = []
         for feature in df_mean_zscore.columns:
             try:
-                p_value = f_oneway(
+                statistic, p_value = f_oneway(
                     *[df_zscore[df_zscore[group_variable] == group][feature] for group in valid_groups]
-                )[1]
+                )
+                statistics.append(statistic)
                 p_values.append(p_value)
             except Exception as e:
                 print(f"Warning: Skipping ANOVA for feature '{feature}' due to error: {e}")
                 bad_features.append(feature)
+                statistics.append(np.nan)
                 p_values.append(np.nan)
 
         if len(bad_features) > 0:
@@ -452,6 +536,26 @@ def generate_cluster_heatmap(
         # plt.tight_layout()
         plt.savefig(dest_path, dpi=300, bbox_inches="tight")
         plt.close(g.fig)
+
+        if stats_path is not None:
+            # the ANOVA above, so the table holds exactly the p-values behind the markers
+            group_sizes = df_zscore[group_variable].value_counts()
+            groups = [(group, group_sizes[group]) for group in df_mean_zscore.index if group in set(valid_groups)]
+            df_within = len(df_zscore) - len(valid_groups)
+            rows = []
+            for feature in ordered_features:
+                i = df_mean_zscore.columns.get_loc(feature)
+                tested = feature not in bad_features
+                rows.append(stats_row(
+                    feature,
+                    statistic=statistics[i],
+                    df_between=len(valid_groups) - 1 if tested else np.nan,
+                    df_within=df_within,
+                    p=p_values[i],
+                    p_adjusted=p_adjusted[i],
+                    groups=groups,
+                ))
+            write_stats_table(rows, stats_path)
 
     # Step 3: If grouping_mode is "individual", create an individual-level heatmap
     elif grouping_mode == "individual":

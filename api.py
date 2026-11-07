@@ -1,9 +1,11 @@
 # globally import things that all functions share
 # don't import anything not strictly required for the API itself. import API specific things in the functions themselves
-from palmreader_analysis import Palmreader, PalmreaderProgress
+# palmreaderpy, not palmreader_analysis (which re-exports these): importing palmreader_analysis
+# loads numpy, pandas and h5py, and `capabilities` must stay cheap
+from palmreaderpy import Palmreader, PalmreaderProgress
 import argparse
 from enum import Enum
-from typing import TypedDict, List, Tuple, Literal
+from typing import TypedDict, List, Tuple, Literal, Optional
 import json
 
 
@@ -219,7 +221,10 @@ class BarPlotsArgs(TypedDict):
     vars: List[str]
     hue: str
     sortBySignificance: bool
+    # a PNG, or an SVG when it ends in ".svg"
     destPath: str
+    # optional (may be missing): where to write the stats table (CSV) in the same run
+    statsPath: Optional[str]
 
 
 def bar_plots(args: BarPlotsArgs):
@@ -233,12 +238,13 @@ def bar_plots(args: BarPlotsArgs):
     hue = args["hue"]
     sort_by_significance = args["sortBySignificance"]
     dest_path = args["destPath"]
+    stats_path = args.get("statsPath")
 
     df = _graph_read_csv(summary_path)
 
     df = summary_viz_preprocess(df, enabled_rows, vars, hue)
 
-    generate_bar_plots(df, hue, dest_path, sort_by_significance)
+    generate_bar_plots(df, hue, dest_path, sort_by_significance, stats_path)
 
 
 class ClusterHeatmapArgs(TypedDict):
@@ -248,7 +254,11 @@ class ClusterHeatmapArgs(TypedDict):
     vars: List[str]
     hue: str
     groupingMode: Literal["group", "individual"]
+    # a PNG, or an SVG when it ends in ".svg"
     destPath: str
+    # optional (may be missing): where to write the stats table (CSV) in the same run. Only the
+    # group-level heatmap runs a test, so in individual mode nothing is written there
+    statsPath: Optional[str]
 
 
 def cluster_heatmap(args: ClusterHeatmapArgs):
@@ -262,12 +272,13 @@ def cluster_heatmap(args: ClusterHeatmapArgs):
     hue = args["hue"]
     grouping_mode = args["groupingMode"]
     dest_path = args["destPath"]
+    stats_path = args.get("statsPath")
 
     df = _graph_read_csv(summary_path, index_col=0)
 
     df = summary_viz_preprocess(df, enabled_rows, vars, hue)
 
-    generate_cluster_heatmap(df, hue, dest_path, grouping_mode)
+    generate_cluster_heatmap(df, hue, dest_path, grouping_mode, stats_path)
 
 class OpenFieldOccupancyArgs(TypedDict):
     features_path: str
@@ -283,6 +294,32 @@ def open_field_occupancy(args: OpenFieldOccupancyArgs):
     plot_open_field_occupancy_map(features_path, dest_path)
 
 
+# What the graph functions support beyond a PNG. Palmreader asks once per launch, so a new export
+# appears after a silent subpackage update without an app update. A missing key means "not
+# supported", and Palmreader ignores keys it doesn't know. Keep this in step with the functions
+CAPABILITIES = {
+    "cluster_heatmap": {
+        # `destPath` ending in ".svg"
+        "svg": True,
+        # `statsPath`
+        "stats_table": True,
+    },
+    "bar_plots": {
+        "svg": True,
+        "stats_table": True,
+        # `sortBySignificance` ranks the columns (the fix in bcfe103; before it, it did nothing)
+        "sort_by_significance": True,
+    },
+}
+
+
+def capabilities(args):
+    """
+    Prints CAPABILITIES as one JSON object on stdout. Imports nothing: Palmreader runs it at startup.
+    """
+    print(json.dumps(CAPABILITIES), flush=True)
+
+
 # Palmreader <-> Analysis API
 # The following code is relied upon by the Palmreader software. Take special care when modifying it.
 class ApiFunction(Enum):
@@ -294,6 +331,7 @@ class ApiFunction(Enum):
     BAR_PLOTS = "bar_plots"
     CLUSTER_HEATMAP = "cluster_heatmap"
     OPEN_FIELD_OCCUPANCY = "open_field_occupancy"
+    CAPABILITIES = "capabilities"
 
     def __str__(self):
         return self.value
@@ -367,6 +405,9 @@ def main():
     elif args.function == ApiFunction.OPEN_FIELD_OCCUPANCY:
         func = open_field_occupancy
         task = "generating open-field occupancy map"
+    elif args.function == ApiFunction.CAPABILITIES:
+        func = capabilities
+        task = "listing graph capabilities"
 
     if func is None:
         raise ValueError("Invalid function")
